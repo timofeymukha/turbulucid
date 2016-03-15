@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.integrate import simps
 
 __all__ = ["momentum_thickness", "delta_star", "delta_99"]
 
@@ -13,7 +14,7 @@ def momentum_thickness(field, u0, yLoc):
     for i in range(x.size):
         yIdxTop = np.argmin(np.abs(Y[:,i]-yLoc[i]))
         y = Y[0:yIdxTop,i]
-        theta[i] = np.trapz(V[0:yIdxTop,i]/u0[i]*(1-V[0:yIdxTop,i]/u0[i]), y)     
+        theta[i] = simps(V[0:yIdxTop,i]/u0[i]*(1-V[0:yIdxTop,i]/u0[i]), x=y)     
 
     return theta   
 
@@ -28,8 +29,7 @@ def delta_star(field, u0, yLoc):
     for i in xrange(x.size):
         yIdxTop = np.argmin(np.abs(Y[:,i]-yLoc[i]))
         y =Y[0:yIdxTop,i]
-        deltaStar[i] = np.trapz((1-V[0:yIdxTop,i]/u0[i]), y)
-
+        deltaStar[i] = simps((1-V[0:yIdxTop,i]/u0[i]), x=y)
 
     return deltaStar 
 
