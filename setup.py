@@ -10,6 +10,7 @@ setup(name='turbulucid',
       scripts=[],
       install_requires=[
                     'numpy',
+                    'scipy',
                     'matplotlib',
                     'pandas',
                     'PyFoam'

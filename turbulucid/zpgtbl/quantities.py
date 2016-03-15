@@ -15,7 +15,7 @@ def momentum_thickness(field, u0, yLoc):
         y = Y[0:yIdxTop,i]
         theta[i] = np.trapz(V[0:yIdxTop,i]/u0[i]*(1-V[0:yIdxTop,i]/u0[i]), y)     
 
-    return [x, theta]    
+    return theta   
 
 def delta_star(field, u0, yLoc):
     X = field["X"]
@@ -31,7 +31,7 @@ def delta_star(field, u0, yLoc):
         deltaStar[i] = np.trapz((1-V[0:yIdxTop,i]/u0[i]), y)
 
 
-    return [x, deltaStar]
+    return deltaStar 
 
 def delta_99(field, u0, yLoc):
     X = field["X"]
