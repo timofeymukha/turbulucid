@@ -532,9 +532,3 @@ def open_field(case, fieldName, time, utilName = "averageAlongAxis"):
         startIdx = startIdx + X[0,:].size
 
     return {'X':X, 'Y':Y, 'V':V}
-    
-
-
-#case = open_case("D:\\shared\\OpenFOAM\\tiam-2.3.0\\run\\ramp\\RANS\\ramp_SA")
-#case2 = open_case("D:\\shared\\OpenFOAM\\tiam-2.3.0\\run\\ramp\\RANS\\ramp_SA_ref3")
-
