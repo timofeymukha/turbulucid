@@ -11,10 +11,10 @@ def momentum_thickness(field, u0, yLoc):
 
     x = X[0,:]
     theta = np.zeros(x.size) 
-    for i in range(x.size):
-        yIdxTop = np.argmin(np.abs(Y[:,i]-yLoc[i]))
+    for i in xrange(x.size):
+        yIdxTop = np.argmin(np.abs(Y[:, i]-yLoc[i]))
         y = Y[0:yIdxTop,i]
-        theta[i] = simps(V[0:yIdxTop,i]/u0[i]*(1-V[0:yIdxTop,i]/u0[i]), x=y)     
+        theta[i] = simps(V[0:yIdxTop, i]/u0[i]*(1-V[0:yIdxTop, i]/u0[i]), x=y)     
 
     return theta   
 
@@ -27,9 +27,9 @@ def delta_star(field, u0, yLoc):
     deltaStar = np.zeros(x.size) 
 
     for i in xrange(x.size):
-        yIdxTop = np.argmin(np.abs(Y[:,i]-yLoc[i]))
-        y =Y[0:yIdxTop,i]
-        deltaStar[i] = simps((1-V[0:yIdxTop,i]/u0[i]), x=y)
+        yIdxTop = np.argmin(np.abs(Y[:, i]-yLoc[i]))
+        y =Y[0:yIdxTop, i]
+        deltaStar[i] = simps((1-V[0:yIdxTop, i]/u0[i]), x=y)
 
     return deltaStar 
 
