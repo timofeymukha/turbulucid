@@ -2,13 +2,14 @@ import numpy as np
 
 __all__ = ["profile_along_gridline"]
 
+
 def profile_along_gridline(field, point, direction="y", index=-1):
     """Return the values along a path following a grid-line 
     Equivalent to a line-profile on a rectangular mesh.
     
     Parameters
     ----------
-        field -- the field as a dictionary with X, Y and Z 
+        field -- the field as a dictionary with X, Y and Z
         point -- the point from where to start the path 
         direction -- which direction to move in (x or y), default is "y"
         index -- instead of point, choose the array index directly

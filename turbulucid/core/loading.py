@@ -28,7 +28,6 @@ def block_data(case):
     # Block connectivity matrix 
     connectivityMatrix = -1*np.ones((nBlocks, 4), dtype=np.int)
 
-
     # Matrix with the faces of the blocks
     faces = []
     for i in range(nBlocks):
