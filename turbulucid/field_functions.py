@@ -1,3 +1,5 @@
+# THIS IS A LEGACY FILE WHICH WAS THE BASE FOR THIS PACKAGE
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
