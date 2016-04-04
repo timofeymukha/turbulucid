@@ -4,7 +4,7 @@ import h5py
 
 __all__ = ["dns_schlatter", "dns_schlatter_retheta", "dns_schlatter_retau",
            "dns_schlatter_redeltastar", "dns_schlatter_cf",
-           "dns_schlatter_shape_factor"]
+           "dns_schlatter_shape_factor", "dns_schlatter_redelta99"]
 
 
 def dns_schlatter():
@@ -65,6 +65,22 @@ def dns_schlatter_retau():
         reTau.append(dbFile[i].attrs["reTau"])
 
     return reTau
+
+def dns_schlatter_redelta99():
+    """
+    Return the list of delta-99 based Reynolds numbers for the
+    profiles in the DNS dataset by Schlatter et al for the ZPGTBL.
+    """
+
+    groups = ["670", "1000", "1410", "2000", "2540", "3030", "3270", "3630",
+              "4060"]
+    dbFile = h5py.File(dns_schlatter())
+
+    reDelta99 = []
+    for i in groups:
+        reDelta99.append(dbFile[i].attrs["reDelta99"])
+
+    return reDelta99
 
 
 def dns_schlatter_cf():
