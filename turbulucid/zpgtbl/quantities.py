@@ -45,7 +45,8 @@ def delta_99(field, u0, yLoc):
         #interp = interp1d(Y[:,i], V[:,i])
         #newY = np.linspace(Y[0,i], yLoc[i], 10000)
         #newV = interp(newY)
-        for j in range(V[:,i].size):
+        yIdxTop = np.argmin(np.abs(Y[:, i]-yLoc[i]))
+        for j in range(V[:yIdxTop, i].size):
             if V[j, i] >= 0.99*u0[i]:
                 delta99[i] = Y[j, i]
                 break
