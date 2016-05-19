@@ -4,7 +4,8 @@ import h5py
 
 __all__ = ["dns_schlatter", "dns_schlatter_retheta", "dns_schlatter_retau",
            "dns_schlatter_redeltastar", "dns_schlatter_cf",
-           "dns_schlatter_shape_factor", "dns_schlatter_redelta99"]
+           "dns_schlatter_shape_factor", "dns_schlatter_redelta99",
+           "dns_schlatter_vinf"]
 
 
 def dns_schlatter():
@@ -115,3 +116,23 @@ def dns_schlatter_shape_factor():
         H.append(dbFile[i].attrs["H"])
 
     return H
+
+
+def dns_schlatter_vinf():
+    """
+    Return the list of values of the edge wall-normal velocity, scaled with
+    the friction velocity.
+
+    Grabs the values at the upper boundary.
+    """
+
+    groups = ["670", "1000", "1410", "2000", "2540", "3030", "3270", "3630",
+              "4060"]
+
+    dbFile = h5py.File(dns_schlatter())
+
+    vInf = []
+    for i in groups:
+        vInf.append(dbFile[i]["vPlus"][-1])
+
+    return vInf
