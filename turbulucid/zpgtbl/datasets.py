@@ -1,6 +1,7 @@
 import os
 import sys
 import h5py
+import numpy as np
 
 __all__ = ["dns_schlatter", "dns_schlatter_retheta", "dns_schlatter_retau",
            "dns_schlatter_redeltastar", "dns_schlatter_cf",
@@ -31,7 +32,7 @@ def dns_schlatter_retheta():
     for i in groups:
         reTheta.append(dbFile[i].attrs["reTheta"])
 
-    return reTheta
+    return np.array(reTheta)
 
 
 def dns_schlatter_redeltastar():
@@ -48,7 +49,7 @@ def dns_schlatter_redeltastar():
     for i in groups:
         reDeltaStar.append(dbFile[i].attrs["reDeltaStar"])
 
-    return reDeltaStar
+    return np.array(reDeltaStar)
 
 
 def dns_schlatter_retau():
@@ -65,7 +66,7 @@ def dns_schlatter_retau():
     for i in groups:
         reTau.append(dbFile[i].attrs["reTau"])
 
-    return reTau
+    return np.array(reTau)
 
 def dns_schlatter_redelta99():
     """
@@ -81,7 +82,7 @@ def dns_schlatter_redelta99():
     for i in groups:
         reDelta99.append(dbFile[i].attrs["reDelta99"])
 
-    return reDelta99
+    return np.array(reDelta99)
 
 
 def dns_schlatter_cf():
@@ -98,7 +99,7 @@ def dns_schlatter_cf():
     for i in groups:
         cf.append(dbFile[i].attrs["cf"])
 
-    return cf
+    return np.array(cf)
 
 
 def dns_schlatter_shape_factor():
@@ -115,7 +116,7 @@ def dns_schlatter_shape_factor():
     for i in groups:
         H.append(dbFile[i].attrs["H"])
 
-    return H
+    return np.array(H)
 
 
 def dns_schlatter_vinf():
@@ -135,4 +136,4 @@ def dns_schlatter_vinf():
     for i in groups:
         vInf.append(dbFile[i]["vPlus"][-1])
 
-    return vInf
+    return np.array(vInf)

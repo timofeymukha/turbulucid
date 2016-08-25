@@ -1,6 +1,8 @@
 import numpy as np
+import h5py
+from scipy.interpolate import interp1d
 
-__all__ = ["profile_along_gridline"]
+__all__ = ["profile_along_gridline", "interpolate_dataset"]
 
 
 def profile_along_gridline(field, point, direction="y", index=-1):
@@ -44,3 +46,38 @@ def profile_along_gridline(field, point, direction="y", index=-1):
 
     return [coords, values]
 
+
+def interpolate_dataset(dataset, value, xAxis, yAxis):
+    dataFile = h5py.File(dataset)
+
+    availVals = np.sort(np.array(map(float, dataFile.keys()), dtype=np.int64))
+    if value < availVals.min() or value > availVals.max():
+        raise ValueError("Error: desired value outside available interpolation"
+                         " range")
+
+    argMin = np.argmin(np.abs(availVals - value))
+
+    if availVals[argMin] < value:
+        valLeft = str(availVals[argMin])
+        valRight = str(availVals[argMin+1])
+    else:
+        valLeft = str(availVals[argMin-1])
+        valRight = str(availVals[argMin])
+
+    interpLeft = interp1d(dataFile[valLeft][xAxis],
+                          dataFile[valLeft][yAxis])
+
+    interpRight = interp1d(dataFile[valRight][xAxis],
+                           dataFile[valRight][yAxis])
+
+    interpX = dataFile[valRight][xAxis][:]
+
+    interpY = np.zeros(interpX.shape)
+
+    for i in range(interpX.size):
+        interpY[i] = interp1d(np.array([float(valLeft), float(valRight)]),
+                              np.array([interpLeft(interpX[i]),
+                                        interpRight(interpX[i])]))(value)
+
+    dataFile.close()
+    return interpX, interpY

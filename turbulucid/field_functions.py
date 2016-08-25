@@ -16,8 +16,10 @@ def chauhan_U_inner(yPlus, kappa=0.384, a=-10.361):
            (yPlus - a)) + alpha/beta*(4*alpha + 5*a)*(np.arctan((yPlus-alpha)/beta) \
            + np.arctan(alpha/beta)))    
 
+
 def chauhan_U_inner_mod(yPlus, kappa=0.384, a=-10.361):
     return chauhan_U_inner(yPlus, kappa, a) + 1/2.85*np.exp(-np.log(yPlus/30)**2)
+
 
 def chauhan_wake(eta, Pi, a2=132.8410, a3=-166.2041, a4=71.9114):
     nom1 = 1 - np.exp(-0.25*(5*a2 + 6*a3 + 7*a4)*eta**4 + a2*eta**5 + a3*eta**6 + a4*eta**7)
@@ -25,11 +27,14 @@ def chauhan_wake(eta, Pi, a2=132.8410, a3=-166.2041, a4=71.9114):
     denom = 1 - np.exp(-0.25*(a2+2*a3+3*a4))
     return nom1*nom2/denom
 
+
 def chauhan_U_composite(yPlus, eta, Pi, kappa=0.384, a=-10.361):
     return chauhan_U_inner_mod(yPlus, kappa, a) + 2*Pi/kappa*chauhan_wake(eta, Pi)
 
+
 def epsilon_ReT(y, ReTau, kappa, APlus):
     return (0.5*np.sqrt(1 + kappa**2*ReTau**2/9*(1 - (y - 1)**2)**2*(1 + 2*(y-1)**2)**2*(1 - np.exp(-y*ReTau/APlus))**2) - 0.5)
+
 
 def zpgtbl_momentum_thickness(field, u0, yLoc):
     X = field["X"]
