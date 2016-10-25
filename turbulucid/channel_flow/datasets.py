@@ -1,8 +1,15 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os
 import sys
 import numpy as np
 
-__all__ = ["dns_lee_moser"]
+__all__ = ["dns_lee_moser", "dns_lee_moser_retau", "dns_lee_moser_redelta99",
+           "dns_lee_moser_redeltastar", "dns_lee_moser_retheta",
+           "dns_moser_kim_mansour", "dns_moser_kim_mansour_retau",
+           "dns_jimenez", "dns_moser_jimenez_retau"]
 
 
 def dns_lee_moser():
@@ -28,3 +35,31 @@ def dns_lee_moser_redelta99():
 
 def dns_lee_moser_redeltastar():
     return np.array([469.305, 1413.505, 2604.424, 5185.416, 12816.696])
+
+
+def dns_moser_kim_mansour():
+    """
+    Returns the path to the DNS dataset by Moser, Kim and Mansour for
+    channel flow.
+    """
+
+    return os.path.join(sys.modules[__name__].__file__, "..","datasets",
+                        "channel_moser_kim_mansour.hdf5")
+
+
+def dns_moser_kim_mansour_retau():
+    return np.array([178.12, 392.24, 587.19])
+
+
+def dns_jimenez():
+    """
+    Returns the path to the DNS dataset by Jimenez and co-workers for
+    channel flow.
+    """
+
+    return os.path.join(sys.modules[__name__].__file__, "..","datasets",
+                        "channel_jimenez.hdf5")
+
+
+def dns_moser_jimenez_retau():
+    return np.array([180, 550, 934, 2003, 4179])

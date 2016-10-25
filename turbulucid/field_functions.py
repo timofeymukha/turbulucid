@@ -1,5 +1,7 @@
 # THIS IS A LEGACY FILE WHICH WAS THE BASE FOR THIS PACKAGE
-
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -58,7 +60,7 @@ def zpgtbl_delta_star(field, u0, yLoc):
 
     deltaStar = np.zeros(x.size) 
 
-    for i in xrange(x.size):
+    for i in range(x.size):
         yIdxTop = np.argmin(np.abs(Y[:,i]-yLoc[i]))
         y =Y[0:yIdxTop,i]
         deltaStar[i] = np.trapz((1-V[0:yIdxTop,i]/u0[i]), y)
@@ -74,7 +76,7 @@ def zpgtbl_delta_99(field, u0, yLoc):
 
     delta99 = np.zeros(x.shape)
 
-    for i in xrange(x.size):
+    for i in range(x.size):
         #interp = interp1d(Y[:,i], V[:,i])
         #newY = np.linspace(Y[0,i], yLoc[i], 10000)
         #newV = interp(newY)
@@ -94,7 +96,7 @@ def plot_Cp(field, pRefPoint, wall, uRef, **kwargs):
     
     v = v-v[np.argmin(abs(x[:]-pRefPoint))]
     uRef = uRef[np.argmin(abs(x[:]-pRefPoint))]
-    print uRef
+    print(uRef)
 
     plt.plot(x/l_ramp,v/(0.5*uRef**2), **kwargs)
     plt.xlim([-2,8])
@@ -133,10 +135,10 @@ def delta_star_top(field, relDiff=0.001):
     convY = np.zeros(x.size) 
     yLoc = np.zeros(x.size) 
 
-    for i in xrange(x.size):
+    for i in range(x.size):
         maxYidx = np.min(np.argwhere(V[:,i] == np.max(V[:,i])))
 
-        for yIdx in xrange(Y.shape[0]-10,maxYidx,-1):
+        for yIdx in range(Y.shape[0]-10,maxYidx,-1):
             y = 1000*Y[yIdx:Y.shape[0],i]
             u0[i] = V[yIdx,i]
             deltaStar[i] = np.trapz((1-V[yIdx:Y.shape[0],i]/u0[i]), y)
@@ -158,7 +160,7 @@ def delta_star_bottom(field, u0, yLoc):
 
     deltaStar = np.zeros(x.size) 
 
-    for i in xrange(x.size):
+    for i in range(x.size):
         yIdxTop = np.argmin(np.abs(Y[:,i]-yLoc[i]))
         y = 1000*Y[0:yIdxTop,i]
         deltaStar[i] = np.trapz((1-V[0:yIdxTop,i]/u0[i]), y)
@@ -208,10 +210,10 @@ def u_0(field, wall="bottom", relDiff=0.01):
         u0 = np.zeros(x.size)
         yLoc = np.zeros(x.size)
 
-        for i in xrange(x.size):
+        for i in range(x.size):
             yIdxTop = np.argmin(np.abs(Y[:,i]-yLocTop[i]))
 
-            for j in xrange(yIdxTop, 0, -1):
+            for j in range(yIdxTop, 0, -1):
                 if (np.abs(V[j,i]-u0Top[i])/u0Top[i] > relDiff):
                     u0[i] = V[j-1,i]
                     yLoc[i] = Y[j-1,i]
@@ -232,10 +234,10 @@ def u0_from_grad(field, gradField, wall="bottom", relDiff=0.05, sanity=2000, sta
     yLoc = np.zeros(x.size) 
 
     if (wall == "top"):
-        for i in xrange(x.size):
+        for i in range(x.size):
             startIdx = np.argmin(np.abs(Y[:,i]-(Y[-1,i]-start)))
 
-            for yIdx in xrange(startIdx,0,-1):
+            for yIdx in range(startIdx,0,-1):
                 if (grad[yIdx,i] > sanity):
                     continue
 
@@ -246,10 +248,10 @@ def u0_from_grad(field, gradField, wall="bottom", relDiff=0.05, sanity=2000, sta
                     yLoc[i] = Y[yIdx,i]
                     break
     else:
-        for i in xrange(x.size):
+        for i in range(x.size):
             startIdx = np.argmin(np.abs(Y[:,i]-(Y[0,i]+start)))
 
-            for yIdx in xrange(startIdx,Y.shape[0]):
+            for yIdx in range(startIdx,Y.shape[0]):
                 if (grad[yIdx,i] > sanity):
                     continue
 
@@ -312,7 +314,7 @@ def profile_along_gridline(field, point, direction="y", index=-1):
             actual_x = X[0,idx]
 
             if (actual_x != point):
-                print "Note: using point "+str(actual_x)+" instead of "+str(point)
+                print("Note: using point "+str(actual_x)+" instead of "+str(point))
         else:
             idx = index
         values = V[:,idx]
@@ -323,7 +325,7 @@ def profile_along_gridline(field, point, direction="y", index=-1):
             actual_y = Y[idx,0]
 
             if (actual_y != point):
-                print "Note: using point = "+str(actual_y)+" instead of "+str(point)
+                print("Note: using point = "+str(actual_y)+" instead of "+str(point))
         else:
             idx = index
         values = V[idx,:]
@@ -458,12 +460,12 @@ def open_field(case, fieldName, time, utilName = "averageAlongAxis"):
     # Find the block with no neighbour on the left and bottom 
     startBlock = -1
     for blockI in range(nBlocks):
-        if ((blockConnectivity[blockI][0] == -1) and \
+        if ((blockConnectivity[blockI][0] == -1) and
             (blockConnectivity[blockI][3] == -1)):
             startBlock = blockI
     
     if (startBlock == -1):
-        print "Error in open_field(): found no starting block"
+        print("Error in open_field(): found no starting block")
 
     # Start index for each block
     startIndices = [0]

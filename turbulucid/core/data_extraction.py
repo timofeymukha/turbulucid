@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 import numpy as np
 import h5py
 from scipy.interpolate import interp1d
@@ -27,7 +30,7 @@ def profile_along_gridline(field, point, direction="y", index=-1):
             actual_x = X[0,idx]
 
             if (actual_x != point):
-                print "Note: using point "+str(actual_x)+" instead of "+str(point)
+                print("Note: using point "+str(actual_x)+" instead of "+str(point))
         else:
             idx = index
         values = V[:,idx]
@@ -38,7 +41,7 @@ def profile_along_gridline(field, point, direction="y", index=-1):
             actual_y = Y[idx,0]
 
             if (actual_y != point):
-                print "Note: using point = "+str(actual_y)+" instead of "+str(point)
+                print("Note: using point = "+str(actual_y)+" instead of "+str(point))
         else:
             idx = index
         values = V[idx,:]

@@ -1,3 +1,6 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 from PyFoam.RunDictionary.ParsedParameterFile import ParsedParameterFile
 from PyFoam.RunDictionary.SolutionDirectory import SolutionDirectory
 from os import path
@@ -6,10 +9,12 @@ import pandas as pd
 
 __all__ = ["open_case", "open_field"]
 
+
 def open_case(path):
     case = SolutionDirectory(path, parallel=False, archive=None)    
     blockData = block_data(case)
     return {'case':case, 'blockData':blockData}
+
 
 def block_data(case):
 
@@ -56,7 +61,7 @@ def block_data(case):
         sizesMatrix[blockI][0] = blockData[blockI][2][0]
         sizesMatrix[blockI][1] = blockData[blockI][2][1]
         sizesMatrix[blockI][2] = blockData[blockI][2][0]* \
-                                    blockData[blockI][2][1]
+                                 blockData[blockI][2][1]
         
     return {'connectivity':connectivityMatrix, 'sizes':sizesMatrix}
 
@@ -66,8 +71,8 @@ def open_field(case, fieldName, time, utilName = "averageAlongAxis"):
     blockData = case["blockData"]
     case = case["case"]
     # Form the path and load in the field as a database
-    fieldPath = path.join(case.systemDir(),"..","postProcessing", utilName, \
-            str(time),fieldName)
+    fieldPath = path.join(case.systemDir(),"..","postProcessing", utilName,
+                          str(time),fieldName)
     field = pd.DataFrame.from_csv(fieldPath, sep=' ')
     
     blockSizes = blockData["sizes"]
@@ -77,12 +82,12 @@ def open_field(case, fieldName, time, utilName = "averageAlongAxis"):
     # Find the block with no neighbour on the left and bottom 
     startBlock = -1
     for blockI in range(nBlocks):
-        if ((blockConnectivity[blockI][0] == -1) and \
+        if ((blockConnectivity[blockI][0] == -1) and
             (blockConnectivity[blockI][3] == -1)):
             startBlock = blockI
     
     if (startBlock == -1):
-        print "Error in open_field(): found no starting block"
+        print("Error in open_field(): found no starting block")
 
     # Start index for each block
     startIndices = [0]
@@ -135,7 +140,7 @@ def open_field(case, fieldName, time, utilName = "averageAlongAxis"):
 
         rowStartBlock = blockConnectivity[rowStartBlock,2]
 
-    startIdx = startIdx + blockSizes[-1][2]
+    startIdx += blockSizes[-1][2]
 
     # Add boundary values at the top and bottom
     # Assumes there are only two patches
