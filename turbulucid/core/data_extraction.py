@@ -3,9 +3,11 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import h5py
+import vtk
+from vtk.numpy_interface import dataset_adapter as dsa
 from scipy.interpolate import interp1d
 
-__all__ = ["profile_along_gridline", "interpolate_dataset"]
+__all__ = ["profile_along_gridline", "interpolate_dataset", "profile_along_line"]
 
 
 def profile_along_gridline(field, point, direction="y", index=-1):
@@ -48,6 +50,38 @@ def profile_along_gridline(field, point, direction="y", index=-1):
         coords = X[idx,:]
 
     return [coords, values]
+
+
+def profile_along_line(case, field, startPoint, endPoint):
+    # Convert point to ndarrays
+    startPoint = np.array(startPoint)
+    endPoint = np.array(endPoint)
+
+    # Create a locator to check which cells are intersected by the line
+    locator = vtk.vtkCellLocator()
+    locator.SetDataSet(case.reader.GetOutput())
+    locator.BuildLocator()
+    idList = vtk.vtkIdList()
+    locator.FindCellsAlongLine(startPoint, endPoint, 0.0, idList)
+
+    nCells = idList.GetNumberOfIds()
+    nDims = case.vtkData.CellData[field][0].size
+
+    # unit vector point along the line
+    direction = (endPoint - startPoint)/np.linalg.norm(endPoint-startPoint)
+
+    coords = np.zeros((nCells, 3))
+    distance = np.zeros((nCells, 1))
+    data = np.zeros((nCells, nDims))
+
+    for i in range(nCells):
+        coords[i, :] = case.cellCentres[idList.GetId(i)]
+        data[i, :] = case.vtkData.CellData[field][idList.GetId(i)]
+
+        # Project the vector connecting the starting point and the cell-center
+        # to get the distance
+        distance[i] = np.sum((coords[i,:] - startPoint)*direction)
+    return [coords, distance, data]
 
 
 def interpolate_dataset(dataset, value, xAxis, yAxis):
