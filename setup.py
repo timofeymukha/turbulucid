@@ -13,8 +13,8 @@ setup(name='turbulucid',
                         'scipy',
                         'matplotlib',
                         'pandas',
-                        'PyFoam',
-                        'h5py'
+                        'h5py',
+                        'vtk'
                        ],
       zip_safe=False)
 
