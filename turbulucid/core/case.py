@@ -22,8 +22,7 @@ class Case:
         self.fileName = fileName
 
         if not os.path.exists(fileName):
-            print("ERROR: The file "+fileName+" does not exist")
-            raise ValueError
+            raise ValueError("ERROR: The file "+fileName+" does not exist")
 
         # Read the file
         self._reader = vtk.vtkPolyDataReader()
@@ -38,6 +37,8 @@ class Case:
             dsa.WrapDataObject(self._cellCentres.GetOutput()).GetPoints()
 
         self._vtkData = dsa.WrapDataObject(self._reader.GetOutput())
+
+        self._zValue = self._vtkData.Points[0, 2]
 
     @property
     def reader(self):
@@ -56,6 +57,12 @@ class Case:
         """wrapped VTKArray : the cell centres of the read data """
 
         return self._cellCentres
+
+    @property
+    def zValue(self):
+        """vtkPolyDataReader : A vtk reader for the stored data."""
+
+        return self._zValue
 
     def __getitem__(self, item):
         """Return a cell array of a given name.
@@ -102,7 +109,19 @@ class Case:
         return extractSelection
 
     def boundary_cell_data(self, boundary):
+        """Return cell-center coordinates and data from cells adjacent
+        to a specific boundary.
 
+        Parameters
+        ----------
+            boundary : str
+                The name of the boundary.
+
+        Returns
+        -------
+
+
+        """
         selection = self.extract_boundary_cells(boundary)
         cCenters = vtk.vtkCellCenters()
         cCenters.SetInputData(selection.GetOutput())
