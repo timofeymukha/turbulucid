@@ -6,46 +6,152 @@ import h5py
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
 from vtk.util.numpy_support import numpy_to_vtk
+from vtk.util.numpy_support import vtk_to_numpy
 from scipy.interpolate import interp1d
 
-__all__ = ["interpolate_dataset", "profile_along_line"]
+__all__ = ["interpolate_dataset", "profile_along_line", "dist"]
 
 
-def profile_along_line(case, p1, p2):
+def profile_along_line(case, p1, p2, correctDistance=False, debug=False):
+    """Extract a linear profile from the data.
+
+    Returns the data itself and the its location in a coordinate
+    system tangential to the line.
+
+    Parameters
+    ----------
+        case : Case
+            The case to extract data from.
+        p1 : 2-tuple
+            Start point defining the line.
+        p2 : 2-tuple
+            End point defining the line.
+        correctDistance : bool
+            Whether to place the origo of the coordinate system at p1
+            or at the point where the the line first intersects the
+            geometry.
+        debug : bool
+            Debug switch, if True, additional output is given.
+
+    """
     # Convert point to ndarrays
-    p1 = np.array(p1)
-    p2 = np.array(p2)
+    zValue = case.zValue
 
+    # Add the z-value to the points.
+    p1 = np.append(np.array(p1), zValue)
+    p2 = np.append(np.array(p2), zValue)
+
+    # Compute the plane-normal as a cross-product
     unit = (p2 - p1)/np.linalg.norm(p2 - p1)
-
     geomNormal = np.array([0, 0, 1])
     planeNormal = np.cross(unit, geomNormal)
 
+    # Define the cutting plane
     plane = vtk.vtkPlane()
     plane.SetNormal(planeNormal[0], planeNormal[1], planeNormal[2])
     plane.SetOrigin(p1[0], p1[1], p1[2])
 
+    # Create the cutter and extract the sampled data
     planeCut = vtk.vtkCutter()
-    planeCut.SetInputData(case.reader.GetOutput())
+    planeCut.SetInputData(case.vtkData.VTKObject)
     planeCut.GenerateTrianglesOff()
     planeCut.SetCutFunction(plane)
     planeCut.Update()
     cutData = dsa.WrapDataObject(planeCut.GetOutput())
 
+    # Create the cell-centres on the cut -- that is where the data is
     cCenters = vtk.vtkCellCenters()
     cCenters.SetInputData(planeCut.GetOutput())
     cCenters.Update()
+    cCentersData = dsa.WrapDataObject(cCenters.GetOutput())
 
+    # Grab the data and its coordinates
     coords = dsa.WrapDataObject(cCenters.GetOutput()).Points
-    data = cutData.CellData
+    data = cCentersData.PointData
+
+    # Extract data from the boundaries
+    #for boundary in case.boundaries:
+    #    block = case.extract_block_by_name(boundary)
+    #    planeCut.SetInputData(block)
+    #    planeCut.Update()
+
+    #    cutData = dsa.WrapDataObject(planeCut.GetOutput())
+    #    print(cutData.PointData['p'])
+
+
+
+
 
     nCells = cutData.GetNumberOfCells()
 
     distance = np.zeros(nCells)
 
+    # Compute the distance from p1 to each coordinate
     for i in range(nCells):
         distance[i] = np.linalg.norm(coords[i, :] - p1)
-    return [distance, data, coords]
+
+    # Sort
+    order = np.argsort(distance)
+    distance = distance[order]
+
+    # Sort the data and convert to numpy arrays
+    dataNumpy = {}
+    for key in data.keys():
+        if np.ndim(data[key]) > 1:
+            dataNumpy[key] = np.array(data[key])[order, :]
+        else:
+            dataNumpy[key] = np.array(data[key])[order]
+
+    # Find the point (not cell-centre!) closest to p1, get correction
+    planeCut.SetInputData(case.vtkData.VTKObject)
+    planeCut.Update()
+
+    shiftPointId = cutData.VTKObject.FindPoint(p1)
+    shiftPoint = cutData.Points[shiftPointId, :]
+    correction = np.linalg.norm(shiftPoint - p1)
+
+    # Correct the distance values
+    if correctDistance:
+        distance -= correction
+
+    if debug:
+        print("p1 ", p1)
+        print("p2 ", p2)
+        print("Plane normal", planeNormal)
+        print("Point id closest to p1 ", shiftPointId)
+        print("The point closest to p1", shiftPoint)
+        print("The distance correction is", correction)
+
+        return distance, dataNumpy, coords
+
+    return distance, dataNumpy
+
+
+def dist(case, name):
+    """Compute the distances between the boundary and the adjacent
+    cell-centre.
+
+    Parameters
+    ----------
+        case : Case
+            The case to extract data from.
+        name : str
+            The name of the boundary.
+
+
+    Returns
+    -------
+        ndarray
+            The value of the distance for each adjacent cell.
+
+    """
+    boundaryCoords = case.boundary_data(name)[0]
+    cellCoords = case.boundary_cell_data(name)[0]
+
+    distVectors = cellCoords - boundaryCoords
+
+    return np.linalg.norm(distVectors, axis=1)
+
 
 
 def interpolate_dataset(dataset, value, xAxis, yAxis):
