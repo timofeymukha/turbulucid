@@ -9,7 +9,6 @@ from __future__ import division
 import os
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
 from vtk.util.numpy_support import *
@@ -131,7 +130,7 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
         probeFilter.SetSourceData(patchBlock)
 
         for seed in range(nSeedPoints):
-            #print_progress(seed, nSeedPoints, 5, 1)
+            # print_progress(seed, nSeedPoints, 5, 1)
 
             seedPoint = patchPolys[boundary].GetPoint(seed)
             line.SetResolution(nSamples)
@@ -149,24 +148,24 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
                     np.mean(probeData.PointData[field])
 
         for field in patchAveragedFields:
-            nComp = patchAveragedFields[field].shape[1]
-            if nComp == 1: #scalar
+            fieldI = patchAveragedFields[field]
+            nComp = fieldI.shape[1]
+            if nComp == 1:  # scalar
                 patchBlockData.SetActiveScalars(field)
-                patchBlockData.SetScalars(numpy_to_vtk(patchAveragedFields[field]))
-            elif nComp == 3: #vector
+                patchBlockData.SetScalars(numpy_to_vtk(fieldI))
+            elif nComp == 3:  # vector
                 patchBlockData.SetActiveVectors(field)
-                patchBlockData.SetVectors(numpy_to_vtk(patchAveragedFields[field]))
-            elif nComp == 6: #symmetric tensor
+                patchBlockData.SetVectors(numpy_to_vtk(fieldI))
+            elif nComp == 6:  # symmetric tensor
                 # Add three dummy components
 
-                sixComp = patchAveragedFields[field]
-                nineComp = np.column_stack((sixComp, np.zeros((sixComp.shape[0], 3))))
+                nineComp = np.column_stack((fieldI, np.zeros((fieldI.shape[0], 3))))
                 #nineCompVTK = numpy_to_vtk(nineComp)
                 #nineCompVTK.SetName(field)
 
                 #patchBlockData.SetActiveTensors(field)
                 #patchBlockData.SetTensors(nineCompVTK)
-            elif nComp == 9: #tensor
+            elif nComp == 9:  # tensor
                 patchBlockData.SetActiveTensors(field)
                 patchBlockData.SetTensors(numpy_to_vtk(patchAveragedFields[field]))
 
@@ -261,7 +260,14 @@ def main():
         time = args.time
         writePath = args.file
 
+
     print("Reading")
+    # Check that paths are valid
+    if not os.path.exists(path):
+        raise ValueError("Provided path to .foam file invalid!")
+    elif not os.path.exists(pathPatch):
+        raise ValueError("Provided path to vtk seed patch not valid!")
+
     # Case reader
     reader = read_case(path)
 
@@ -271,7 +277,6 @@ def main():
     patchReader.Update()
 
     # Writer
-    #writer = vtk.vtkPolyDataWriter()
     writer = vtk.vtkXMLMultiBlockDataWriter()
     writer.SetFileName(writePath)
 
@@ -283,7 +288,6 @@ def main():
     smallDz = (bounds[5] - bounds[2])/10000
 
     patchData = patchReader.GetOutput()
-    nCells = patchData.GetNumberOfCells()
 
     patchCellCenters = vtk.vtkCellCenters()
     patchCellCenters.SetInputData(patchData)
@@ -322,7 +326,6 @@ def main():
 
         probeFilter.SetInputConnection(line.GetOutputPort())
         probeFilter.Update()
-
 
         probeData = probeFilter.GetOutput().GetPointData()
 
@@ -397,7 +400,7 @@ def main():
         boundaryIPoints = dsa.WrapDataObject(patchFeatureEdgesData).Points
 
         # Extract cell centers on the feature edges
-        patchFeatureEdgesCCsFilter =  vtk.vtkCellCenters()
+        patchFeatureEdgesCCsFilter = vtk.vtkCellCenters()
         patchFeatureEdgesCCsFilter.SetInputData(patchFeatureEdgesData)
         patchFeatureEdgesCCsFilter.Update()
 
@@ -417,8 +420,8 @@ def main():
                     nameNum = j
                     break
 
-            idx = ccPoints[:, 2] == bounds[4]
-            ids =  np.where(idx == True)
+            idx = ccPoints[:, 2] == patchData.GetPoint(0)[2]
+            ids = np.where(idx == True)
             selectionNode.SetSelectionList(numpy_to_vtk(ids[0]))
 
             selection = vtk.vtkSelection()
