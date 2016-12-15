@@ -35,7 +35,6 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
             If on or both scaling factors are non-positive.
 
     """
-
     if (scaleX <= 0) or (scaleY <= 0):
         raise ValueError("Scaling factors must be positive.")
 
@@ -56,7 +55,7 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     plt.tricontour(triang, z, levels=[1], **kwargs)
 
 
-def plot_vectors(case, field, colour=None,
+def plot_vectors(case, field, color=None,
                  normalize=False, scaleX=1, scaleY=1,
                  sampleByPlane=False, planeResolution=None,
                  plotBoundaries=True,
@@ -73,8 +72,8 @@ def plot_vectors(case, field, colour=None,
         field : str or ndarray
             Either a string with the name of the field as found in the
             case or an ndarray with the data.
-        colour :
-
+        color : ndarray
+            Data used to colour the vectors.
         normalize : bool, optional
             Whether to normalize the the length of the vectors.
             Default is False.
@@ -127,9 +126,14 @@ def plot_vectors(case, field, colour=None,
         else:
             plane.SetResolution(50, 50)
 
-        plane.SetOrigin(case.bounds[0], case.bounds[2], case.zValue)
-        plane.SetPoint1(case.bounds[0], case.bounds[3], case.zValue)
-        plane.SetPoint2(case.bounds[1], case.bounds[2], case.zValue)
+        minX = np.min(case.cellCentres[:, 0])
+        maxX = np.max(case.cellCentres[:, 0])
+        minY = np.min(case.cellCentres[:, 1])
+        maxY = np.max(case.cellCentres[:, 1])
+
+        plane.SetOrigin(minX, minY, case.zValue)
+        plane.SetPoint1(minX, maxY, case.zValue)
+        plane.SetPoint2(maxX, minY, case.zValue)
         plane.Update()
 
         probeFilter = vtk.vtkProbeFilter()
@@ -161,18 +165,20 @@ def plot_vectors(case, field, colour=None,
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
 
-    plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0], data[:, 1],
-               **kwargs)
+
+    if (color == None) or sampleByPlane:
+        plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0], data[:, 1],
+                   **kwargs)
+    else:
+        plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0], data[:, 1],
+                   color, **kwargs)
 
 
-def plot_streamlines(case, field,
+def plot_streamlines(case, field, color=None,
                      scaleX=1, scaleY=1,
                      planeResolution=None,
                      plotBoundaries=True,
                      **kwargs):
-    pass
-    pointsX = np.copy(case.cellCentres[:, 0])
-    pointsY = np.copy(case.cellCentres[:, 1])
 
     if type(field) == str:
         data = case[field]
@@ -212,22 +218,22 @@ def plot_streamlines(case, field,
         data = np.copy(probeData.PointData['temp'])
         case.__delitem__('temp')
 
-    pointsX = pointsX.reshape(planeResolution[0]+1, planeResolution[1]+1)[:, 0]
-    pointsY = pointsY.reshape(planeResolution[0]+1, planeResolution[1]+1)[0, :]
-    dataX = data[:, 0].reshape((planeResolution[1]+1, planeResolution[0]+1),
+    pointsX = pointsX.reshape(planeResolution[1]+1, planeResolution[0]+1)[:, 0]
+    pointsY = pointsY.reshape(planeResolution[1]+1, planeResolution[0]+1)[0, :]
+    dataX = data[:, 0].reshape((planeResolution[0]+1, planeResolution[1]+1),
                                order='F')
-    dataY = data[:, 1].reshape((planeResolution[1]+1, planeResolution[0]+1),
+    dataY = data[:, 1].reshape((planeResolution[0]+1, planeResolution[1]+1),
                                order='F')
-
-    print(pointsX.shape)
-    print(pointsY.shape)
-    print(dataX.shape)
 
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
 
-    plt.streamplot(pointsX/scaleX, pointsY/scaleY,
-                   dataX, dataY, **kwargs)
-
-    return pointsY
+    if color == None:
+        plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY, **kwargs)
+    else:
+        plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY, **kwargs)
+        #color = color.reshape((planeResolution[0]+1, planeResolution[1]+1),
+        #                       order='F')
+        #plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
+        #               color=color, **kwargs)
 
