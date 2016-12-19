@@ -2,12 +2,17 @@ from setuptools import setup
 
 setup(name='turbulucid',
       version='0.1',
-      description='A package for simple post-processing of 2d turbulent fluid fields.',
+      description='A package for post-processing of 2D flow fields.',
       url='http://://bitbucket.org/lesituu/turbulucid',
       author='Timofey Mukha',
       author_email='timofey.mukha@it.uu.se',
       packages=['turbulucid'],
       scripts=[],
+      entry_points={
+          'console_scripts': [
+              'averageAlongAxis=turbulucid.bin.averageAlongAxis:main'
+          ]
+      },
       install_requires=[
                         'numpy',
                         'scipy',
@@ -16,5 +21,10 @@ setup(name='turbulucid',
                         'h5py',
                         'vtk'
                        ],
+      license="GNU GPL 3",
+      classifiers=[
+          "Development Status :: 4 - Beta",
+          "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
+      ],
       zip_safe=False)
 
