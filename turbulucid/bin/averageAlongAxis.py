@@ -13,7 +13,30 @@ import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
 from vtk.util.numpy_support import *
 from collections import OrderedDict
+from mpi4py import MPI
 from sys import exit
+
+
+def get_block_names(blocks):
+    """ Return the names of the blocks in a given multiblock dataset
+
+    Parameters
+    ----------
+        blocks : vtkMultiBlockDataSet
+            The dataset with the blocks.
+
+    Returns
+    -------
+        names : list of str
+            A list with the names of the blocks.
+
+    """
+    names = []
+    for i in range(blocks.GetNumberOfBlocks()):
+        blockName = blocks.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME())
+        names.append(blockName)
+
+    return names
 
 
 def get_block_index(blocks, name):
@@ -46,15 +69,11 @@ def get_block_index(blocks, name):
     return number
 
 
-def read(casePath, patchPath):
+def read(casePath):
 
-    print("Reading")
     # Check that paths are valid
     if not os.path.exists(casePath):
         raise ValueError("Provided path to .foam file invalid!")
-    elif not os.path.exists(patchPath):
-        raise ValueError("Provided path to vtk seed patch not valid!")
-    print(casePath)
 
     # Case reader
     reader = vtk.vtkOpenFOAMReader()
@@ -70,12 +89,7 @@ def read(casePath, patchPath):
     reader.Update()
     reader.UpdateInformation()
 
-    # Seed patch reader
-    patchReader = vtk.vtkPolyDataReader()
-    patchReader.SetFileName(patchPath)
-    patchReader.Update()
-
-    return reader, patchReader
+    return reader
 
 
 def print_progress(current, total, freq=10., tabLevel=0):
@@ -136,18 +150,14 @@ def average_internal_field_data(block, patchData, nSamples):
     probeFilter.SetSourceData(block)
     patchCellData = patchData.GetCellData()
 
-    averageFields = []
-    fieldNames = []
+    averageFields = OrderedDict()
+
     nFields = blockData.GetNumberOfArrays()
 
     for field in range(nFields):
         name = blockData.GetArrayName(field)
-        newAverageField = vtk.vtkFloatArray()
-        newAverageField.SetName(name)
-        newAverageField.SetNumberOfComponents(blockData.GetArray(field).GetNumberOfComponents())
-        newAverageField.SetNumberOfTuples(nSeedPoints)
-        averageFields.append(newAverageField)
-        fieldNames.append(name)
+        nCols = blockData.GetArray(field).GetNumberOfComponents()
+        averageFields[name] = np.zeros( (nSeedPoints, nCols))
 
     print("Sampling and averaging internal field")
     for seed in range(int(nSeedPoints)):
@@ -162,42 +172,21 @@ def average_internal_field_data(block, patchData, nSamples):
         probeFilter.SetInputConnection(line.GetOutputPort())
         probeFilter.Update()
 
-        probeData = probeFilter.GetOutput().GetPointData()
+        probeData = dsa.WrapDataObject(probeFilter.GetOutput())
 
-        for fieldI in range(nFields):
-            field = probeData.GetArray(fieldI)
-            name = probeData.GetArray(fieldI).GetName()
-            field = vtk_to_numpy(field)
-            averageField = np.array(np.mean(field, axis=0), dtype=np.float32)
-            idx = fieldNames.index(name)
+        for field in averageFields:
+            averageFields[field][seed] = np.mean(probeData.PointData[field],
+                                                 axis=0)
 
-            for comp in range(averageField.size):
-                if averageField.size > 1:
-                    averageFields[idx].SetComponent(seed, comp, averageField[comp])
-                else:
-                    averageFields[idx].SetValue(seed, averageField)
+    wrappedPatchData = dsa.WrapDataObject(patchData)
+    for field in averageFields:
+        fieldI = averageFields[field]
+        nComp = fieldI.shape[1]
 
-    # Add the averaged data to the patch
-    for field in range(nFields):
-        nComp = averageFields[field].GetNumberOfComponents()
         if nComp == 1:  # scalar
-            patchCellData.SetActiveScalars(averageFields[field].GetName())
-            patchCellData.SetScalars(averageFields[field])
-        elif nComp == 3:  # vector
-            patchCellData.SetActiveVectors(averageFields[field].GetName())
-            patchCellData.SetVectors(averageFields[field])
-        elif nComp == 6:  # symmetric tensor
-            # Add three dummy components
-            nineComp = vtk_to_numpy(averageFields[field])
-            nineComp = np.column_stack((nineComp, np.zeros((nineComp.shape[0], 3))))
-            nineCompVTK = numpy_to_vtk(nineComp)
-            nineCompVTK.SetName(averageFields[field].GetName())
-
-            patchCellData.SetActiveTensors(averageFields[field].GetName())
-            patchCellData.SetTensors(nineCompVTK)
-        elif nComp == 9:  # tensor
-            patchCellData.SetActiveTensors(averageFields[field].GetName())
-            patchCellData.SetTensors(averageFields[field])
+            wrappedPatchData.CellData[field][:] = fieldI[:, 0]
+        else:
+            wrappedPatchData.CellData[field][:, :] = fieldI[:, :]
 
 
 def average_patch_data(data, patchPolys, nSamples, bounds):
@@ -212,10 +201,14 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
 
     for boundary in patchPolys:
         print("Patch "+boundary)
+
+        polyI = patchPolys[boundary]
+        zero_out_arrays(polyI)
+
         blockNumber = get_block_index(data.GetBlock(1), boundary)
         patchBlock = data.GetBlock(1).GetBlock(blockNumber)
         patchBlockData = patchBlock.GetCellData()
-        nSeedPoints = patchPolys[boundary].GetNumberOfPoints()
+        nSeedPoints = polyI.GetNumberOfPoints()
 
         nFields = patchBlockData.GetNumberOfArrays()
 
@@ -227,12 +220,11 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
         probeFilter.SetSourceData(patchBlock)
 
         for seed in range(nSeedPoints):
-            # print_progress(seed, nSeedPoints, 5, 1)
 
-            seedPoint = patchPolys[boundary].GetPoint(seed)
+            seedPoint = polyI.GetPoint(seed)
             line.SetResolution(nSamples)
             line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
-            line.SetPoint2((seedPoint[0], seedPoint[1] ,bounds[5]-smallDz))
+            line.SetPoint2((seedPoint[0], seedPoint[1], bounds[5]-smallDz))
             line.Update()
 
             probeFilter.SetInputConnection(line.GetOutputPort())
@@ -242,29 +234,17 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
 
             for field in patchAveragedFields:
                 patchAveragedFields[field][seed] = \
-                    np.mean(probeData.PointData[field])
+                    np.mean(probeData.PointData[field], axis=0)
+
+        wrappedPoly = dsa.WrapDataObject(polyI)
 
         for field in patchAveragedFields:
             fieldI = patchAveragedFields[field]
             nComp = fieldI.shape[1]
             if nComp == 1:  # scalar
-                patchBlockData.SetActiveScalars(field)
-                patchBlockData.SetScalars(numpy_to_vtk(fieldI))
+                wrappedPoly.PointData[field][:] = fieldI[:, 0]
             elif nComp == 3:  # vector
-                patchBlockData.SetActiveVectors(field)
-                patchBlockData.SetVectors(numpy_to_vtk(fieldI))
-            elif nComp == 6:  # symmetric tensor
-                # Add three dummy components
-
-                nineComp = np.column_stack((fieldI, np.zeros((fieldI.shape[0], 3))))
-                #nineCompVTK = numpy_to_vtk(nineComp)
-                #nineCompVTK.SetName(field)
-
-                #patchBlockData.SetActiveTensors(field)
-                #patchBlockData.SetTensors(nineCompVTK)
-            elif nComp == 9:  # tensor
-                patchBlockData.SetActiveTensors(field)
-                patchBlockData.SetTensors(numpy_to_vtk(patchAveragedFields[field]))
+                wrappedPoly.PointData[field][:, :] = fieldI[:, :]
 
 
 def colour_boundary_points(patchData, boundaryPoints):
@@ -283,6 +263,10 @@ def colour_boundary_points(patchData, boundaryPoints):
 
 def mark_boundary_cells(patchData, patchPolys, boundaryPoints):
     print("Marking boundary cells.")
+
+    # For each point on a given boundary find the id of this point in the
+    # patch data. Then set the colouring to 1 in at row number with found
+    # id and column number according to boundary ordering
     pointColouring = colour_boundary_points(patchData, boundaryPoints)
 
     boundaryCellsConn = {}
@@ -338,45 +322,30 @@ def assemble_multiblock(patchData, patchPolys):
 
     return multiBlock
 
+
 def create_parser():
     parser = argparse.ArgumentParser(
-        description="Script for averaging a 3D field along a chosen \
-                            direction.")
+        description="Script for averaging a 3D field along z.")
 
     parser.add_argument('--config',
                         type=str,
                         help='The config file.',
-                        required=False)
+                        required=True)
 
-    parser.add_argument('-n',
-                        type=int,
-                        help='Number of samples.',
-                        required=False)
-
-    parser.add_argument('-c', '--case',
-                        type=str,
-                        help='Path to the OpenFOAM case. Default is cwd.',
-                        default='.',
-                        required=False)
-
-    parser.add_argument('-p', '--patch',
-                        type=str,
-                        help='Path to the seed patch, saved as a vtk file.',
-                        default=os.path.join(".", "postProcessing", "sufraces",
-                                             "0", "seedPatch.vtk"),
-                        required=False)
-
-    parser.add_argument('-t', '--time',
-                        type=float,
-                        help='The time value for the fields to be averaged. \
-                              Default is latest time.',
-                        required=False)
-
-    parser.add_argument('-f', '--file',
-                        type=str,
-                        help='The name of the output file.',
-                        required=False)
     return parser
+
+
+def zero_out_arrays(polyData):
+    wrapped = dsa.WrapDataObject(polyData)
+
+    for field in wrapped.PointData.keys():
+        wrapped.PointData[field][:] = np.zeros(wrapped.PointData[field].shape)
+
+    for field in wrapped.CellData.keys():
+        wrapped.CellData[field][:] = np.zeros(wrapped.CellData[field].shape)
+
+
+
 
 
 def main():
@@ -384,44 +353,41 @@ def main():
     parser = create_parser()
     args = parser.parse_args()
 
-    if args.config is not None:
-        config = config_to_dict(args.config)
-        try:
-            casePath = config["case"]
-            patchPath = config["patch"]
-            time = float(config["time"])
-            nSamples = int(config["nSamples"])
-            writePath = config["file"]
-        except KeyError:
-            print("ERROR: required parameter not specified in config file.")
-            raise
-    else:
-        casePath = args.case
-        patchPath = args.patch
-        nSamples = args.n
-        time = args.time
-        writePath = args.file
+    config = config_to_dict(args.config)
+    try:
+        casePath = config["case"]
+        seedPatchName = config["patch"]
+        time = float(config["time"])
+        nSamples = int(config["nSamples"])
+        writePath = config["file"]
+    except KeyError:
+        print("ERROR: required parameter not specified in config file.")
+        raise
 
     # Case reader
-    reader, patchReader = read(casePath, patchPath)
+    print("Reading")
+    reader = read(casePath)
 
     # Writer
     writer = vtk.vtkXMLMultiBlockDataWriter()
     writer.SetFileName(writePath)
 
     caseData = reader.GetOutput()
-    block = caseData.GetBlock(0)
-    blockData = block.GetCellData()
-    bounds = block.GetBounds()
+    internalBlock = caseData.GetBlock(0)
+    bounds = internalBlock.GetBounds()
 
-    patchData = patchReader.GetOutput()
+    patchBlocks = caseData.GetBlock(1)
+    patchBlockI = patchBlocks.GetBlock(get_block_index(patchBlocks,
+                                                       seedPatchName))
 
-    average_internal_field_data(block, patchData, nSamples)
+    patchData = vtk.vtkPolyData()
+    patchData.ShallowCopy(patchBlockI)
 
-    nBoundaries = reader.GetNumberOfPatchArrays()
+    zero_out_arrays(patchData)
+
+    average_internal_field_data(internalBlock, patchData, nSamples)
+
     boundaryNames = vtk.vtkStringArray()
-    # one is actually the internal field and 2 are x-y planes
-    boundaryNames.SetNumberOfValues(nBoundaries - 3)
     boundaryNames.SetName("boundaries")
 
     # Find seed points for the patches
@@ -442,12 +408,14 @@ def main():
     selectionNode.SetFieldType(vtk.vtkSelectionNode.POINT)
     selectionNode.SetContentType(vtk.vtkSelectionNode.INDICES)
 
-    for field in range(nBoundaries-1):
+    #for field in range(nBoundaries-1):
+    for patchName in get_block_names(patchBlocks):
         # Get the patch data
-        patchBlock = caseData.GetBlock(1).GetBlock(field)
+        patchBlockI = patchBlocks.GetBlock(get_block_index(patchBlocks,
+                                                           patchName))
 
         # Extract feature edges
-        patchFeatureEdgesFilter.SetInputData(patchBlock)
+        patchFeatureEdgesFilter.SetInputData(patchBlockI)
         patchFeatureEdgesFilter.Update()
         patchFeatureEdgesData = patchFeatureEdgesFilter.GetOutput()
 
@@ -467,13 +435,15 @@ def main():
             np.all(ccPoints[:, 2] == bounds[5])):
                 continue
         else:
-            nameNum = 0
-            for j in range(boundaryNames.GetNumberOfValues()):
-                if boundaryNames.GetValue(j) == '':
-                    boundaryNames.SetValue(j, reader.GetPatchArrayName(field + 1))
-                    nameNum = j
-                    break
+            #nameNum = 0
+            #for j in range(boundaryNames.GetNumberOfValues()):
+            #    if boundaryNames.GetValue(j) == '':
+            #        boundaryNames.SetValue(j, reader.GetPatchArrayName(field + 1))
+            #        nameNum = j
+            #        break
+            boundaryNames.InsertNextValue(patchName)
 
+            # Select the points located at the boundary of the patch
             idx = ccPoints[:, 2] == patchData.GetPoint(0)[2]
             ids = np.where(idx == True)
             selectionNode.SetSelectionList(numpy_to_vtk(ids[0]))
@@ -490,10 +460,10 @@ def main():
             newPoly = vtk.vtkPolyData()
             newPoly.ShallowCopy(extractSelection.GetOutput())
 
-            patchPolys[boundaryNames.GetValue(nameNum)] = newPoly
+            patchPolys[patchName] = newPoly
 
             idx = boundaryIPoints[:, 2] == patchData.GetPoint(0)[2]
-            boundaryPoints[boundaryNames.GetValue(nameNum)] = boundaryIPoints[idx, :]
+            boundaryPoints[patchName] = boundaryIPoints[idx, :]
 
     # Add the names of the boundaries as field data
     patchData.GetFieldData().AddArray(boundaryNames)
@@ -503,9 +473,6 @@ def main():
     minLength = minimal_length(patchData)
     tol = 0.001*minLength
 
-    # For each point on a given boundary find the id of this point in the
-    # patch data. Then set the colouring to 1 in at row number with found
-    # id and column number according to boundary ordering
     mark_boundary_cells(patchData, patchPolys, boundaryPoints)
 
     multiBlock = assemble_multiblock(patchData, patchPolys)
@@ -516,4 +483,8 @@ def main():
 
 
 if __name__ == '__main__':
+    comm = MPI.COMM_WORLD
+    nProcs = comm.size
+
+    print(nProcs)
     main()
