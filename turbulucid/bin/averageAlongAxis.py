@@ -385,7 +385,7 @@ def main():
 
     zero_out_arrays(patchData)
 
-    average_internal_field_data(internalBlock, patchData, nSamples)
+    #average_internal_field_data(internalBlock, patchData, nSamples)
 
     boundaryNames = vtk.vtkStringArray()
     boundaryNames.SetName("boundaries")
@@ -428,52 +428,95 @@ def main():
 
         patchFeatureEdgesCCs = dsa.WrapDataObject(
                 patchFeatureEdgesCCsFilter.GetOutput())
+
         ccPoints = patchFeatureEdgesCCs.Points
 
         # The patch is an x-y plane
-        if (np.all(ccPoints[:, 2] == bounds[4]) or
-            np.all(ccPoints[:, 2] == bounds[5])):
+        if (np.all(boundaryIPoints[:, 2] == bounds[4]) or
+            np.all(boundaryIPoints[:, 2] == bounds[5])):
                 continue
         else:
-            #nameNum = 0
-            #for j in range(boundaryNames.GetNumberOfValues()):
-            #    if boundaryNames.GetValue(j) == '':
-            #        boundaryNames.SetValue(j, reader.GetPatchArrayName(field + 1))
-            #        nameNum = j
-            #        break
             boundaryNames.InsertNextValue(patchName)
 
             # Select the points located at the boundary of the patch
             idx = ccPoints[:, 2] == patchData.GetPoint(0)[2]
             ids = np.where(idx == True)
+
+            idx = boundaryIPoints[:, 2] == patchData.GetPoint(0)[2]
+            ids = np.where(idx == True)
+
+            cellIds = vtk.vtkIntArray()
+            for i in range(patchFeatureEdgesData.GetNumberOfCells()):
+                cellI = patchFeatureEdgesData.GetCell(i)
+                pointIds = vtk.vtkIdList()
+                patchFeatureEdgesData.GetCellPoints(i, pointIds)
+
+                flag = 0
+                for j in range(pointIds.GetNumberOfIds()):
+                    if not idx[pointIds.GetId(j)]:
+                        break
+                    flag += 1
+
+                if flag == 2:
+                    cellIds.InsertNextValue(i)
+
+
+            newPoly = vtk.vtkPolyData()
+            newPoly.ShallowCopy(patchFeatureEdgesFilter.GetOutput())
+            cellIds2 = vtk_to_numpy(cellIds)
+            for i in range(newPoly.GetNumberOfCells()):
+                if i not in cellIds2:
+                    newPoly.DeleteCell(i)
+
+            newPoly.RemoveDeletedCells()
+
+            cleaner = vtk.vtkCleanPolyData()
+            cleaner.SetInputData(newPoly)
+            cleaner.Update()
+
+            newPoly.ShallowCopy(cleaner.GetOutput())
+
+
+
             selectionNode.SetSelectionList(numpy_to_vtk(ids[0]))
+
+            #selectionNode.SetSelectionList(cellIds)
+
+            selectionNode.SetFieldType(vtk.vtkSelectionNode.POINT)
+            #selectionNode.SetFieldType(vtk.vtkSelectionNode.CELL)
+            selectionNode.SetContentType(vtk.vtkSelectionNode.INDICES)
+            selectionNode.GetProperties().Set(vtk.vtkSelectionNode.CONTAINING_CELLS(), 1)
 
             selection = vtk.vtkSelection()
             selection.AddNode(selectionNode)
 
             extractSelection = vtk.vtkExtractSelection()
+            #extractSelection.SetInputConnection(0,
+            #    patchFeatureEdgesCCsFilter.GetOutputPort())
             extractSelection.SetInputConnection(0,
-                patchFeatureEdgesCCsFilter.GetOutputPort())
+                                                patchFeatureEdgesFilter.GetOutputPort())
             extractSelection.SetInputData(1, selection)
             extractSelection.Update()
 
-            newPoly = vtk.vtkPolyData()
-            newPoly.ShallowCopy(extractSelection.GetOutput())
+            #newPoly = vtk.vtkPolyData()
+            #newPoly.ShallowCopy(extractSelection.GetOutput())
+
+            #newPoly.ShallowCopy(patchFeatureEdgesFilter.GetOutput())
 
             patchPolys[patchName] = newPoly
 
-            idx = boundaryIPoints[:, 2] == patchData.GetPoint(0)[2]
+            #idx = boundaryIPoints[:, 2] == patchData.GetPoint(0)[2]
             boundaryPoints[patchName] = boundaryIPoints[idx, :]
 
     # Add the names of the boundaries as field data
     patchData.GetFieldData().AddArray(boundaryNames)
 
-    average_patch_data(caseData, patchPolys, nSamples, bounds)
+  #  average_patch_data(caseData, patchPolys, nSamples, bounds)
 
     minLength = minimal_length(patchData)
     tol = 0.001*minLength
 
-    mark_boundary_cells(patchData, patchPolys, boundaryPoints)
+   # mark_boundary_cells(patchData, patchPolys, boundaryPoints)
 
     multiBlock = assemble_multiblock(patchData, patchPolys)
 
