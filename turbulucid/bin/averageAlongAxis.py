@@ -197,10 +197,14 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
     line = vtk.vtkLineSource()
     probeFilter = vtk.vtkProbeFilter()
 
+
+    cellCenters = vtk.vtkCellCenters()
+
     smallDz = (bounds[5] - bounds[4])/1000.
 
     for boundary in patchPolys:
         print("Patch "+boundary)
+
 
         polyI = patchPolys[boundary]
         zero_out_arrays(polyI)
@@ -208,7 +212,12 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
         blockNumber = get_block_index(data.GetBlock(1), boundary)
         patchBlock = data.GetBlock(1).GetBlock(blockNumber)
         patchBlockData = patchBlock.GetCellData()
-        nSeedPoints = polyI.GetNumberOfPoints()
+        nSeedPoints = polyI.GetNumberOfCells()
+
+        cellCenters.SetInputData(polyI)
+        cellCenters.Update()
+
+
 
         nFields = patchBlockData.GetNumberOfArrays()
 
@@ -221,7 +230,7 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
 
         for seed in range(nSeedPoints):
 
-            seedPoint = polyI.GetPoint(seed)
+            seedPoint = cellCenters.GetOutput().GetPoint(seed)
             line.SetResolution(nSamples)
             line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
             line.SetPoint2((seedPoint[0], seedPoint[1], bounds[5]-smallDz))
@@ -242,57 +251,92 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
             fieldI = patchAveragedFields[field]
             nComp = fieldI.shape[1]
             if nComp == 1:  # scalar
-                wrappedPoly.PointData[field][:] = fieldI[:, 0]
+                wrappedPoly.CellData[field][:] = fieldI[:, 0]
             elif nComp == 3:  # vector
-                wrappedPoly.PointData[field][:, :] = fieldI[:, :]
+                wrappedPoly.CellData[field][:, :] = fieldI[:, :]
+
+
+def get_cell_points(data, cellId):
+    """Get the ids of the points of the cell with id cellId.
+
+    Wraps the corresponding VTK function data.GetCellPoints().
+
+    Parameters
+    ----------
+        data : vtkPolyData
+            The data object with the cells.
+        cellId : int
+            The id of the cell.
+
+    Returns
+    -------
+        list
+            List of point ids.
+
+    """
+    cellPointsIdsVtk = vtk.vtkIdList()
+    data.GetCellPoints(cellId, cellPointsIdsVtk)
+    cellPointsIds = np.zeros(cellPointsIdsVtk.GetNumberOfIds(),
+                             dtype=np.int64)
+    for id in range(cellPointsIds.size):
+        cellPointsIds[id] = cellPointsIdsVtk.GetId(id)
+
+    return cellPointsIds
 
 
 def colour_boundary_points(patchData, boundaryPoints):
-    pointColouring = np.zeros((patchData.GetNumberOfPoints(),
-                               len(boundaryPoints)),
-                              dtype=np.int64)
-    pointColouring[:] = 0
-    for boundary in boundaryPoints:
-        for pointI in range(boundaryPoints[boundary].shape[0]):
-            pointId = patchData.FindPoint(
-                boundaryPoints[boundary][pointI, :])
-            pointColouring[pointId, boundaryPoints.keys().index(boundary)] = 1
+    """Mark the points that belong to a boundary with ones.
+    """
+    pointColouring = np.zeros(patchData.GetNumberOfPoints(), dtype=np.int64)
+
+    for pointI in range(boundaryPoints.shape[0]):
+        pointId = patchData.FindPoint(boundaryPoints[pointI, :])
+        pointColouring[pointId] = 1
 
     return pointColouring
 
 
-def mark_boundary_cells(patchData, patchPolys, boundaryPoints):
+def get_point_ids(polyData, points):
+    ids = np.zeros(points.shape, dtype=np.int64)
+
+    for pointI in range(points.shape[0]):
+        ids[pointI] = polyData.FindPoint(points[pointI, :])
+
+    return ids
+
+
+def mark_boundary_cells(patchData, patchPolys):
+
     print("Marking boundary cells.")
 
-    # For each point on a given boundary find the id of this point in the
-    # patch data. Then set the colouring to 1 in at row number with found
-    # id and column number according to boundary ordering
-    pointColouring = colour_boundary_points(patchData, boundaryPoints)
+    boundaryCellsConn = OrderedDict()
+    cellCenters = vtk.vtkCellCenters()
 
-    boundaryCellsConn = {}
+    for boundary in patchPolys:
+        boundaryCellsConn[boundary] = -1*np.ones(patchPolys[boundary].GetNumberOfCells())
 
-    for field in range(len(patchPolys)):
-        key = list(patchPolys.keys())[field]
-        boundaryCellsConn[key] = -1*np.ones(patchPolys[key].GetNumberOfPoints())
 
     for cellI in range(patchData.GetNumberOfCells()):
         print_progress(cellI, patchData.GetNumberOfCells(), 5, 1)
-        cellPointsIdsVtk = vtk.vtkIdList()
-        patchData.GetCellPoints(cellI, cellPointsIdsVtk)
-        cellPointsIds = np.zeros(cellPointsIdsVtk.GetNumberOfIds(),
-                                 dtype=np.int64)
-        for i in range(cellPointsIds.size):
-            cellPointsIds[i] = cellPointsIdsVtk.GetId(i)
 
-        for boundary in boundaryPoints:
-            colIdx = boundaryPoints.keys().index(boundary)
-            boundaryPointIds = np.where(pointColouring[:,colIdx] == 1)[0]
+        cellPointsIds = get_cell_points(patchData, cellI)
+
+        for boundary in patchPolys:
+
+            polyI = patchPolys[boundary]
+            cellCenters.SetInputData(polyI)
+            cellCenters.Update()
+
+            boundaryPoints = np.copy(dsa.WrapDataObject(polyI).Points)
+
+            boundaryPointIds = get_point_ids(patchData, boundaryPoints)
+
             intersection = np.intersect1d(cellPointsIds, boundaryPointIds)
             if intersection.size >= 2:
                 point1 = np.array(patchData.GetPoint(intersection[0]))
                 point2 = np.array(patchData.GetPoint(intersection[1]))
                 midPoint = 0.5*(point1 + point2)
-                idOnPatchPoly = patchPolys[boundary].FindPoint(midPoint)
+                idOnPatchPoly = cellCenters.GetOutput().FindPoint(midPoint)
                 boundaryCellsConn[boundary][idOnPatchPoly] = cellI
 
     # Check if some connectivity is not establishes
@@ -301,22 +345,36 @@ def mark_boundary_cells(patchData, patchPolys, boundaryPoints):
             print("ERROR: some connectivity not established for boundary "+key)
 
     for key in boundaryCellsConn:
+        print(key)
         toVtk = numpy_to_vtk(boundaryCellsConn[key])
         toVtk.SetName(key)
         patchData.GetFieldData().AddArray(toVtk)
 
 
-def assemble_multiblock(patchData, patchPolys):
+def assemble_multiblock(internalData, edgeDataDict):
+    """Assemble the multiblock data set from the internal field and
+    boundary data.
+
+    Parameters
+    ----------
+        internalData : vtkPolyData
+            The polydata with the internal field
+
+        edgeDataDict : dictionary
+            A dictionary with each entry being a vtkPolydata
+            corresponding to one edge.
+
+    """
     print("Assembling multi-block structure")
     multiBlock = vtk.vtkMultiBlockDataSet()
-    multiBlock.SetNumberOfBlocks(len(patchPolys) + 1)
-    multiBlock.SetBlock(0, patchData)
+    multiBlock.SetNumberOfBlocks(len(edgeDataDict) + 1)
+    multiBlock.SetBlock(0, internalData)
     multiBlock.GetMetaData(0).Set(vtk.vtkCompositeDataSet.NAME(),
                                   "internalField")
 
     i = 1
-    for boundary in patchPolys:
-        multiBlock.SetBlock(i, patchPolys[boundary])
+    for boundary in edgeDataDict:
+        multiBlock.SetBlock(i, edgeDataDict[boundary])
         multiBlock.GetMetaData(i).Set(vtk.vtkCompositeDataSet.NAME(), boundary)
         i += 1
 
@@ -324,6 +382,9 @@ def assemble_multiblock(patchData, patchPolys):
 
 
 def create_parser():
+    """Create a parse for the command line arguments.
+
+    """
     parser = argparse.ArgumentParser(
         description="Script for averaging a 3D field along z.")
 
@@ -336,6 +397,14 @@ def create_parser():
 
 
 def zero_out_arrays(polyData):
+    """Assign all point and cell array for a given polyData to 0.
+
+    Parameters
+    ----------
+        polyData : vtkPolyData
+            The polyData.
+
+    """
     wrapped = dsa.WrapDataObject(polyData)
 
     for field in wrapped.PointData.keys():
@@ -343,9 +412,6 @@ def zero_out_arrays(polyData):
 
     for field in wrapped.CellData.keys():
         wrapped.CellData[field][:] = np.zeros(wrapped.CellData[field].shape)
-
-
-
 
 
 def main():
@@ -385,7 +451,7 @@ def main():
 
     zero_out_arrays(patchData)
 
-    #average_internal_field_data(internalBlock, patchData, nSamples)
+    average_internal_field_data(internalBlock, patchData, nSamples)
 
     boundaryNames = vtk.vtkStringArray()
     boundaryNames.SetName("boundaries")
@@ -395,20 +461,8 @@ def main():
 
     patchFeatureEdgesFilter = vtk.vtkFeatureEdges()
 
-    # Polydata with points containing boundary data
-    # also used as seeds for sampling the patch data
     patchPolys = OrderedDict()
 
-    # The boundary points extracted from the patches.
-    # Needed for finding boundary cells and associating them with the boundary
-    # names
-    boundaryPoints = OrderedDict()
-
-    selectionNode = vtk.vtkSelectionNode()
-    selectionNode.SetFieldType(vtk.vtkSelectionNode.POINT)
-    selectionNode.SetContentType(vtk.vtkSelectionNode.INDICES)
-
-    #for field in range(nBoundaries-1):
     for patchName in get_block_names(patchBlocks):
         # Get the patch data
         patchBlockI = patchBlocks.GetBlock(get_block_index(patchBlocks,
@@ -421,16 +475,6 @@ def main():
 
         boundaryIPoints = dsa.WrapDataObject(patchFeatureEdgesData).Points
 
-        # Extract cell centers on the feature edges
-        patchFeatureEdgesCCsFilter = vtk.vtkCellCenters()
-        patchFeatureEdgesCCsFilter.SetInputData(patchFeatureEdgesData)
-        patchFeatureEdgesCCsFilter.Update()
-
-        patchFeatureEdgesCCs = dsa.WrapDataObject(
-                patchFeatureEdgesCCsFilter.GetOutput())
-
-        ccPoints = patchFeatureEdgesCCs.Points
-
         # The patch is an x-y plane
         if (np.all(boundaryIPoints[:, 2] == bounds[4]) or
             np.all(boundaryIPoints[:, 2] == bounds[5])):
@@ -439,12 +483,10 @@ def main():
             boundaryNames.InsertNextValue(patchName)
 
             # Select the points located at the boundary of the patch
-            idx = ccPoints[:, 2] == patchData.GetPoint(0)[2]
-            ids = np.where(idx == True)
 
             idx = boundaryIPoints[:, 2] == patchData.GetPoint(0)[2]
-            ids = np.where(idx == True)
 
+            # Find ids of the cells in the x-y plane
             cellIds = vtk.vtkIntArray()
             for i in range(patchFeatureEdgesData.GetNumberOfCells()):
                 cellI = patchFeatureEdgesData.GetCell(i)
@@ -460,7 +502,7 @@ def main():
                 if flag == 2:
                     cellIds.InsertNextValue(i)
 
-
+            # Create the polydata and remove all cells but the ones in cellIds
             newPoly = vtk.vtkPolyData()
             newPoly.ShallowCopy(patchFeatureEdgesFilter.GetOutput())
             cellIds2 = vtk_to_numpy(cellIds)
@@ -470,53 +512,21 @@ def main():
 
             newPoly.RemoveDeletedCells()
 
+            # Clean up redundant points
             cleaner = vtk.vtkCleanPolyData()
             cleaner.SetInputData(newPoly)
             cleaner.Update()
 
             newPoly.ShallowCopy(cleaner.GetOutput())
 
-
-
-            selectionNode.SetSelectionList(numpy_to_vtk(ids[0]))
-
-            #selectionNode.SetSelectionList(cellIds)
-
-            selectionNode.SetFieldType(vtk.vtkSelectionNode.POINT)
-            #selectionNode.SetFieldType(vtk.vtkSelectionNode.CELL)
-            selectionNode.SetContentType(vtk.vtkSelectionNode.INDICES)
-            selectionNode.GetProperties().Set(vtk.vtkSelectionNode.CONTAINING_CELLS(), 1)
-
-            selection = vtk.vtkSelection()
-            selection.AddNode(selectionNode)
-
-            extractSelection = vtk.vtkExtractSelection()
-            #extractSelection.SetInputConnection(0,
-            #    patchFeatureEdgesCCsFilter.GetOutputPort())
-            extractSelection.SetInputConnection(0,
-                                                patchFeatureEdgesFilter.GetOutputPort())
-            extractSelection.SetInputData(1, selection)
-            extractSelection.Update()
-
-            #newPoly = vtk.vtkPolyData()
-            #newPoly.ShallowCopy(extractSelection.GetOutput())
-
-            #newPoly.ShallowCopy(patchFeatureEdgesFilter.GetOutput())
-
             patchPolys[patchName] = newPoly
-
-            #idx = boundaryIPoints[:, 2] == patchData.GetPoint(0)[2]
-            boundaryPoints[patchName] = boundaryIPoints[idx, :]
 
     # Add the names of the boundaries as field data
     patchData.GetFieldData().AddArray(boundaryNames)
 
-  #  average_patch_data(caseData, patchPolys, nSamples, bounds)
+    average_patch_data(caseData, patchPolys, nSamples, bounds)
 
-    minLength = minimal_length(patchData)
-    tol = 0.001*minLength
-
-   # mark_boundary_cells(patchData, patchPolys, boundaryPoints)
+    mark_boundary_cells(patchData, patchPolys)
 
     multiBlock = assemble_multiblock(patchData, patchPolys)
 
@@ -529,5 +539,4 @@ if __name__ == '__main__':
     comm = MPI.COMM_WORLD
     nProcs = comm.size
 
-    print(nProcs)
     main()
