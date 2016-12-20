@@ -3,7 +3,8 @@ from setuptools import setup
 setup(name='turbulucid',
       version='0.1',
       description='A package for post-processing of 2D flow fields.',
-      url='http://://bitbucket.org/lesituu/turbulucid',
+      url='https://github.com/timofeymukha/turbulucid',
+
       author='Timofey Mukha',
       author_email='timofey.mukha@it.uu.se',
       packages=['turbulucid'],
