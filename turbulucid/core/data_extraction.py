@@ -20,18 +20,18 @@ def profile_along_line(case, p1, p2, correctDistance=False, debug=False):
 
     Parameters
     ----------
-        case : Case
-            The case to extract data from.
-        p1 : 2-tuple
-            Start point defining the line.
-        p2 : 2-tuple
-            End point defining the line.
-        correctDistance : bool
-            Whether to place the origo of the coordinate system at p1
-            or at the point where the the line first intersects the
-            geometry.
-        debug : bool
-            Debug switch, if True, additional output is given.
+    case : Case
+        The case to extract data from.
+    p1 : 2-tuple
+        Start point defining the line.
+    p2 : 2-tuple
+        End point defining the line.
+    correctDistance : bool
+        Whether to place the origo of the coordinate system at p1
+        or at the point where the the line first intersects the
+        geometry.
+    debug : bool
+        Debug switch, if True, additional output is given.
 
     """
     # Convert point to ndarrays
@@ -133,16 +133,16 @@ def dist(case, name):
 
     Parameters
     ----------
-        case : Case
-            The case to extract data from.
-        name : str
-            The name of the boundary.
+    case : Case
+        The case to extract data from.
+    name : str
+        The name of the boundary.
 
 
     Returns
     -------
-        ndarray
-            The value of the distance for each adjacent cell.
+    ndarray
+        The value of the distance for each adjacent cell.
 
     """
     boundaryCoords = case.boundary_data(name)[0]
@@ -151,7 +151,6 @@ def dist(case, name):
     distVectors = cellCoords - boundaryCoords
 
     return np.linalg.norm(distVectors, axis=1)
-
 
 
 def interpolate_dataset(dataset, value, xAxis, yAxis):

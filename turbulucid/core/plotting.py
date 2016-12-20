@@ -20,19 +20,19 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
 
     Parameters
     ----------
-        case : Case
-            The case to draw the boundaries for.
-        scaleX : float, optional
-            A scaling factor for the abscissa.
-        scaleY : float, optional
-            A scaling factor for the ordinate.
-        **kwargs
-            Additional options to pass to pyplot.tricontour.
+    case : Case
+        The case to draw the boundaries for.
+    scaleX : float, optional
+        A scaling factor for the abscissa.
+    scaleY : float, optional
+        A scaling factor for the ordinate.
+    **kwargs
+        Additional options to pass to pyplot.tricontour.
 
     Raises
     ------
-        ValueError
-            If on or both scaling factors are non-positive.
+    ValueError
+        If on or both scaling factors are non-positive.
 
     """
     if (scaleX <= 0) or (scaleY <= 0):
@@ -67,37 +67,37 @@ def plot_vectors(case, field, color=None,
 
     Parameters
     ----------
-        case : Case
-            The case that the vector field belongs to.
-        field : str or ndarray
-            Either a string with the name of the field as found in the
-            case or an ndarray with the data.
-        color : ndarray
-            Data used to colour the vectors.
-        normalize : bool, optional
-            Whether to normalize the the length of the vectors.
-            Default is False.
-        scaleX : float, optional
-            A scaling factor for the abscissa.
-        scaleY : float, optional
-            A scaling factor for the ordinate.
-        sampleByPlane : bool, optional
-            Instead of using the cell-centre coordinates use points
-            equally distributed over a plane overlayed on the
-            geometry.
-        planeResolution : 2-tuple, optional
-            Only needed in case sampleByPlane is True. Sets the
-            amount of sampling points in the x and y directions.
-        **kwargs
-            Additional arguments to be passed to pyplot.quiver.
+    case : Case
+        The case that the vector field belongs to.
+    field : str or ndarray
+        Either a string with the name of the field as found in the
+        case or an ndarray with the data.
+    color : ndarray
+        Data used to colour the vectors.
+    normalize : bool, optional
+        Whether to normalize the the length of the vectors.
+        Default is False.
+    scaleX : float, optional
+        A scaling factor for the abscissa.
+    scaleY : float, optional
+        A scaling factor for the ordinate.
+    sampleByPlane : bool, optional
+        Instead of using the cell-centre coordinates use points
+        equally distributed over a plane overlayed on the
+        geometry.
+    planeResolution : 2-tuple, optional
+        Only needed in case sampleByPlane is True. Sets the
+        amount of sampling points in the x and y directions.
+    **kwargs
+        Additional arguments to be passed to pyplot.quiver.
 
     Raises
     ------
-        TypeError
-            If field is neither a string or and ndarray.
-        ValueError
-            If the data to be plotted has less dimensions than two.
-            If one or both scaling factors are non-positive.
+    TypeError
+        If field is neither a string or and ndarray.
+    ValueError
+        If the data to be plotted has less dimensions than two.
+        If one or both scaling factors are non-positive.
 
     """
     pointsX = np.copy(case.cellCentres[:, 0])
