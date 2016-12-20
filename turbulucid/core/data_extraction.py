@@ -8,11 +8,13 @@ from vtk.numpy_interface import dataset_adapter as dsa
 from vtk.util.numpy_support import numpy_to_vtk
 from vtk.util.numpy_support import vtk_to_numpy
 from scipy.interpolate import interp1d
+from collections import OrderedDict
 
 __all__ = ["interpolate_dataset", "profile_along_line", "dist"]
 
 
-def profile_along_line(case, p1, p2, correctDistance=False, debug=False):
+def profile_along_line(case, p1, p2, correctDistance=False,
+                       excludeBoundaries=False, debug=False):
     """Extract a linear profile from the data.
 
     Returns the data itself and the its location in a coordinate
@@ -30,6 +32,9 @@ def profile_along_line(case, p1, p2, correctDistance=False, debug=False):
         Whether to place the origo of the coordinate system at p1
         or at the point where the the line first intersects the
         geometry.
+    excludeBoundaries : bool
+        Exclude boundary data when extracting the profile, default
+        is False.
     debug : bool
         Debug switch, if True, additional output is given.
 
@@ -66,24 +71,34 @@ def profile_along_line(case, p1, p2, correctDistance=False, debug=False):
     cCentersData = dsa.WrapDataObject(cCenters.GetOutput())
 
     # Grab the data and its coordinates
-    coords = dsa.WrapDataObject(cCenters.GetOutput()).Points
-    data = cCentersData.PointData
+    coords = np.copy(dsa.WrapDataObject(cCenters.GetOutput()).Points)
+    data = OrderedDict()
+
+    for field in cCentersData.PointData.keys():
+        data[field] = cCentersData.PointData[field]
 
     # Extract data from the boundaries
-    #for boundary in case.boundaries:
-    #    block = case.extract_block_by_name(boundary)
-    #    planeCut.SetInputData(block)
-    #    planeCut.Update()
+    if not excludeBoundaries:
+        boundaryCC = vtk.vtkCellCenters()
+        for boundary in case.boundaries:
 
-    #    cutData = dsa.WrapDataObject(planeCut.GetOutput())
-    #    print(cutData.PointData['p'])
+            block = case.extract_block_by_name(boundary)
+            planeCut.SetInputData(block)
+            planeCut.Update()
 
+            boundaryCC.SetInputData(planeCut.GetOutput())
+            boundaryCC.Update()
+            boundaryCCData = dsa.WrapDataObject(boundaryCC.GetOutput())
 
+            if boundaryCCData.Points is not None:
+                coords = np.append(coords, boundaryCCData.Points, axis=0)
 
+                for field in data.keys():
+                    data[field] = np.append(data[field],
+                                            boundaryCCData.PointData[field],
+                                            axis=0)
 
-
-    nCells = cutData.GetNumberOfCells()
-
+    nCells = coords.shape[0]
     distance = np.zeros(nCells)
 
     # Compute the distance from p1 to each coordinate
@@ -102,7 +117,7 @@ def profile_along_line(case, p1, p2, correctDistance=False, debug=False):
         else:
             dataNumpy[key] = np.array(data[key])[order]
 
-    # Find the point (not cell-centre!) closest to p1, get correction
+    # Find the point (not cell-center!) closest to p1, get correction
     planeCut.SetInputData(case.vtkData.VTKObject)
     planeCut.Update()
 
