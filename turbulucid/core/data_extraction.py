@@ -107,7 +107,6 @@ def profile_along_line(case, p1, p2, correctDistance=False,
         distP2 = np.linalg.norm(coords[i, :] - p2)
         if (distP1 <= l) and (distP2 <= l):
             validIds.append(i)
-    print(validIds)
 
     coords = coords[validIds, :]
     for field in data.keys():
