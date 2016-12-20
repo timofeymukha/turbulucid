@@ -1,7 +1,6 @@
 from . import core
 from . import zpgtbl
 from . import channel_flow
-from . import legacy
 
 
 from .core import *
