@@ -14,7 +14,7 @@ __all__ = ["Case"]
 
 
 class Case:
-    """A class for representing the simulation.
+    """A class for representing the simulation case.
 
     Attributes
     ----------
@@ -73,7 +73,7 @@ class Case:
 
     @property
     def zValue(self):
-        """vtkPolyDataReader : A vtk reader for the stored data."""
+        """float : the value of z for the considered geometry."""
 
         return self._zValue
 
@@ -113,6 +113,7 @@ class Case:
             The name of the cell array.
 
         """
+        # TODO Consider tensors
         return np.copy(vtk_to_numpy(self.vtkData.CellData[item]))
 
     def __setitem__(self, item, values):
@@ -126,6 +127,8 @@ class Case:
             The values of the field.
 
         """
+
+        # TODO Consider tensors
         if values.shape[0] != self[self.fields[0]].shape[0]:
             raise ValueError("The dimensionality of the provided field "
                              "does not match that of the case.")
@@ -154,8 +157,8 @@ class Case:
 
         Parameters
         ----------
-            item : str
-                Name of the field to delete.
+        item : str
+            Name of the field to delete.
 
         """
         self.vtkData.VTKObject.GetCellData().RemoveArray(item)
@@ -166,8 +169,8 @@ class Case:
 
         Parameters
         ----------
-            boundary : str
-                The name of the boundary.
+        boundary : str
+            The name of the boundary.
 
         Returns
         -------
@@ -200,8 +203,8 @@ class Case:
 
         Parameters
         ----------
-            boundary : str
-                The name of the boundary.
+        boundary : str
+            The name of the boundary.
 
         Returns
         -------
@@ -228,14 +231,23 @@ class Case:
 
         Parameters
         ----------
-            boundary : str
-                The name of the boundary.
+        boundary : str
+            The name of the boundary.
+
+        Returns
+        -------
+        Two ndarrays
+            The coordinates of the boundary face centres.
+            The corresponding data.
         """
 
         blockData = self.extract_block_by_name(boundary)
-        wrapped = dsa.WrapDataObject(blockData)
 
-        return wrapped.Points, wrapped.PointData
+        cCenters = vtk.vtkCellCenters()
+        cCenters.SetInputData(blockData)
+        cCenters.Update()
 
+        points = dsa.WrapDataObject(cCenters.GetOutput()).Points
+        data = dsa.WrapDataObject(blockData).CellData
 
-
+        return points, data
