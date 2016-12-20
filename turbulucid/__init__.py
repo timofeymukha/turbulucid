@@ -6,5 +6,5 @@ from . import legacy
 
 from .core import *
 
-__all__ = ["core", "zpgtbl", "channel_flow", "legacy"]
+__all__ = ["core", "zpgtbl", "channel_flow"]
 __all__.extend(core.__all__)
