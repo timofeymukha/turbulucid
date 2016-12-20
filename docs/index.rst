@@ -11,12 +11,13 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: core
+.. automodule:: turbulucid.core
    :members:
-.. automodule:: channel_flow
+.. automodule:: turbulucid.channel_flow
    :members:
-.. automodule:: zpgtbl
+.. automodule:: turbulucid.zpgtbl
    :members:
+
 Indices and tables
 ==================
 
