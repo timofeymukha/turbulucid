@@ -98,6 +98,24 @@ def profile_along_line(case, p1, p2, correctDistance=False,
                                             boundaryCCData.PointData[field],
                                             axis=0)
 
+    validIds = []
+
+    l = np.linalg.norm(p2 - p1)
+
+    for i in range(coords.shape[0]):
+        distP1 = np.linalg.norm(coords[i, :] - p1)
+        distP2 = np.linalg.norm(coords[i, :] - p2)
+        if (distP1 <= l) and (distP2 <= l):
+            validIds.append(i)
+    print(validIds)
+
+    coords = coords[validIds, :]
+    for field in data.keys():
+        if np.ndim(data[field]) == 1:
+            data[field] = data[field][validIds]
+        else:
+            data[field] = data[field][validIds, :]
+
     nCells = coords.shape[0]
     distance = np.zeros(nCells)
 
