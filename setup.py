@@ -17,9 +17,8 @@ setup(name='turbulucid',
                         'numpy',
                         'scipy',
                         'matplotlib',
-                        'pandas',
                         'h5py',
-                        'vtk'
+                        'vtk>=7.0.0'
                        ],
       license="GNU GPL 3",
       classifiers=[
