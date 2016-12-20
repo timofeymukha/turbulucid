@@ -43,7 +43,9 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
 
     nEdgePoints = 0
     for i in case.boundaries:
-        points = case.boundary_data(i)[0]
+        block = dsa.WrapDataObject(case.extract_block_by_name(i))
+
+        points = block.Points
         nEdgePoints += points.shape[0]
         pointsX = np.append(pointsX, points[:, 0])
         pointsY = np.append(pointsY, points[:, 1])
