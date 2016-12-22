@@ -9,11 +9,9 @@ from __future__ import division
 import os
 import argparse
 import numpy as np
-import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
 from vtk.util.numpy_support import *
 from collections import OrderedDict
-from mpi4py import MPI
 from sys import exit
 
 
@@ -622,7 +620,4 @@ def main():
 
 
 if __name__ == '__main__':
-    comm = MPI.COMM_WORLD
-    nProcs = comm.size
-
     main()
