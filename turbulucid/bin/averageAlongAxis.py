@@ -59,7 +59,7 @@ def get_block_index(blocks, name):
     number = -1
     for i in range(blocks.GetNumberOfBlocks()):
         if (blocks.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME()) ==
-            name):
+           name):
             number = i
             break
 
@@ -155,14 +155,14 @@ def minimal_length(patchData):
     return np.sqrt(np.min(area))
 
 
-def get_cell_points(data, cellId):
+def get_cell_points(polyData, cellId):
     """Get the ids of the points of the cell with id cellId.
 
     Wraps the corresponding VTK function data.GetCellPoints().
 
     Parameters
     ----------
-    data : vtkPolyData
+    polyData : vtkPolyData
         The data object with the cells.
     cellId : int
         The id of the cell.
@@ -174,7 +174,7 @@ def get_cell_points(data, cellId):
 
     """
     cellPointsIdsVtk = vtk.vtkIdList()
-    data.GetCellPoints(cellId, cellPointsIdsVtk)
+    polyData.GetCellPoints(cellId, cellPointsIdsVtk)
     cellPointsIds = np.zeros(cellPointsIdsVtk.GetNumberOfIds(),
                              dtype=np.int64)
     for id in range(cellPointsIds.size):
@@ -183,14 +183,14 @@ def get_cell_points(data, cellId):
     return cellPointsIds
 
 
-def average_internal_field_data(block, patchData, nSamples):
+def average_internal_field_data(block, internalData, nSamples):
 
-    blockData = block.GetCellData()
+    blockCellData = block.GetCellData()
     bounds = block.GetBounds()
     smallDz = (bounds[5] - bounds[2])/10000
 
     patchCellCenters = vtk.vtkCellCenters()
-    patchCellCenters.SetInputData(patchData)
+    patchCellCenters.SetInputData(internalData)
     patchCellCenters.Update()
 
     patchCellCenters = patchCellCenters.GetOutput()
@@ -199,22 +199,22 @@ def average_internal_field_data(block, patchData, nSamples):
     line = vtk.vtkLineSource()
     probeFilter = vtk.vtkProbeFilter()
     probeFilter.SetSourceData(block)
-    patchCellData = patchData.GetCellData()
+    patchCellData = internalData.GetCellData()
 
-    averageFields = OrderedDict()
+    avrgFields = OrderedDict()
 
-    nFields = blockData.GetNumberOfArrays()
+    nFields = blockCellData.GetNumberOfArrays()
 
     for field in range(nFields):
-        name = blockData.GetArrayName(field)
-        nCols = blockData.GetArray(field).GetNumberOfComponents()
-        averageFields[name] = np.zeros( (nSeedPoints, nCols))
+        name = blockCellData.GetArrayName(field)
+        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
+        avrgFields[name] = np.zeros((nSeedPoints, nCols))
 
     for seed in range(int(nSeedPoints)):
         print_progress(seed, nSeedPoints)
 
         seedPoint = patchCellCenters.GetPoint(seed)
-        line.SetResolution(nSamples)
+        line.SetResolution(nSamples-1)
         line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
         line.SetPoint2(seedPoint[0], seedPoint[1], bounds[5]-smallDz)
         line.Update()
@@ -222,26 +222,32 @@ def average_internal_field_data(block, patchData, nSamples):
         probeFilter.SetInputConnection(line.GetOutputPort())
         probeFilter.Update()
 
-        probeData = dsa.WrapDataObject(probeFilter.GetOutput())
+        probeData = dsa.WrapDataObject(probeFilter.GetOutput()).PointData
 
-        for field in averageFields:
-            averageFields[field][seed] = np.mean(probeData.PointData[field],
-                                                 axis=0)
+        for field in avrgFields:
+            if avrgFields[field].shape[1] == 9: # a tensor
+                reshaped = probeData[field].reshape((nSamples, 9))
+                avrgFields[field][seed] = np.mean(reshaped, axis=0)
+            else:
+                avrgFields[field][seed] = np.mean(probeData[field], axis=0)
 
-    wrappedPatchData = dsa.WrapDataObject(patchData)
-    for field in averageFields:
-        fieldI = averageFields[field]
+    wrappedPatchData = dsa.WrapDataObject(internalData)
+    for field in avrgFields:
+        fieldI = avrgFields[field]
         nComp = fieldI.shape[1]
 
         if nComp == 1:  # scalar
             wrappedPatchData.CellData[field][:] = fieldI[:, 0]
+        elif nComp == 9:  # tensor
+            wrappedPatchData.CellData[field][:] = fieldI.reshape(nSeedPoints,
+                                                                 3, 3)
         else:
             wrappedPatchData.CellData[field][:, :] = fieldI[:, :]
 
 
-def average_patch_data(data, patchPolys, nSamples, bounds):
+def average_patch_data(data, boundaryData, nSamples, bounds):
 
-    patchAveragedFields = OrderedDict()
+    avergFields = OrderedDict()
 
     line = vtk.vtkLineSource()
     probeFilter = vtk.vtkProbeFilter()
@@ -250,10 +256,10 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
 
     smallDz = (bounds[5] - bounds[4])/1000.
 
-    for boundary in patchPolys:
+    for boundary in boundaryData:
         print("Patch "+boundary)
 
-        polyI = patchPolys[boundary]
+        polyI = boundaryData[boundary]
         zero_out_arrays(polyI)
 
         blockNumber = get_block_index(data.GetBlock(1), boundary)
@@ -269,14 +275,14 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
         for field in range(nFields):
             name = patchBlockData.GetArrayName(field)
             nCols = patchBlockData.GetArray(field).GetNumberOfComponents()
-            patchAveragedFields[name] = np.zeros((nSeedPoints, nCols))
+            avergFields[name] = np.zeros((nSeedPoints, nCols))
 
         probeFilter.SetSourceData(patchBlock)
 
         for seed in range(nSeedPoints):
 
             seedPoint = cellCenters.GetOutput().GetPoint(seed)
-            line.SetResolution(nSamples)
+            line.SetResolution(nSamples - 1)
             line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
             line.SetPoint2((seedPoint[0], seedPoint[1], bounds[5]-smallDz))
             line.Update()
@@ -284,20 +290,27 @@ def average_patch_data(data, patchPolys, nSamples, bounds):
             probeFilter.SetInputConnection(line.GetOutputPort())
             probeFilter.Update()
 
-            probeData = dsa.WrapDataObject(probeFilter.GetOutput())
+            probeData = dsa.WrapDataObject(probeFilter.GetOutput()).PointData
 
-            for field in patchAveragedFields:
-                patchAveragedFields[field][seed] = \
-                    np.mean(probeData.PointData[field], axis=0)
+            for field in avergFields:
+                if avergFields[field].shape[1] == 9: #tensor
+                    reshaped = probeData[field].reshape((nSamples, 9))
+                    avergFields[field][seed] = np.mean(reshaped, axis=0)
+                else:
+                    avergFields[field][seed] = np.mean(probeData[field],
+                                                       axis=0)
 
         wrappedPoly = dsa.WrapDataObject(polyI)
 
-        for field in patchAveragedFields:
-            fieldI = patchAveragedFields[field]
+        for field in avergFields:
+            fieldI = avergFields[field]
             nComp = fieldI.shape[1]
             if nComp == 1:  # scalar
                 wrappedPoly.CellData[field][:] = fieldI[:, 0]
-            elif nComp == 3:  # vector
+            elif nComp == 9:  # tensor
+                wrappedPoly.CellData[field][:, :] = fieldI.reshape(nSeedPoints,
+                                                                   3, 3)
+            else:
                 wrappedPoly.CellData[field][:, :] = fieldI[:, :]
 
 
@@ -321,6 +334,44 @@ def get_point_ids(polyData, points):
         ids[pointI] = polyData.FindPoint(points[pointI, :])
 
     return ids
+
+
+def mark_boundary_cells_2(patchData, patchPolys):
+    boundaryCellsConn = OrderedDict()
+    cellCenters = vtk.vtkCellCenters()
+
+    for boundary in patchPolys:
+        boundaryCellsConn[boundary] = -1*np.ones(patchPolys[boundary].GetNumberOfCells(), dtype=np.int32)
+
+    locator = vtk.vtkCellLocator()
+    locator.SetDataSet(patchData)
+    locator.Update()
+
+    for boundary in patchPolys:
+
+        polyI = patchPolys[boundary]
+        cellCenters.SetInputData(polyI)
+        cellCenters.Update()
+
+        points = dsa.WrapDataObject(cellCenters.GetOutput()).Points
+
+        cell = vtk.vtkGenericCell()
+        tol2 = 0.
+        pcoords = [0, 0, 0]
+        weights = []
+
+        for i in range(points.shape[0]):
+            pointI = points[i, :]
+            foundCellid = locator.FindCell(pointI, tol2, cell, pcoords, weights)
+            boundaryCellsConn[boundary][i] = foundCellid
+
+    for key in boundaryCellsConn:
+        if np.any(boundaryCellsConn[key] == -1):
+            print("ERROR: some connectivity not established for boundary "+key)
+
+        toVtk = numpy_to_vtk(boundaryCellsConn[key])
+        toVtk.SetName(key)
+        patchData.GetFieldData().AddArray(toVtk)
 
 
 def mark_boundary_cells(patchData, patchPolys):
@@ -360,7 +411,6 @@ def mark_boundary_cells(patchData, patchPolys):
             print("ERROR: some connectivity not established for boundary "+key)
 
     for key in boundaryCellsConn:
-        print(key)
         toVtk = numpy_to_vtk(boundaryCellsConn[key])
         toVtk.SetName(key)
         patchData.GetFieldData().AddArray(toVtk)
@@ -561,7 +611,7 @@ def main():
     add_boundary_names_to_fielddata(internalData, boundaryData)
 
     print("Marking boundary cells.")
-    mark_boundary_cells(internalData, boundaryData)
+    mark_boundary_cells_2(internalData, boundaryData)
 
     print("Assembling multi-block structure")
     multiBlock = assemble_multiblock(internalData, boundaryData)
