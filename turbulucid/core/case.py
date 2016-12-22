@@ -15,24 +15,12 @@ __all__ = ["Case"]
 
 class Case:
     """A class for representing the simulation case.
-
-    Attributes
-    ----------
     """
-
     def __init__(self, fileName):
         self.fileName = fileName
 
-        if not os.path.exists(fileName):
-            raise ValueError("ERROR: The file "+fileName+" does not exist")
-
-        # Read the file
-        self._reader = vtk.vtkXMLMultiBlockDataReader()
-
-        self._reader.SetFileName(fileName)
-        self._reader.Update()
-
-        self._blockData = self._reader.GetOutput()
+        # Read in the data
+        self._blockData = self.read(fileName)
 
         # Compute the cell-centres
         self._cellCentres = vtk.vtkCellCenters()
@@ -52,12 +40,38 @@ class Case:
 
         self._fields = self._vtkData.CellData.keys()
 
+    def read(self, fileName):
+        """Reads in the data from a file.
 
-    @property
-    def reader(self):
-        """vtkPolyDataReader : A vtk reader for the stored data."""
+        Parameters
+        ----------
+        fileName : str
+            The path to the file with the data.
 
-        return self._reader
+        Raises
+        ------
+        ValueError
+            If the provided file does not exist.
+
+        """
+        if not os.path.exists(fileName):
+            raise ValueError("ERROR: The file "+fileName+" does not exist")
+
+        fileExt = os.path.splitext(fileName)[1]
+
+        if fileExt == ".vtm":
+            reader = vtk.vtkXMLMultiBlockDataReader()
+
+        reader.SetFileName(fileName)
+        reader.Update()
+
+        return reader.GetOutput()
+
+    #@property
+    #def reader(self):
+    #    """vtkPolyDataReader : A vtk reader for the stored data."""
+    #
+    #    return self._reader
 
     @property
     def vtkData(self):
@@ -113,7 +127,6 @@ class Case:
             The name of the cell array.
 
         """
-        # TODO Consider tensors
         return np.copy(vtk_to_numpy(self.vtkData.CellData[item]))
 
     def __setitem__(self, item, values):
@@ -127,8 +140,6 @@ class Case:
             The values of the field.
 
         """
-
-        # TODO Consider tensors
         if values.shape[0] != self[self.fields[0]].shape[0]:
             raise ValueError("The dimensionality of the provided field "
                              "does not match that of the case.")
