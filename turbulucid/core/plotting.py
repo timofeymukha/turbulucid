@@ -64,16 +64,16 @@ def plot_vectors(case, field, color=None,
                  **kwargs):
     """Plot a vector field.
 
-    This function wraps pyplot.quiver. See that function's
-    documentation for additional customisation parameters.
+    This function wraps pyplot.quiver. See that function's documentation
+    for additional customization parameters.
 
     Parameters
     ----------
     case : Case
         The case that the vector field belongs to.
     field : str or ndarray
-        Either a string with the name of the field as found in the
-        case or an ndarray with the data.
+        Either a string with the name of the field as found in the case
+        or an ndarray with the data.
     color : ndarray
         Data used to colour the vectors.
     normalize : bool, optional
@@ -84,12 +84,12 @@ def plot_vectors(case, field, color=None,
     scaleY : float, optional
         A scaling factor for the ordinate.
     sampleByPlane : bool, optional
-        Instead of using the cell-centre coordinates use points
-        equally distributed over a plane overlayed on the
+        Instead of using the cell-centre coordinates use points equally
+        distributed over a plane overlayed on the
         geometry.
     planeResolution : 2-tuple, optional
-        Only needed in case sampleByPlane is True. Sets the
-        amount of sampling points in the x and y directions.
+        Only needed in case sampleByPlane is True. Sets the amount of
+        sampling points in the x and y directions.
     **kwargs
         Additional arguments to be passed to pyplot.quiver.
 
@@ -167,7 +167,6 @@ def plot_vectors(case, field, color=None,
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
 
-
     if (color == None) or sampleByPlane:
         plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0], data[:, 1],
                    **kwargs)
@@ -181,6 +180,37 @@ def plot_streamlines(case, field, color=None,
                      planeResolution=None,
                      plotBoundaries=True,
                      **kwargs):
+    """Produce a streamline plot.
+
+    This function wraps pyplot.streamplot. See that functions
+    documentation for additional customization parameters.
+
+    Parameters
+    ----------
+    case : Case
+        The case that the vector field used for the streamlines belongs
+        to.
+    field : str or ndarray
+        The vector field used for computing the streamlines. Either a
+        string with the name of the field as found in the case or an
+        ndarray with the data.
+    color : ndarray
+        Data used to colour the vectors.
+    normalize : bool, optional
+        Whether to normalize the the length of the vectors.
+        Default is False.
+    scaleX : float, optional
+        A scaling factor for the abscissa.
+    scaleY : float, optional
+        A scaling factor for the ordinate.
+    planeResolution : 2-tuple, optional
+        Sets the amount of sampling points in the x and y directions.
+        Note that this does not control the density of the streamlines.
+    **kwargs
+        Additional arguments to be passed to pyplot.quiver.
+
+
+    """
 
     if type(field) == str:
         data = case[field]
