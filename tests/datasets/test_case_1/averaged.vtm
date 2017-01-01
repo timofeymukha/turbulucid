@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian" header_type="UInt32" compressor="vtkZLibDataCompressor">
+  <vtkMultiBlockDataSet>
+    <DataSet index="0" name="internalField" file="averaged/averaged_0.vtp">
+    </DataSet>
+    <DataSet index="1" name="top" file="averaged/averaged_1.vtp">
+    </DataSet>
+    <DataSet index="2" name="inlet" file="averaged/averaged_2.vtp">
+    </DataSet>
+    <DataSet index="3" name="botOrthoHex" file="averaged/averaged_3.vtp">
+    </DataSet>
+    <DataSet index="4" name="botCurved" file="averaged/averaged_4.vtp">
+    </DataSet>
+    <DataSet index="5" name="botPrism" file="averaged/averaged_5.vtp">
+    </DataSet>
+    <DataSet index="6" name="outlet" file="averaged/averaged_6.vtp">
+    </DataSet>
+    <DataSet index="7" name="botSkewedHex" file="averaged/averaged_7.vtp">
+    </DataSet>
+  </vtkMultiBlockDataSet>
+</VTKFile>

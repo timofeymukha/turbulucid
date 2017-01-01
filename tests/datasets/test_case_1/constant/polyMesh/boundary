@@ -1,0 +1,85 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  3.0.1                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+9
+(
+    left
+    {
+        type            patch;
+        physicalType    patch;
+        nFaces          377;
+        startFace       9813;
+    }
+    right
+    {
+        type            patch;
+        physicalType    patch;
+        nFaces          377;
+        startFace       10190;
+    }
+    top
+    {
+        type            patch;
+        physicalType    patch;
+        nFaces          360;
+        startFace       10567;
+    }
+    inlet
+    {
+        type            patch;
+        physicalType    patch;
+        nFaces          90;
+        startFace       10927;
+    }
+    botOrthoHex
+    {
+        type            patch;
+        physicalType    patch;
+        nFaces          90;
+        startFace       11017;
+    }
+    botCurved
+    {
+        type            patch;
+        physicalType    patch;
+        nFaces          90;
+        startFace       11107;
+    }
+    botPrism
+    {
+        type            patch;
+        physicalType    patch;
+        nFaces          90;
+        startFace       11197;
+    }
+    outlet
+    {
+        type            patch;
+        physicalType    patch;
+        nFaces          90;
+        startFace       11287;
+    }
+    botSkewedHex
+    {
+        type            patch;
+        physicalType    patch;
+        nFaces          90;
+        startFace       11377;
+    }
+)
+
+// ************************************************************************* //

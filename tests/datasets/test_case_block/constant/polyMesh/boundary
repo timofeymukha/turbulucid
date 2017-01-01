@@ -1,0 +1,76 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  3.0.1                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+6
+(
+    inlet
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          8;
+        startFace       46;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  outlet;
+    }
+    outlet
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          8;
+        startFace       54;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  inlet;
+    }
+    bottomWall
+    {
+        type            wall;
+        inGroups        1(wall);
+        nFaces          12;
+        startFace       62;
+    }
+    topWall
+    {
+        type            wall;
+        inGroups        1(wall);
+        nFaces          12;
+        startFace       74;
+    }
+    left
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          6;
+        startFace       86;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  right;
+    }
+    right
+    {
+        type            cyclic;
+        inGroups        1(cyclic);
+        nFaces          6;
+        startFace       92;
+        matchTolerance  0.0001;
+        transform       unknown;
+        neighbourPatch  left;
+    }
+)
+
+// ************************************************************************* //

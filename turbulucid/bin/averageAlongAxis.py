@@ -53,7 +53,6 @@ def get_block_index(blocks, name):
         The index of the sought block.
 
     """
-    
     number = -1
     for i in range(blocks.GetNumberOfBlocks()):
         if (blocks.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME()) ==
@@ -130,7 +129,7 @@ def config_to_dict(configPath):
     configDict = {}
 
     for line in configFile:
-        if (line[0] == '#') or (line == '\n'):
+        if (line[0] == '#') or (not line.strip()):
             continue
         configDict[line.split()[0]] = line.split()[1]
 
@@ -197,7 +196,6 @@ def average_internal_field_data(block, internalData, nSamples):
     line = vtk.vtkLineSource()
     probeFilter = vtk.vtkProbeFilter()
     probeFilter.SetSourceData(block)
-    patchCellData = internalData.GetCellData()
 
     avrgFields = OrderedDict()
 
@@ -313,7 +311,7 @@ def average_patch_data(data, boundaryData, nSamples, bounds):
 
 
 def get_point_ids(polyData, points):
-    """Given a list of point coordinates return their in given data.
+    """Given a list of point coordinates return their ids in given data.
 
     Parameters
     ----------
@@ -511,6 +509,11 @@ def assemble_multiblock(internalData, edgeDataDict):
     edgeDataDict : dictionary
         A dictionary with each entry being a vtkPolydata corresponding
         to one edge.
+
+    Returns
+    -------
+    vtkMultiBlockDataSet
+        The assembled dataset.
 
     """
     multiBlock = vtk.vtkMultiBlockDataSet()

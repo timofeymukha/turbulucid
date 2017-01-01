@@ -5,8 +5,6 @@ from __future__ import print_function
 __all__ = ["cf_from_rex", "cf_from_redelta99", "redelta99_from_rex",
            "retau_from_rex", "retheta_from_rex", "cf_from_retheta"]
 
-
-           
 # From reX
 def cf_from_rex(reX):
     return 0.0283*pow(reX, -2./13)

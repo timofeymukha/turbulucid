@@ -21,6 +21,7 @@ def momentum_thickness(field, u0, yLoc):
 
     return theta   
 
+
 def delta_star(field, u0, yLoc):
     X = field["X"]
     Y = field["Y"]
@@ -35,6 +36,7 @@ def delta_star(field, u0, yLoc):
         deltaStar[i] = simps((1-V[0:yIdxTop, i]/u0[i]), x=y)
 
     return deltaStar 
+
 
 def delta_99(field, u0, yLoc):
     X = field["X"]
@@ -54,5 +56,3 @@ def delta_99(field, u0, yLoc):
                 delta99[i] = Y[j, i]
                 break
     return delta99
-
-

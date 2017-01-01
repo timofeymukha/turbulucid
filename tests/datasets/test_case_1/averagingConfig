@@ -1,0 +1,10 @@
+case testpath
+
+# A comment
+
+patch left
+
+time 0
+file ./averaged.vtm
+
+nSamples 10
