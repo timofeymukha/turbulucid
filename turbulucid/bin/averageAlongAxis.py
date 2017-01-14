@@ -131,7 +131,7 @@ def config_to_dict(configPath):
     for line in configFile:
         if (line[0] == '#') or (not line.strip()):
             continue
-        configDict[line.split()[0]] = line.split()[1]
+        configDict[line.split(None, 1)[0]] = line.split(None, 1)[1].rstrip()
 
     configFile.close()
     return configDict
