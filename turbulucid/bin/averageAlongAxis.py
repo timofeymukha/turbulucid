@@ -365,9 +365,14 @@ def mark_boundary_cells_2(patchData, patchPolys):
         if np.any(boundaryCellsConn[key] == -1):
             print("ERROR: some connectivity not established for boundary "+key)
 
-        toVtk = numpy_to_vtk(boundaryCellsConn[key])
-        toVtk.SetName(key)
-        patchData.GetFieldData().AddArray(toVtk)
+        wrappedData = dsa.WrapDataObject(patchData)
+        #wd.FieldData[key] = boundaryCellsConn[key]
+        wrappedData.FieldData.append(boundaryCellsConn[key], key)
+        #toVtk = numpy_to_vtk(boundaryCellsConn[key])
+        #print(key)
+        #print(boundaryCellsConn[key])
+        #toVtk.SetName(key)
+        #patchData.GetFieldData().AddArray(toVtk)
 
 
 def mark_boundary_cells(patchData, patchPolys):
