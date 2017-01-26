@@ -77,7 +77,7 @@ def delta_99(y, v):
             delta99 = y[i]
             break
 
-    if delta99 > 0:
+    if delta99 <= 0:
         raise ValueError("delta_99 is not positive!")
 
     return delta99
