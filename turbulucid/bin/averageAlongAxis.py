@@ -111,6 +111,8 @@ def read(casePath):
     reader.CreateCellToPointOff()
     reader.DisableAllPointArrays()
     reader.EnableAllPatchArrays()
+    reader.DecomposePolyhedraOff()
+
     reader.Update()
 
     reader.SetTimeValue(vtk_to_numpy(reader.GetTimeValues())[-1])
@@ -332,7 +334,16 @@ def get_point_ids(polyData, points):
     return ids
 
 
-def mark_boundary_cells_2(patchData, patchPolys):
+def mark_boundary_cells(patchData, patchPolys):
+    """Find the internal cell adjacent to each cell in the boundary
+    data.
+
+    Goes through each cell center for all boundary polydata and
+    attempts to find the adjacent cell in the interalField.
+    Creates a connectivity array and adds it as field data to the
+    internal field polydata.
+
+    """
     boundaryCellsConn = OrderedDict()
     cellCenters = vtk.vtkCellCenters()
 
@@ -352,69 +363,46 @@ def mark_boundary_cells_2(patchData, patchPolys):
         points = dsa.WrapDataObject(cellCenters.GetOutput()).Points
 
         cell = vtk.vtkGenericCell()
-        tol2 = 0.
+        tol2 = 0.0
         pcoords = [0, 0, 0]
         weights = []
 
         for i in range(points.shape[0]):
             pointI = points[i, :]
-            foundCellid = locator.FindCell(pointI, tol2, cell, pcoords, weights)
-            boundaryCellsConn[boundary][i] = foundCellid
+            foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
+            boundaryCellsConn[boundary][i] = foundCellId
+
+            if foundCellId == -1:
+                print("Failed to find adjacent cell for boundary point",
+                      pointI, "on boundary", boundary)
+                print("    Attempting with slow algorithm based on minimum"
+                      " distance")
+                distance = np.zeros(patchData.GetNumberOfCells())
+
+                closestPoint = [0, 0, 0]
+                subId = vtk.mutable(0)
+                dist2 = vtk.mutable(0.0)
+                for j in range(distance.shape[0]):
+                    cellI = patchData.GetCell(i)
+                    found = cellI.EvaluatePosition(pointI, closestPoint, subId,
+                                                   pcoords, dist2, weights)
+                    distance[j] = dist2
+                    if found == -1:
+                        print("    ERROR: could not evaluate position for "
+                              "cell", j)
+
+                foundCellId = np.argmin(distance)
+                print("    Found cell with id", foundCellId, "located",
+                      distance[foundCellId], "away.")
+                boundaryCellsConn[boundary][i] = foundCellId
 
     for key in boundaryCellsConn:
         if np.any(boundaryCellsConn[key] == -1):
             print("ERROR: some connectivity not established for boundary "+key)
+
 
         wrappedData = dsa.WrapDataObject(patchData)
-        #wd.FieldData[key] = boundaryCellsConn[key]
         wrappedData.FieldData.append(boundaryCellsConn[key], key)
-        #toVtk = numpy_to_vtk(boundaryCellsConn[key])
-        #print(key)
-        #print(boundaryCellsConn[key])
-        #toVtk.SetName(key)
-        #patchData.GetFieldData().AddArray(toVtk)
-
-
-def mark_boundary_cells(patchData, patchPolys):
-
-    boundaryCellsConn = OrderedDict()
-    cellCenters = vtk.vtkCellCenters()
-
-    for boundary in patchPolys:
-        boundaryCellsConn[boundary] = -1*np.ones(patchPolys[boundary].GetNumberOfCells())
-
-    for cellI in range(patchData.GetNumberOfCells()):
-        print_progress(cellI, patchData.GetNumberOfCells(), 5, 1)
-
-        cellPointsIds = get_cell_points(patchData, cellI)
-
-        for boundary in patchPolys:
-
-            polyI = patchPolys[boundary]
-            cellCenters.SetInputData(polyI)
-            cellCenters.Update()
-
-            boundaryPoints = np.copy(dsa.WrapDataObject(polyI).Points)
-
-            boundaryPointIds = get_point_ids(patchData, boundaryPoints)
-
-            intersection = np.intersect1d(cellPointsIds, boundaryPointIds)
-            if intersection.size >= 2:
-                point1 = np.array(patchData.GetPoint(intersection[0]))
-                point2 = np.array(patchData.GetPoint(intersection[1]))
-                midPoint = 0.5*(point1 + point2)
-                idOnPatchPoly = cellCenters.GetOutput().FindPoint(midPoint)
-                boundaryCellsConn[boundary][idOnPatchPoly] = cellI
-
-    # Check if some connectivity is not establishes
-    for key in boundaryCellsConn:
-        if np.any(boundaryCellsConn[key] == -1):
-            print("ERROR: some connectivity not established for boundary "+key)
-
-    for key in boundaryCellsConn:
-        toVtk = numpy_to_vtk(boundaryCellsConn[key])
-        toVtk.SetName(key)
-        patchData.GetFieldData().AddArray(toVtk)
 
 
 def add_boundary_names_to_fielddata(polyData, boundaryData):
@@ -617,7 +605,7 @@ def main():
     add_boundary_names_to_fielddata(internalData, boundaryData)
 
     print("Marking boundary cells.")
-    mark_boundary_cells_2(internalData, boundaryData)
+    mark_boundary_cells(internalData, boundaryData)
 
     print("Assembling multi-block structure")
     multiBlock = assemble_multiblock(internalData, boundaryData)
