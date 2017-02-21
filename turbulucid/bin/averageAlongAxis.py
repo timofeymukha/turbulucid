@@ -334,6 +334,46 @@ def get_point_ids(polyData, points):
     return ids
 
 
+def get_closest_cell(point, internalData):
+    """For a given point, find the cell located closest to it.
+
+    Based on vtkCell.EvaluatePosition.
+
+    Parameters
+    ---------
+    point : triple
+        The point for which to find the closest cell.
+    internalData : polydata
+        The polydata with the cells.
+
+    Returns
+    -------
+        The id of the cell and the distance to it
+
+
+    """
+    distance = np.zeros(internalData.GetNumberOfCells())
+
+    closestPoint = [0, 0, 0]
+    subId = vtk.mutable(0)
+    dist2 = vtk.mutable(0.0)
+    pcoords = [0, 0, 0]
+    weights = []
+
+    for i in range(distance.shape[0]):
+        cellI = internalData.GetCell(i)
+        found = cellI.EvaluatePosition(point, closestPoint, subId,
+                                       pcoords, dist2, weights)
+        distance[i] = dist2
+        if found == -1:
+            print("    ERROR: could not evaluate position for "
+                  "cell", i)
+
+    foundCellId = np.argmin(distance)
+
+    return foundCellId, distance[foundCellId]
+
+
 def mark_boundary_cells(patchData, patchPolys):
     """Find the internal cell adjacent to each cell in the boundary
     data.
@@ -377,23 +417,10 @@ def mark_boundary_cells(patchData, patchPolys):
                       pointI, "on boundary", boundary)
                 print("    Attempting with slow algorithm based on minimum"
                       " distance")
-                distance = np.zeros(patchData.GetNumberOfCells())
+                foundCellId, distance = get_closest_cell(pointI, patchData)
 
-                closestPoint = [0, 0, 0]
-                subId = vtk.mutable(0)
-                dist2 = vtk.mutable(0.0)
-                for j in range(distance.shape[0]):
-                    cellI = patchData.GetCell(i)
-                    found = cellI.EvaluatePosition(pointI, closestPoint, subId,
-                                                   pcoords, dist2, weights)
-                    distance[j] = dist2
-                    if found == -1:
-                        print("    ERROR: could not evaluate position for "
-                              "cell", j)
-
-                foundCellId = np.argmin(distance)
                 print("    Found cell with id", foundCellId, "located",
-                      distance[foundCellId], "away.")
+                      distance, "away.")
                 boundaryCellsConn[boundary][i] = foundCellId
 
     for key in boundaryCellsConn:
