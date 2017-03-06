@@ -76,7 +76,7 @@ def print_progress(current, total, freq=10., tabLevel=0):
     for i in range(tabLevel):
         tabs += "    "
 
-    if np.mod(current, total/freq) == 0:
+    if np.mod(current, int(float(total)/freq)) == 0:
         print(tabs+"Done about "+str(int(current/total*100.))+"%")
 
 
