@@ -118,7 +118,7 @@ def block_data(case):
     return {'connectivity':connectivityMatrix, 'sizes':sizesMatrix}
 
 
-def open_field(case, fieldName, time, utilName = "averageAlongAxis"):
+def open_field(case, fieldName, time, utilName="averageAlongAxis"):
 
     blockData = case["blockData"]
     case = case["case"]
