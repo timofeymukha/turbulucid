@@ -17,8 +17,8 @@ def dns_schlatter():
     Return the path to the DNS dataset by Schlatter et al for the ZPGTBL.
     """
 
-    return os.path.join(sys.modules[__name__].__file__, "..","datasets",
-                        "zpgtbl_dns_schlatter.hdf5")
+    return os.path.join(os.path.dirname(sys.modules[__name__].__file__),
+                        "datasets", "zpgtbl_dns_schlatter.hdf5")
 
 
 def dns_schlatter_retheta():
