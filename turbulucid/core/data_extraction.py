@@ -10,7 +10,8 @@ from vtk.util.numpy_support import vtk_to_numpy
 from scipy.interpolate import interp1d
 from collections import OrderedDict
 
-__all__ = ["interpolate_dataset", "profile_along_line", "dist"]
+__all__ = ["interpolate_dataset", "profile_along_line", "tangents", "normals",
+           "dist"]
 
 
 def profile_along_line(case, p1, p2, correctDistance=False,
@@ -159,7 +160,74 @@ def profile_along_line(case, p1, p2, correctDistance=False,
     return distance, dataNumpy
 
 
-def dist(case, name):
+def tangents(case, name):
+    """ Compute tangent vectors for a given boundary.
+
+    Parameters
+    ----------
+    case : Case
+        The case to extract data from.
+    name : str
+        The name of the boundary.
+
+    Returns
+    -------
+    ndarray
+        The tangent vectors
+
+    """
+    block = case.extract_block_by_name(name)
+    nCells = block.GetNumberOfCells()
+
+    tangents = np.zeros([nCells, 3])
+
+    for cellI in range(nCells):
+        cell = block.GetCell(cellI)
+        point0 = np.array(cell.GetPoints().GetPoint(0))
+        point1 = np.array(cell.GetPoints().GetPoint(1))
+        tangents[cellI, :] = (point1 - point0)/np.linalg.norm(point1 - point0)
+
+    return tangents
+
+
+def normals(case, name):
+    """Compute outward  normal vectors for a given boundary.
+
+    Parameters
+    ----------
+    case : Case
+        The case to extract data from.
+    name : str
+        The name of the boundary.
+
+    Returns
+    -------
+    ndarray
+        The outward normal vectors
+
+    """
+    t = tangents(case, name)
+
+    n = np.zeros(t.shape)
+    z = np.array([0, 0, 1])
+
+    for i in range(n.shape[0]):
+        n[i] = np.cross(t[i, :], z)
+
+    boundaryCoords = case.boundary_data(name)[0]
+    cellCoords = case.boundary_cell_data(name)[0]
+    d = cellCoords - boundaryCoords
+
+    for i in range(n.shape[0]):
+        n[i] = np.cross(t[i, :], z)
+        # Ensure it is outward
+        if np.dot(n[i], d[i]) > 0:
+            n[i] = -n[i]
+
+    return n
+
+
+def dist(case, name, corrected=True):
     """Compute the distances between the boundary and the adjacent
     cell-centre.
 
@@ -169,7 +237,9 @@ def dist(case, name):
         The case to extract data from.
     name : str
         The name of the boundary.
-
+    corrected : bool
+        If true, projects the distance between face center and cell
+        center onto the wall-normal direction.
 
     Returns
     -------
@@ -180,9 +250,18 @@ def dist(case, name):
     boundaryCoords = case.boundary_data(name)[0]
     cellCoords = case.boundary_cell_data(name)[0]
 
-    distVectors = cellCoords - boundaryCoords
+    d = cellCoords - boundaryCoords
 
-    return np.linalg.norm(distVectors, axis=1)
+    if not corrected:
+        return np.linalg.norm(d, axis=1)
+    else:
+        n = normals(case, name)
+        dNormal = np.zeros(d.shape[0])
+
+        for i in range(dNormal.size):
+            dNormal[i] = np.linalg.norm(np.dot(d[i, :], n[i, :])*n[i, :])
+
+        return dNormal
 
 
 def interpolate_dataset(dataset, value, xAxis, yAxis):
