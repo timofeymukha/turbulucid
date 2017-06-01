@@ -161,7 +161,7 @@ def profile_along_line(case, p1, p2, correctDistance=False,
 
 
 def tangents(case, name):
-    """ Compute tangent vectors for a given boundary.
+    """ Compute unit tangent vectors for a given boundary.
 
     Parameters
     ----------
@@ -191,7 +191,7 @@ def tangents(case, name):
 
 
 def normals(case, name):
-    """Compute outward  normal vectors for a given boundary.
+    """Compute outward unit normal vectors for a given boundary.
 
     Parameters
     ----------
