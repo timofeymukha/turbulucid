@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-from vtk.numpy_interface import dataset_adapter as dsa
 from vtk.util.numpy_support import numpy_to_vtk
 from vtk.util.numpy_support import vtk_to_numpy
 from collections import OrderedDict
@@ -208,7 +207,7 @@ class Case:
 
         return extractSelection
 
-    def boundary_cell_data(self, boundary):
+    def boundary_cell_data(self, boundary, sort=None):
         """Return cell-centre coordinates and data from cells adjacent
         to a specific boundary.
 
@@ -216,6 +215,10 @@ class Case:
         ----------
         boundary : str
             The name of the boundary.
+        sort : str
+            Whether to sort the data along a coordinate. Use "x" and
+            "y" to sort along x and y, respectively. Default is no
+            sorting.
 
         Returns
         -------
@@ -227,23 +230,43 @@ class Case:
         cCenters.SetInputData(selection.GetOutput())
         cCenters.Update()
 
-        coords = dsa.WrapDataObject(cCenters.GetOutput()).Points
-        data = dsa.WrapDataObject(selection.GetOutput()).CellData
+        points = np.array(dsa.WrapDataObject(cCenters.GetOutput()).Points)
+        dataVTK = dsa.WrapDataObject(selection.GetOutput()).CellData
 
-        return coords, data
+        data = {}
+        for key in dataVTK.keys():
+            data[key] = np.array(dataVTK[key])
+
+        if sort is None:
+            return points, data
+        elif sort == "x":
+            ind = np.argsort(points[:, 0])
+        elif sort == "y":
+            ind = np.argsort(points[:, 1])
+
+        points = points[ind]
+
+        for key in data:
+            data[key] = data[key][ind]
+
+        return points, data
 
     def extract_block_by_name(self, name):
         """Extract a block from the case by a given name."""
 
         return self._blockData.GetBlock(self.boundaries.index(name) + 1)
 
-    def boundary_data(self, boundary):
+    def boundary_data(self, boundary, sort=None):
         """Return cell-center coordinates and data from a boundary.
 
         Parameters
         ----------
         boundary : str
             The name of the boundary.
+        sort : str
+            Whether to sort the data along a coordinate. Use "x" and
+            "y" to sort along x and y, respectively. Default is no
+            sorting.
 
         Returns
         -------
@@ -258,7 +281,23 @@ class Case:
         cCenters.SetInputData(blockData)
         cCenters.Update()
 
-        points = dsa.WrapDataObject(cCenters.GetOutput()).Points
-        data = dsa.WrapDataObject(blockData).CellData
+        points = np.array(dsa.WrapDataObject(cCenters.GetOutput()).Points)
+        dataVTK = dsa.WrapDataObject(blockData).CellData
+
+        data = {}
+        for key in dataVTK.keys():
+            data[key] = np.array(dataVTK[key])
+
+        if sort is None:
+            return points, data
+        elif sort == "x":
+            ind = np.argsort(points[:, 0])
+        elif sort == "y":
+            ind = np.argsort(points[:, 1])
+
+        points = points[ind]
+
+        for key in data:
+            data[key] = data[key][ind]
 
         return points, data
