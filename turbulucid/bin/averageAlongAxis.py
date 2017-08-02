@@ -603,6 +603,7 @@ def main():
     # Case reader
     print("Reading")
     reader = read(casePath)
+    print("Done")
 
     # Writer
     writer = vtk.vtkXMLMultiBlockDataWriter()

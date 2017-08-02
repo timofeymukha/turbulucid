@@ -1,8 +1,6 @@
 from . import core
-from . import zpgtbl
-from . import channel_flow
-
-
+from .flows import zpgtbl
+from .flows import channel_flow
 from .core import *
 
 __all__ = ["core", "zpgtbl", "channel_flow"]
