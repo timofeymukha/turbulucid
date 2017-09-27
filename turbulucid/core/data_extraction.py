@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 from collections import OrderedDict
 
 __all__ = ["interpolate_dataset", "profile_along_line", "tangents", "normals",
-           "dist"]
+           "dist", "sort_indices"]
 
 
 def profile_along_line(case, p1, p2, correctDistance=False,
@@ -298,3 +298,39 @@ def interpolate_dataset(dataset, value, xAxis, yAxis):
 
     dataFile.close()
     return interpX, interpY
+
+
+def sort_indices(case, name, axis):
+    """Compute array of indices sorting the values on
+    a boundary along an axis.
+
+    Parameters
+    ----------
+    case : Case
+        The case to extract data from.
+    name : str
+        The name of the boundary.
+    axis : str
+        "x" or "y", corresponds to sorting along y and x.
+
+    Returns
+    -------
+    ndarray
+        The  array of indices.
+
+    """
+
+    blockData = case.extract_block_by_name(name)
+
+    cCenters = vtk.vtkCellCenters()
+    cCenters.SetInputData(blockData)
+    cCenters.Update()
+
+    points = np.array(dsa.WrapDataObject(cCenters.GetOutput()).Points)
+
+    if axis == "x":
+        return np.argsort(points[:, 0])
+    elif axis == "y":
+        return np.argsort(points[:, 1])
+    else:
+        raise ValueError("axis should be x or y.")
