@@ -301,8 +301,7 @@ def interpolate_dataset(dataset, value, xAxis, yAxis):
 
 
 def sort_indices(case, name, axis):
-    """Compute array of indices sorting the values on
-    a boundary along an axis.
+    """Compute indices sorting the values on a boundary along an axis.
 
     Parameters
     ----------
@@ -310,8 +309,8 @@ def sort_indices(case, name, axis):
         The case to extract data from.
     name : str
         The name of the boundary.
-    axis : str
-        "x" or "y", corresponds to sorting along y and x.
+    axis : {'x', 'y'}
+        Axis to sort along.
 
     Returns
     -------

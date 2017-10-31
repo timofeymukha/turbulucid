@@ -13,9 +13,20 @@ __all__ = ["Case"]
 
 
 class Case:
-    """A class for representing the simulation case.
+    """A class representing a simulation case.
+
     """
     def __init__(self, fileName):
+        """
+        Create Case from file.
+
+        Parameters
+        ----------
+        fileName : str
+            The file to be read in. Should be data in VTK format.
+
+        """
+
         self.fileName = fileName
 
         # Read in the data
@@ -40,7 +51,7 @@ class Case:
         self._fields = self._vtkData.CellData.keys()
 
     def read(self, fileName):
-        """Reads in the data from a file.
+        """Read in the data from a file.
 
         Parameters
         ----------
@@ -65,12 +76,6 @@ class Case:
         reader.Update()
 
         return reader.GetOutput()
-
-    #@property
-    #def reader(self):
-    #    """vtkPolyDataReader : A vtk reader for the stored data."""
-    #
-    #    return self._reader
 
     @property
     def vtkData(self):
@@ -104,7 +109,7 @@ class Case:
 
     @property
     def fields(self):
-        """list : The fields present in the case."""
+        """list of str: The names of the fields present in the case."""
 
         return self._fields
 
@@ -118,12 +123,17 @@ class Case:
         return boundaryList
 
     def __getitem__(self, item):
-        """Return a cell array of a given name.
+        """Return a cell array by name.
 
         Parameters
         ----------
         item : string
             The name of the cell array.
+
+        Returns
+        -------
+        ndarray
+            Array of values of the requested field.
 
         """
         return np.copy(vtk_to_numpy(self.vtkData.CellData[item]))
@@ -215,9 +225,9 @@ class Case:
         ----------
         boundary : str
             The name of the boundary.
-        sort : str
-            Whether to sort the data along a coordinate. Use "x" and
-            "y" to sort along x and y, respectively. Default is no
+        sort : {None, 'x', 'y'}, optional
+            Whether to sort the data along a coordinate. Use 'x' and
+            'y' to sort along x and y, respectively. Default is no
             sorting.
 
         Returns

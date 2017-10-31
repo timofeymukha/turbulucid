@@ -32,7 +32,7 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     Raises
     ------
     ValueError
-        If on or both scaling factors are non-positive.
+        If one or both scaling factors are non-positive.
 
     """
     if (scaleX <= 0) or (scaleY <= 0):
