@@ -54,7 +54,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'turbulucid'
-copyright = u'2016, Timofey Mukha'
+copyright = u'2017, Timofey Mukha'
 author = u'Timofey Mukha'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -88,7 +88,7 @@ exclude_patterns = ['_build']
 #default_role = None
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
-#add_function_parentheses = True
+add_function_parentheses = True
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
@@ -293,3 +293,11 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
+
+def skip(app, what, name, obj, skip, options):
+    if name == "__init__":
+        return False
+    return skip
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip)

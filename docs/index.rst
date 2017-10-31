@@ -1,27 +1,17 @@
-.. turbulucid documentation master file, created by
-   sphinx-quickstart on Mon Apr 04 17:19:58 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 turbulucid
 ==========
 
-Contents:
+Turbulucid is a package for post-processing two-dimensional CFD data.
+The should be saved in VTK format, and be cell-centred.
+This latter is typical of data produced by finite-volume based solvers.
+
+Turbulucid provides functionality for both performing computations on the
+data as well as producing high-quality plots.
+This is achieved by providing simple to use data-extraction functions, that
+use VTK as a back-bone, and plotting functions that use a combination of
+VTK and matplotlib.
 
 .. toctree::
-   :maxdepth: 2
+   :caption: Table of Contents
 
-.. automodule:: turbulucid.core
-   :members:
-.. automodule:: turbulucid.channel_flow
-   :members:
-.. automodule:: turbulucid.zpgtbl
-   :members:
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+   code_reference/index.rst
