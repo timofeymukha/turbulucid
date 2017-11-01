@@ -6,8 +6,39 @@ import matplotlib.pyplot as plt
 import numpy as np
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
+from mpl_toolkits import axes_grid1
 
-__all__ = ["plot_boundaries", "plot_vectors", "plot_streamlines"]
+__all__ = ["plot_boundaries", "plot_vectors", "plot_streamlines", "plot_field",
+           "add_colorbar"]
+
+
+def add_colorbar(data, aspect=20, padFraction=0.5, **kwargs):
+    """Add a vertical color bar to an image plot.
+
+    Parameters
+    ----------
+    data
+        The data with a .axes attribute.
+    aspect : float, optional
+        The ratio between the height and the width of the colorbar.
+    padFraction : float, optional
+        The horizontal distance between the figure and the colorbar
+        as a fraction of the width of the colorbar.
+
+
+    Returns
+    -------
+        colorbar
+
+    """
+    divider = axes_grid1.make_axes_locatable(im.axes)
+    width = axes_grid1.axes_size.AxesY(im.axes, aspect=1./aspect)
+    pad = axes_grid1.axes_size.Fraction(padFraction, width)
+    currentAx = plt.gca()
+    cax = divider.append_axes("right", size=width, pad=pad)
+    plt.sca(currentAx)
+
+    return im.axes.figure.colorbar(im, cax=cax, **kwargs)
 
 
 def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
@@ -90,6 +121,8 @@ def plot_vectors(case, field, color=None,
     planeResolution : 2-tuple, optional
         Only needed in case sampleByPlane is True. Sets the amount of
         sampling points in the x and y directions.
+    plotBoundaries : bool, optional
+        Whether to plot the boundary of the geometry as a black line.
     **kwargs
         Additional arguments to be passed to pyplot.quiver.
 
@@ -206,12 +239,13 @@ def plot_streamlines(case, field, color=None,
     planeResolution : 2-tuple, optional
         Sets the amount of sampling points in the x and y directions.
         Note that this does not control the density of the streamlines.
+    plotBoundaries : bool, optional
+        Whether to plot the boundary of the geometry as a black line.
     **kwargs
         Additional arguments to be passed to pyplot.quiver.
 
 
     """
-
     if type(field) == str:
         data = case[field]
     elif ((type(field) == vtk.numpy_interface.dataset_adapter.VTKArray) or
@@ -268,4 +302,100 @@ def plot_streamlines(case, field, color=None,
         #                       order='F')
         #plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
         #               color=color, **kwargs)
+
+
+def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
+               colorbar=True, **kwargs):
+
+    """Plot a field.
+
+    This function uses a matplotlib PatchCollection to compose the
+    plot. Additional customization parameters can be passed to the
+    constructor of the PatchCollection via kwargs. In particular,
+    cmp can be used to set the colormap and edgecolor to color the
+    edges of the cells.
+
+    Parameters
+    ----------
+    case : Case
+        The case that the vector field used for the streamlines belongs
+        to.
+    field : str or ndarray
+        The scalar field that will be plotted. Either a  string with
+        the name of the field as found in the case or an ndarray with
+        the data.
+    scaleX : float, optional
+        A scaling factor for the abscissa.
+    scaleY : float, optional
+        A scaling factor for the ordinate.
+    plotBoundaries : bool, optional
+        Whether to plot the boundary of the geometry as a black line.
+    **kwargs
+        Additional arguments to be passed to PatchCollection constructor.
+
+    Raises
+    ------
+    TypeError
+        If field is neither a string or and ndarray.
+    ValueError
+        If the field to be plotted has more dimensions than one.
+        If one or both scaling factors are non-positive.
+
+    Returns
+    -------
+    PatchCollection
+        The collection of polygons defining the cells.
+
+    """
+    if type(field) == str:
+        data = case[field]
+    elif ((type(field) == vtk.numpy_interface.dataset_adapter.VTKArray) or
+         (type(field) == np.ndarray)):
+        case['temp'] = field
+        data = case['temp']
+    else:
+        raise TypeError("field should be a name of an existing field or an"
+                        " array of values. Got "+str(type(field)))
+
+    if np.ndim(data) > 1:
+        raise ValueError("The selected field appears to not be a scalar!")
+
+    if (scaleX <= 0) or (scaleY <= 0):
+        raise ValueError("Scaling factors must be positive.")
+
+    polys = []
+    for i in range(case.vtkData.GetNumberOfCells()):
+        cell = case.vtkData.GetCell(i)
+        nPoints = cell.GetNumberOfPoints()
+        points = np.zeros((nPoints, 2))
+        for pointI in range(nPoints):
+            points[pointI, :] = cell.GetPoints().GetPoint(pointI)[:2]
+            points[pointI, :] /= [scaleX, scaleY]
+
+        polys.append(Polygon(points))
+
+    patchCollection = PatchCollection(polys, **kwargs)
+    if not "edgecolor" in kwargs:
+        patchCollection.set_edgecolor("face")
+    patchCollection.set_array(data)
+
+    minY = np.min(case.cellCentres[:, 1])/scaleY
+    minX = np.min(case.cellCentres[:, 0])/scaleX
+    maxY = np.max(case.cellCentres[:, 1])/scaleY
+    maxX = np.max(case.cellCentres[:, 0])/scaleX
+    marginX = (maxX - minX)/60
+    marginY = (maxY - minY)/60
+
+    fig, ax = plt.subplots()
+    ax.add_collection(patchCollection)
+    ax.set_xlim([minX - marginX, maxX + marginX])
+    ax.set_ylim([minY - marginY, maxY + marginY])
+    ax.set_aspect('equal')
+
+    if colorbar:
+        add_colorbar(patchCollection)
+
+    if plotBoundaries:
+        plot_boundaries(case, scaleX=scaleX, scaleY=scaleY)
+    return patchCollection
 
