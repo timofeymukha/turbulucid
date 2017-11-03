@@ -112,7 +112,9 @@ class Reader():
     """Abstract base class for file readers."""
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, filename):
+    def __init__(self, fileName):
+        if not os.path.exists(fileName):
+            raise ValueError("ERROR: The file "+fileName+" does not exist")
         pass
 
     @abc.abstractproperty
@@ -120,7 +122,7 @@ class Reader():
         pass
 
     @abc.abstractproperty
-    def filename(self):
+    def fileName(self):
         pass
 
     @abc.abstractproperty
@@ -201,9 +203,9 @@ class LegacyReader(Reader):
         Reader.__init__(self, filename)
 
         self._vtkReader = vtk.vtkPolyDataReader()
-        self._filename = filename
+        self._fileName = filename
 
-        self._vtkReader.SetFileName(self._filename)
+        self._vtkReader.SetFileName(self._fileName)
         self._vtkReader.Update()
         internalData = self._transform()
         boundaryData = self._extract_boundary_data(internalData)
@@ -216,8 +218,34 @@ class LegacyReader(Reader):
         return self._vtkReader
 
     @property
-    def filename(self):
-        return self._filename
+    def fileName(self):
+        return self._fileName
+
+    @property
+    def data(self):
+        return self._data
+
+
+class NativeReader(Reader):
+    """Reader for native turbulucid format."""
+
+    def __init__(self, fileName):
+        Reader.__init__(self, fileName)
+
+        self._vtkReader = vtk.vtkXMLMultiBlockDataReader()
+        self._fileName = fileName
+
+        self._vtkReader.SetFileName(self._fileName)
+        self._vtkReader.Update()
+        self._data = self._vtkReader.GetOutput()
+
+    @property
+    def vtkReader(self):
+        return self._vtkReader
+
+    @property
+    def fileName(self):
+        return self._fileName
 
     @property
     def data(self):

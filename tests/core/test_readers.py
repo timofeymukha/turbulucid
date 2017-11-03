@@ -61,17 +61,6 @@ def write_data(data, path, format):
     return writer.GetFileName()
 
 
-def test_block_structure(tmpdir):
-    data = create_single_cell(0, [0, 1, 0], 0)
-    filename = write_data(data, tmpdir, "vtk")
-    reader = LegacyReader(filename)
-    readerData = reader.data
-
-    assert(readerData.GetNumberOfBlocks() == 2)
-    assert(readerData.GetMetaData(0).Get(vtk.vtkCompositeDataSet.NAME()) ==
-           "internalField")
-    assert(readerData.GetMetaData(1).Get(vtk.vtkCompositeDataSet.NAME()) ==
-           "boundary")
 
 
 # Fixtures for testing different types of initial data
@@ -154,5 +143,28 @@ def test_legacy_zvalue_different_axis(different_axis, tmpdir):
     zvalue(different_axis, tmpdir)
 
 
+# Test multiblock structure
+def test_block_structure(tmpdir):
+    data = create_single_cell(0, [0, 1, 0], 0)
+    filename = write_data(data, tmpdir, "vtk")
+    reader = LegacyReader(filename)
+    readerData = reader.data
 
+    assert(readerData.GetNumberOfBlocks() == 2)
+    assert(readerData.GetMetaData(0).Get(vtk.vtkCompositeDataSet.NAME()) ==
+           "internalField")
+    assert(readerData.GetMetaData(1).Get(vtk.vtkCompositeDataSet.NAME()) ==
+           "boundary")
+
+
+# Test boundary field data
+def test_boundary_field_data(tmpdir):
+    data = create_single_cell(0, [0, 1, 0], 0)
+    filename = write_data(data, tmpdir, "vtk")
+    reader = LegacyReader(filename)
+    readerData = reader.data
+    w = dsa.WrapDataObject(readerData.GetBlock(0))
+
+    assert("boundaries" in w.FieldData.keys())
+    assert(w.FieldData["boundaries"].GetNumberOfTuples() == 1)
 

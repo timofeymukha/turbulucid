@@ -8,6 +8,7 @@ from collections import OrderedDict
 import os
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
+from .readers import NativeReader, LegacyReader
 
 __all__ = ["Case"]
 
@@ -42,8 +43,6 @@ class Case:
 
         self._vtkData = dsa.WrapDataObject(self._blockData.GetBlock(0))
 
-        self._zValue = self._vtkData.Points[0, 2]
-
         self._boundaries = self._fill_boundary_list()
 
         self._bounds = self._vtkData.VTKObject.GetBounds()
@@ -64,18 +63,15 @@ class Case:
             If the provided file does not exist.
 
         """
-        if not os.path.exists(fileName):
-            raise ValueError("ERROR: The file "+fileName+" does not exist")
 
         fileExt = os.path.splitext(fileName)[1]
 
         if fileExt == ".vtm":
-            reader = vtk.vtkXMLMultiBlockDataReader()
-
-        reader.SetFileName(fileName)
-        reader.Update()
-
-        return reader.GetOutput()
+            return NativeReader(fileName).data
+        elif fileExt == ".vtk":
+            return LegacyReader(fileName).data
+        else:
+            raise ValueError("Unsupported file format.")
 
     @property
     def vtkData(self):
@@ -88,12 +84,6 @@ class Case:
         """wrapped VTKArray : the cell centres of the read data """
 
         return self._cellCentres
-
-    @property
-    def zValue(self):
-        """float : the value of z for the considered geometry."""
-
-        return self._zValue
 
     @property
     def boundaries(self):
@@ -136,6 +126,9 @@ class Case:
             Array of values of the requested field.
 
         """
+        if item not in self._fields:
+            raise ValueError("Field " + item + " not present in the case.")
+
         return np.copy(vtk_to_numpy(self.vtkData.CellData[item]))
 
     def __setitem__(self, item, values):
