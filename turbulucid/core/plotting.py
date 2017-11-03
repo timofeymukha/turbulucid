@@ -7,13 +7,16 @@ import numpy as np
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
 from mpl_toolkits import axes_grid1
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Polygon
+
 
 __all__ = ["plot_boundaries", "plot_vectors", "plot_streamlines", "plot_field",
            "add_colorbar"]
 
 
 def add_colorbar(data, aspect=20, padFraction=0.5, **kwargs):
-    """Add a vertical color bar to an image plot.
+    """Add a vertical colorbar to an image plot.
 
     Parameters
     ----------
@@ -28,26 +31,27 @@ def add_colorbar(data, aspect=20, padFraction=0.5, **kwargs):
 
     Returns
     -------
-        colorbar
+    colorbar
+        The colorbar object
 
     """
-    divider = axes_grid1.make_axes_locatable(im.axes)
-    width = axes_grid1.axes_size.AxesY(im.axes, aspect=1./aspect)
+    divider = axes_grid1.make_axes_locatable(data.axes)
+    width = axes_grid1.axes_size.AxesY(data.axes, aspect=1./aspect)
     pad = axes_grid1.axes_size.Fraction(padFraction, width)
     currentAx = plt.gca()
     cax = divider.append_axes("right", size=width, pad=pad)
     plt.sca(currentAx)
 
-    return im.axes.figure.colorbar(im, cax=cax, **kwargs)
+    return data.axes.figure.colorbar(data, cax=cax, **kwargs)
 
 
 def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     """Plot the boundaries the domain.
 
     The function defines a field that is 1 at the boundary and zero
-    elsewhere. A contour plot of this field is the produced using
+    elsewhere. A contour plot of this field is then produced using
     pyplot.tricontour. See the documentation of this function for
-    additional customization parameters.
+    additional keyword arguments.
 
     Parameters
     ----------
@@ -64,6 +68,11 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     ------
     ValueError
         If one or both scaling factors are non-positive.
+
+    Returns
+    -------
+    TriContourSet
+        As returned by pyplot.tricontour.
 
     """
     if (scaleX <= 0) or (scaleY <= 0):
@@ -85,7 +94,7 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     z = np.zeros(pointsX.shape[0])
     z[-nEdgePoints:] = 1
 
-    plt.tricontour(triang, z, levels=[1], **kwargs)
+    return plt.tricontour(triang, z, levels=[1], **kwargs)
 
 
 def plot_vectors(case, field, color=None,
@@ -96,7 +105,7 @@ def plot_vectors(case, field, color=None,
     """Plot a vector field.
 
     This function wraps pyplot.quiver. See that function's documentation
-    for additional customization parameters.
+    for additional keyword argumnets.
 
     Parameters
     ----------
@@ -133,6 +142,11 @@ def plot_vectors(case, field, color=None,
     ValueError
         If the data to be plotted has less dimensions than two.
         If one or both scaling factors are non-positive.
+
+    Returns
+    -------
+    Quiver
+        As returned by pyplot.quiver.
 
     """
     pointsX = np.copy(case.cellCentres[:, 0])
@@ -200,12 +214,12 @@ def plot_vectors(case, field, color=None,
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
 
-    if (color == None) or sampleByPlane:
-        plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0], data[:, 1],
-                   **kwargs)
+    if (color is None) or sampleByPlane:
+        return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
+                          data[:, 1], **kwargs)
     else:
-        plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0], data[:, 1],
-                   color, **kwargs)
+        return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
+                          data[:, 1], color, **kwargs)
 
 
 def plot_streamlines(case, field, color=None,
@@ -244,12 +258,24 @@ def plot_streamlines(case, field, color=None,
     **kwargs
         Additional arguments to be passed to pyplot.quiver.
 
+    Raises
+    ------
+    TypeError
+        If field is neither a string or and ndarray.
+    ValueError
+        If the data to be plotted has less dimensions than two.
+        If one or both scaling factors are non-positive.
+
+    Returns
+    -------
+    StreamPlotSet
+        As returned by pyplot.streamplot.
 
     """
     if type(field) == str:
         data = case[field]
     elif ((type(field) == vtk.numpy_interface.dataset_adapter.VTKArray) or
-              (type(field) == np.ndarray)):
+          (type(field) == np.ndarray)):
         case['temp'] = field
         data = case['temp']
     else:
@@ -294,14 +320,16 @@ def plot_streamlines(case, field, color=None,
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
 
-    if color == None:
-        plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY, **kwargs)
+    if color is None:
+        return plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
+                              **kwargs)
     else:
-        plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY, **kwargs)
-        #color = color.reshape((planeResolution[0]+1, planeResolution[1]+1),
-        #                       order='F')
-        #plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
-        #               color=color, **kwargs)
+        return plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
+                              **kwargs)
+#       color = color.reshape((planeResolution[0]+1, planeResolution[1]+1),
+#                              order='F')
+#       plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
+#                      color=color, **kwargs)
 
 
 def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
@@ -330,6 +358,8 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
         A scaling factor for the ordinate.
     plotBoundaries : bool, optional
         Whether to plot the boundary of the geometry as a black line.
+    colorbar : bool, optional
+        Whether to add a vertical colorbar to the right of the plot.
     **kwargs
         Additional arguments to be passed to PatchCollection constructor.
 
@@ -350,7 +380,7 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
     if type(field) == str:
         data = case[field]
     elif ((type(field) == vtk.numpy_interface.dataset_adapter.VTKArray) or
-         (type(field) == np.ndarray)):
+          (type(field) == np.ndarray)):
         case['temp'] = field
         data = case['temp']
     else:
@@ -375,7 +405,7 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
         polys.append(Polygon(points))
 
     patchCollection = PatchCollection(polys, **kwargs)
-    if not "edgecolor" in kwargs:
+    if "edgecolor" not in kwargs:
         patchCollection.set_edgecolor("face")
     patchCollection.set_array(data)
 
@@ -398,4 +428,3 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY)
     return patchCollection
-
