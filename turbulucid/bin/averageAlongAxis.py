@@ -427,7 +427,6 @@ def mark_boundary_cells(patchData, patchPolys):
         if np.any(boundaryCellsConn[key] == -1):
             print("ERROR: some connectivity not established for boundary "+key)
 
-
         wrappedData = dsa.WrapDataObject(patchData)
         wrappedData.FieldData.append(boundaryCellsConn[key], key)
 
