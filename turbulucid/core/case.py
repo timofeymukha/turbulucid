@@ -49,6 +49,10 @@ class Case:
 
         self._fields = self._vtkData.CellData.keys()
 
+        plot_limits = self._compute_plot_limits()
+        self._xlim = plot_limits[0]
+        self._ylim = plot_limits[1]
+
     def read(self, fileName):
         """Read in the data from a file.
 
@@ -102,6 +106,22 @@ class Case:
         """list of str: The names of the fields present in the case."""
 
         return self._fields
+
+    @property
+    def xlim(self):
+        """list of two floats: The x limits that cover the
+        geometry of the case, plus small a margin.
+
+        """
+        return self._xlim
+
+    @property
+    def ylim(self):
+        """list of two floats: The y limits that cover the
+        geometry of the case, plus a small margin.
+
+        """
+        return self._ylim
 
     def _fill_boundary_list(self):
         fieldData = self.vtkData.FieldData['boundaries']
@@ -176,6 +196,19 @@ class Case:
         """
         self.vtkData.VTKObject.GetCellData().RemoveArray(item)
         self.fields.remove(item)
+
+    def _compute_plot_limits(self):
+        """ Compute xlim and ylim."""
+
+        minX = np.min(self._cellCentres[:, 0])
+        maxX = np.max(self._cellCentres[:, 0])
+        minY = np.min(self._cellCentres[:, 1])
+        maxY = np.max(self._cellCentres[:, 1])
+        marginX = (maxX - minX)/60
+        marginY = (maxY - minY)/60
+
+        return ([minX - marginX, maxX + marginX],
+                [minY - marginY, maxY + marginY])
 
     def extract_boundary_cells(self, boundary):
         """Extract cells adjacent to a certain boundary.
