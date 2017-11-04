@@ -8,6 +8,7 @@ import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
 from mpl_toolkits import axes_grid1
 from matplotlib.collections import PatchCollection
+from matplotlib.collections import LineCollection
 from matplotlib.patches import Polygon
 
 
@@ -48,11 +49,6 @@ def add_colorbar(data, aspect=20, padFraction=0.5, **kwargs):
 def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     """Plot the boundaries the domain.
 
-    The function defines a field that is 1 at the boundary and zero
-    elsewhere. A contour plot of this field is then produced using
-    pyplot.tricontour. See the documentation of this function for
-    additional keyword arguments.
-
     Parameters
     ----------
     case : Case
@@ -71,30 +67,29 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
 
     Returns
     -------
-    TriContourSet
-        As returned by pyplot.tricontour.
+    LineCollection
+        Collection of line segments defining the boundary.
 
     """
     if (scaleX <= 0) or (scaleY <= 0):
         raise ValueError("Scaling factors must be positive.")
 
-    pointsX = np.copy(case.cellCentres[:, 0])
-    pointsY = np.copy(case.cellCentres[:, 1])
+    ax = plt.gca()
+    segments = []
+    for boundary in case.boundaries:
+        block = case.extract_block_by_name(boundary)
+        for c in range(block.GetNumberOfCells()):
+            point0= block.GetCell(c).GetPoints().GetPoint(0)[:2]
+            point1 = block.GetCell(c).GetPoints().GetPoint(1)[:2]
+            segments.append((point0, point1))
+    collection = LineCollection(segments)
 
-    nEdgePoints = 0
-    for i in case.boundaries:
-        block = dsa.WrapDataObject(case.extract_block_by_name(i))
+    ax.add_collection(collection)
+    ax.set_xlim(case.xlim/scaleX)
+    ax.set_ylim(case.ylim/scaleY)
+    ax.set_aspect('equal')
 
-        points = block.Points
-        nEdgePoints += points.shape[0]
-        pointsX = np.append(pointsX, points[:, 0])
-        pointsY = np.append(pointsY, points[:, 1])
-
-    triang = tri.Triangulation(pointsX/scaleX, pointsY/scaleY)
-    z = np.zeros(pointsX.shape[0])
-    z[-nEdgePoints:] = 1
-
-    return plt.tricontour(triang, z, levels=[1], **kwargs)
+    return collection
 
 
 def plot_vectors(case, field, color=None,
@@ -409,17 +404,10 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
         patchCollection.set_edgecolor("face")
     patchCollection.set_array(data)
 
-    minY = np.min(case.cellCentres[:, 1])/scaleY
-    minX = np.min(case.cellCentres[:, 0])/scaleX
-    maxY = np.max(case.cellCentres[:, 1])/scaleY
-    maxX = np.max(case.cellCentres[:, 0])/scaleX
-    marginX = (maxX - minX)/60
-    marginY = (maxY - minY)/60
-
     fig, ax = plt.subplots()
     ax.add_collection(patchCollection)
-    ax.set_xlim([minX - marginX, maxX + marginX])
-    ax.set_ylim([minY - marginY, maxY + marginY])
+    ax.set_xlim(case.xlim/scaleX)
+    ax.set_ylim(case.ylim/scaleY)
     ax.set_aspect('equal')
 
     if colorbar:
