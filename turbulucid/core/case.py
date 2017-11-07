@@ -345,3 +345,17 @@ class Case:
             data[key] = data[key][ind]
 
         return points, data
+
+    def write(self, writePath):
+        """Save the case to a .vtm format.
+
+        Parameters
+        ----------
+        writePath : str
+            The name of the file.
+
+        """
+        writer = vtk.vtkXMLMultiBlockDataWriter()
+        writer.SetFileName(writePath)
+        writer.SetInputData(self._blockData)
+        writer.Write()
