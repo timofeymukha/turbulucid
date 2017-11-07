@@ -200,15 +200,23 @@ class Case:
     def _compute_plot_limits(self):
         """ Compute xlim and ylim."""
 
-        minX = np.min(self._cellCentres[:, 0])
-        maxX = np.max(self._cellCentres[:, 0])
-        minY = np.min(self._cellCentres[:, 1])
-        maxY = np.max(self._cellCentres[:, 1])
+        minX = np.Inf
+        minY = np.Inf
+        maxX = -np.Inf
+        maxY = -np.Inf
+
+        for b in self.boundaries:
+            x = self.boundary_data(b)[0][:, 0]
+            y = self.boundary_data(b)[0][:, 1]
+            minX = np.min([np.min(x), minX])
+            maxX = np.max([np.max(x), maxX])
+            minY = np.min([np.min(y), minY])
+            maxY = np.max([np.max(y), maxY])
         marginX = (maxX - minX)/60
         marginY = (maxY - minY)/60
 
-        return ([minX - marginX, maxX + marginX],
-                [minY - marginY, maxY + marginY])
+        return (np.array([minX - marginX, maxX + marginX]),
+                np.array([minY - marginY, maxY + marginY]))
 
     def extract_boundary_cells(self, boundary):
         """Extract cells adjacent to a certain boundary.
