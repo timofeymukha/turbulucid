@@ -17,7 +17,7 @@ class Case:
     """A class representing a simulation case.
 
     """
-    def __init__(self, fileName):
+    def __init__(self, fileName, clean=False):
         """
         Create Case from file.
 
