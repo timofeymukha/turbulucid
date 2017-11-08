@@ -10,47 +10,7 @@ import abc
 from vtk.util.numpy_support import numpy_to_vtk
 from vtk.util.numpy_support import vtk_to_numpy
 
-__all__ = ["Reader", "LegacyReader", "mark_boundary_cells", "get_closest_cell"]
-
-
-def get_closest_cell(point, internalData):
-    """For a given point, find the cell located closest to it.
-
-    Based on vtkCell.EvaluatePosition.
-
-    Parameters
-    ---------
-    point : triple
-        The point for which to find the closest cell.
-    internalData : polydata
-        The polydata with the cells.
-
-    Returns
-    -------
-        The id of the cell and the distance to it
-
-
-    """
-    distance = np.zeros(internalData.GetNumberOfCells())
-
-    closestPoint = [0, 0, 0]
-    subId = vtk.mutable(0)
-    dist2 = vtk.mutable(0.0)
-    pcoords = [0, 0, 0]
-    weights = []
-
-    for i in range(distance.shape[0]):
-        cellI = internalData.GetCell(i)
-        found = cellI.EvaluatePosition(point, closestPoint, subId,
-                                       pcoords, dist2, weights)
-        distance[i] = dist2
-        if found == -1:
-            print("    ERROR: could not evaluate position for "
-                  "cell", i)
-
-    foundCellId = np.argmin(distance)
-
-    return foundCellId, distance[foundCellId]
+__all__ = ["Reader", "LegacyReader", "mark_boundary_cells", "NativeReader"]
 
 
 def mark_boundary_cells(internalData, boundaryDataDict):
