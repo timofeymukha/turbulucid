@@ -59,6 +59,30 @@ class Reader():
     def data(self):
         pass
 
+    def _clean(self, data):
+        """Removes cells that have area less than 1e-10. Also runs the
+        data through vtkCleanPolyData().
+
+        """
+        data.BuildLinks()
+
+        area = vtk.vtkMeshQuality()
+        area.SetTriangleQualityMeasureToArea()
+        area.SetInputData(data)
+        area.Update()
+        area = dsa.WrapDataObject(area.GetOutput()).CellData["Quality"]
+
+        for i in range(data.GetNumberOfCells()):
+            if area[i] < 1e-10:
+                data.DeleteCell(i)
+
+        data.RemoveDeletedCells()
+
+        cleaner = vtk.vtkCleanPolyData()
+        cleaner.SetInputData(data)
+        cleaner.Update()
+        return cleaner.GetOutput()
+
     def _transform(self):
         transform = vtk.vtkTransform()
 
@@ -103,8 +127,10 @@ class Reader():
         patchFeatureEdgesFilter.NonManifoldEdgesOff()
         patchFeatureEdgesFilter.ManifoldEdgesOff()
 
+
         patchFeatureEdgesFilter.SetInputData(internalData)
         patchFeatureEdgesFilter.Update()
+
         return patchFeatureEdgesFilter.GetOutput()
 
     def _assemble_multiblock_data(self, internalData, boundaryData):
@@ -129,7 +155,7 @@ class Reader():
 class LegacyReader(Reader):
     """Reader for data in legacy VTK format, i.e. .vtk."""
 
-    def __init__(self, filename):
+    def __init__(self, filename, clean=False):
         Reader.__init__(self, filename)
 
         self._vtkReader = vtk.vtkPolyDataReader()
@@ -137,7 +163,17 @@ class LegacyReader(Reader):
 
         self._vtkReader.SetFileName(self._fileName)
         self._vtkReader.Update()
+
         internalData = self._transform()
+        if clean:
+            internalData = self._clean(internalData)
+
+        n = internalData.GetNumberOfCells()
+        pids = np.arange(n)
+
+        internalData.GetAttributes(vtk.vtkDataObject.CELL).SetPedigreeIds(
+            numpy_to_vtk(pids))
+
         boundaryData = self._extract_boundary_data(internalData)
         bDict = {'boundary': boundaryData}
         mark_boundary_cells(internalData, bDict)
@@ -180,14 +216,3 @@ class NativeReader(Reader):
     @property
     def data(self):
         return self._data
-
-
-
-
-
-
-
-
-
-
-
