@@ -7,6 +7,8 @@ import os
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
 import abc
+from vtk.util.numpy_support import numpy_to_vtk
+from vtk.util.numpy_support import vtk_to_numpy
 
 __all__ = ["Reader", "LegacyReader", "mark_boundary_cells", "get_closest_cell"]
 
@@ -51,7 +53,7 @@ def get_closest_cell(point, internalData):
     return foundCellId, distance[foundCellId]
 
 
-def mark_boundary_cells(patchData, patchPolys):
+def mark_boundary_cells(internalData, boundaryDataDict):
     """Find the internal cell adjacent to each cell in the boundary
     data.
 
@@ -64,47 +66,21 @@ def mark_boundary_cells(patchData, patchPolys):
     boundaryCellsConn = OrderedDict()
     cellCenters = vtk.vtkCellCenters()
 
-    for boundary in patchPolys:
-        boundaryCellsConn[boundary] = -1*np.ones(patchPolys[boundary].GetNumberOfCells(), dtype=np.int32)
+    for boundary in boundaryDataDict:
+        boundaryCellsConn[boundary] = -1*np.ones(boundaryDataDict[boundary].GetNumberOfCells(), dtype=np.int32)
 
-    locator = vtk.vtkCellLocator()
-    locator.SetDataSet(patchData)
-    locator.Update()
+    for boundary in boundaryDataDict:
 
-    for boundary in patchPolys:
+        boundaryDataI = boundaryDataDict[boundary]
 
-        polyI = patchPolys[boundary]
-        cellCenters.SetInputData(polyI)
-        cellCenters.Update()
-
-        points = dsa.WrapDataObject(cellCenters.GetOutput()).Points
-
-        cell = vtk.vtkGenericCell()
-        tol2 = 0.0
-        pcoords = [0, 0, 0]
-        weights = []
-
-        for i in range(points.shape[0]):
-            pointI = points[i, :]
-            foundCellId = locator.FindCell(pointI, tol2, cell, pcoords,
-                                           weights)
-            boundaryCellsConn[boundary][i] = foundCellId
-
-            if foundCellId == -1:
-                print("Failed to find adjacent cell for boundary point",
-                      pointI, "on boundary", boundary)
-                print("    Attempting with slow algorithm based on minimum"
-                      " distance")
-                foundCellId, distance = get_closest_cell(pointI, patchData)
-
-                print("    Found cell with id", foundCellId, "located",
-                      distance, "away.")
-                boundaryCellsConn[boundary][i] = foundCellId
+        boundaryCellsConn[boundary] = \
+            vtk_to_numpy(boundaryDataI.GetAttributes(vtk.vtkDataObject.CELL).
+                         GetPedigreeIds())
 
     for key in boundaryCellsConn:
         if np.any(boundaryCellsConn[key] == -1):
             print("ERROR: some connectivity not established for boundary "+key)
-        wrappedData = dsa.WrapDataObject(patchData)
+        wrappedData = dsa.WrapDataObject(internalData)
         wrappedData.FieldData.append(boundaryCellsConn[key], key)
 
 
