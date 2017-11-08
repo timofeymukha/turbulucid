@@ -24,10 +24,6 @@ def mark_boundary_cells(internalData, boundaryDataDict):
 
     """
     boundaryCellsConn = OrderedDict()
-    cellCenters = vtk.vtkCellCenters()
-
-    for boundary in boundaryDataDict:
-        boundaryCellsConn[boundary] = -1*np.ones(boundaryDataDict[boundary].GetNumberOfCells(), dtype=np.int32)
 
     for boundary in boundaryDataDict:
 
@@ -38,8 +34,6 @@ def mark_boundary_cells(internalData, boundaryDataDict):
                          GetPedigreeIds())
 
     for key in boundaryCellsConn:
-        if np.any(boundaryCellsConn[key] == -1):
-            print("ERROR: some connectivity not established for boundary "+key)
         wrappedData = dsa.WrapDataObject(internalData)
         wrappedData.FieldData.append(boundaryCellsConn[key], key)
 
