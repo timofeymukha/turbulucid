@@ -97,7 +97,7 @@ class Case:
 
     @property
     def bounds(self):
-        """tuple : (min(x), max(x), min(y), max(y), min(z), max(z))."""
+        """tuple : (min(x), max(x), min(y), max(y))."""
 
         return self._bounds
 
