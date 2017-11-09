@@ -39,6 +39,13 @@ def profile_along_line(case, p1, p2, correctDistance=False,
     debug : bool
         Debug switch, if True, additional output is given.
 
+    Returns
+    (ndarray, dictionary)
+        The first element of the tuple is an array of coordinates along
+        the line where the data is located. The second element is a
+        dictionary with the case's fields as keys and arrays of values
+        of these fields as values.
+
     """
     # Convert point to ndarrays
     zValue = case.zValue
@@ -262,42 +269,6 @@ def dist(case, name, corrected=True):
             dNormal[i] = np.linalg.norm(np.dot(d[i, :], n[i, :])*n[i, :])
 
         return dNormal
-
-
-def interpolate_dataset(dataset, value, xAxis, yAxis):
-    dataFile = h5py.File(dataset)
-
-    availVals = np.sort(np.array(map(float, dataFile.keys()), dtype=np.int64))
-    if value < availVals.min() or value > availVals.max():
-        raise ValueError("Error: desired value outside available interpolation"
-                         " range")
-
-    argMin = np.argmin(np.abs(availVals - value))
-
-    if availVals[argMin] < value:
-        valLeft = str(availVals[argMin])
-        valRight = str(availVals[argMin+1])
-    else:
-        valLeft = str(availVals[argMin-1])
-        valRight = str(availVals[argMin])
-
-    interpLeft = interp1d(dataFile[valLeft][xAxis],
-                          dataFile[valLeft][yAxis])
-
-    interpRight = interp1d(dataFile[valRight][xAxis],
-                           dataFile[valRight][yAxis])
-
-    interpX = dataFile[valRight][xAxis][:]
-
-    interpY = np.zeros(interpX.shape)
-
-    for i in range(interpX.size):
-        interpY[i] = interp1d(np.array([float(valLeft), float(valRight)]),
-                              np.array([interpLeft(interpX[i]),
-                                        interpRight(interpX[i])]))(value)
-
-    dataFile.close()
-    return interpX, interpY
 
 
 def sort_indices(case, name, axis):
