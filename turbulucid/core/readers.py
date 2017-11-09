@@ -167,6 +167,7 @@ class LegacyReader(Reader):
         internalData = self._transform()
         if clean:
             internalData = self._clean(internalData)
+        internalData.BuildLinks()
 
         n = internalData.GetNumberOfCells()
         pids = np.arange(n)

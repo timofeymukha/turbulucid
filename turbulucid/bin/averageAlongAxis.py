@@ -619,6 +619,7 @@ def main():
     # The polyData for the 2d fields, copied from the seed patch
     internalData = vtk.vtkPolyData()
     internalData.ShallowCopy(seedPatchBlock)
+    internalData.BuildLinks()
 
     print("Sampling and averaging internal field")
     zero_out_arrays(internalData)
