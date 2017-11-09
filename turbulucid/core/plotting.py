@@ -79,7 +79,7 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     for boundary in case.boundaries:
         block = case.extract_block_by_name(boundary)
         for c in range(block.GetNumberOfCells()):
-            point0= block.GetCell(c).GetPoints().GetPoint(0)[:2]
+            point0 = block.GetCell(c).GetPoints().GetPoint(0)[:2]
             point1 = block.GetCell(c).GetPoints().GetPoint(1)[:2]
             segments.append((point0, point1))
     collection = LineCollection(segments)
@@ -400,6 +400,7 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
         polys.append(Polygon(points))
 
     patchCollection = PatchCollection(polys, **kwargs)
+
     if "edgecolor" not in kwargs:
         patchCollection.set_edgecolor("face")
     patchCollection.set_array(data)

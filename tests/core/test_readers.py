@@ -125,11 +125,6 @@ def zvalue(fixture, tmpdir):
         zValue = readerData.GetBlock(0).GetPoint(pointI)[-1]
         assert_allclose(zValue, [0], rtol=1e-5, atol=1e-5)
 
-    #w = dsa.WrapDataObject(readerData.GetBlock(0))
-    #assert("boundary" in w.FieldData.keys())
-    #assert(w.FieldData["boundary"].size == 4)
-    #assert(np.all(w.FieldData["boundary"] == 0))
-
 
 def test_legacy_zvalue_different_z(different_z, tmpdir):
     zvalue(different_z, tmpdir)
@@ -167,4 +162,3 @@ def test_boundary_field_data(tmpdir):
 
     assert("boundaries" in w.FieldData.keys())
     assert(w.FieldData["boundaries"].GetNumberOfTuples() == 1)
-
