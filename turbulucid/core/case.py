@@ -26,12 +26,14 @@ class Case:
         fileName : str
             The file to be read in. Should be data in VTK format.
 
-        """
+        clean : bool
+            Whether to attempt to clean the data of redundant cells.
 
+        """
         self.fileName = fileName
 
         # Read in the data
-        self._blockData = self.read(fileName)
+        self._blockData = self.read(clean)
 
         # Compute the cell-centres
         self._cellCentres = vtk.vtkCellCenters()
@@ -45,7 +47,7 @@ class Case:
 
         self._boundaries = self._fill_boundary_list()
 
-        self._bounds = self._vtkData.VTKObject.GetBounds()
+        self._bounds = self._vtkData.VTKObject.GetBounds()[:4]
 
         self._fields = self._vtkData.CellData.keys()
 
@@ -53,29 +55,13 @@ class Case:
         self._xlim = plot_limits[0]
         self._ylim = plot_limits[1]
 
-    def read(self, fileName):
-        """Read in the data from a file.
-
-        Parameters
-        ----------
-        fileName : str
-            The path to the file with the data.
-
-        Raises
-        ------
-        ValueError
-            If the provided file does not exist.
+    @property
+    def blockData(self):
+        """vtkMultiBlockDataSet : the multiblock data assembled by the
+        reader.
 
         """
-
-        fileExt = os.path.splitext(fileName)[1]
-
-        if fileExt == ".vtm":
-            return NativeReader(fileName).data
-        elif fileExt == ".vtk":
-            return LegacyReader(fileName).data
-        else:
-            raise ValueError("Unsupported file format.")
+        return self._blockData
 
     @property
     def vtkData(self):
@@ -200,23 +186,85 @@ class Case:
     def _compute_plot_limits(self):
         """ Compute xlim and ylim."""
 
-        minX = np.Inf
-        minY = np.Inf
-        maxX = -np.Inf
-        maxY = -np.Inf
+        minX = self.bounds[0]
+        maxX = self.bounds[1]
+        minY = self.bounds[2]
+        maxY = self.bounds[3]
 
-        for b in self.boundaries:
-            x = self.boundary_data(b)[0][:, 0]
-            y = self.boundary_data(b)[0][:, 1]
-            minX = np.min([np.min(x), minX])
-            maxX = np.max([np.max(x), maxX])
-            minY = np.min([np.min(y), minY])
-            maxY = np.max([np.max(y), maxY])
         marginX = (maxX - minX)/60
         marginY = (maxY - minY)/60
 
         return (np.array([minX - marginX, maxX + marginX]),
                 np.array([minY - marginY, maxY + marginY]))
+
+    def _transform(self, transform):
+        """Transform the geometry according to a vtkTransform filter."""
+
+        # Transform the internal field
+        filter = vtk.vtkTransformPolyDataFilter()
+        filter.SetInputData(self.blockData.GetBlock(0))
+        filter.SetTransform(transform)
+        filter.Update()
+
+        self._blockData.SetBlock(0, filter.GetOutput())
+
+        # Transform boundary data
+        i = 1
+        for boundary in self.boundaries:
+            filter = vtk.vtkTransformPolyDataFilter()
+            filter.SetTransform(transform)
+            filter.SetInputData(self.blockData.GetBlock(i))
+            filter.Update()
+            self.blockData.SetBlock(i, filter.GetOutput())
+            i += 1
+
+        # Update attuributes
+        self._cellCentres = vtk.vtkCellCenters()
+        self._cellCentres.SetInputData(self.blockData.GetBlock(0))
+        self._cellCentres.Update()
+        self._cellCentres = \
+            dsa.WrapDataObject(self._cellCentres.GetOutput()).GetPoints()
+        self._cellCentres = np.array(self._cellCentres[:, :2])
+
+        self._vtkData = dsa.WrapDataObject(self._blockData.GetBlock(0))
+
+        self._bounds = self._vtkData.VTKObject.GetBounds()[:4]
+
+        plot_limits = self._compute_plot_limits()
+        self._xlim = plot_limits[0]
+        self._ylim = plot_limits[1]
+
+    def translate(self, dx, dy):
+        """Translate the geometry of the case.
+
+        Parameters
+        ----------
+        dx : float
+            The translation along the x axis.
+        dy : float
+            The translation along the y axis.
+
+        """
+        transform = vtk.vtkTransform()
+        transform.Translate(dx, dy, 0)
+        transform.Update()
+
+        self._transform(transform)
+
+    def rotate(self, angle):
+        """Rotate the geometry of the case around the z axis.
+
+        Parameters
+        ----------
+        dx : angle
+            Rotation angle in degrees.
+
+        """
+        axis = [0, 0, 1]
+        transform = vtk.vtkTransform()
+        transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
+        transform.Update()
+        self._transform(transform)
 
     def extract_boundary_cells(self, boundary):
         """Extract cells adjacent to a certain boundary.
@@ -345,6 +393,32 @@ class Case:
             data[key] = data[key][ind]
 
         return points, data
+
+    def read(self, clean):
+        """Read in the data from a file.
+
+        Parameters
+        ----------
+        clean : bool
+            Whether to attempt cleaning the case of degenerate cells upon
+            read.
+
+        Raises
+        ------
+        ValueError
+            If the provided file does not exist.
+
+        """
+        fileName = self.fileName
+
+        fileExt = os.path.splitext(fileName)[1]
+
+        if fileExt == ".vtm":
+            return NativeReader(fileName).data
+        elif fileExt == ".vtk":
+            return LegacyReader(fileName, clean=clean).data
+        else:
+            raise ValueError("Unsupported file format.")
 
     def write(self, writePath):
         """Save the case to a .vtm format.
