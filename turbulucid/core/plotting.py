@@ -86,8 +86,11 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
         for c in range(block.GetNumberOfCells()):
             point0 = block.GetCell(c).GetPoints().GetPoint(0)[:2]
             point1 = block.GetCell(c).GetPoints().GetPoint(1)[:2]
+
+            point0 = np.array(point0)/[scaleX, scaleY]
+            point1 = np.array(point1)/[scaleX, scaleY]
             segments.append((point0, point1))
-    collection = LineCollection(segments)
+    collection = LineCollection(segments, **kwargs)
 
     ax.add_collection(collection)
     ax.set_xlim(case.xlim/scaleX)
@@ -340,7 +343,7 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
     This function uses a matplotlib PatchCollection to compose the
     plot. Additional customization parameters can be passed to the
     constructor of the PatchCollection via kwargs. In particular,
-    cmp can be used to set the colormap and edgecolor to color the
+    cmap can be used to set the colormap and edgecolor to color the
     edges of the cells.
 
     Parameters
@@ -410,7 +413,7 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
         patchCollection.set_edgecolor("face")
     patchCollection.set_array(data)
 
-    fig, ax = plt.subplots()
+    ax = plt.gca()
     ax.add_collection(patchCollection)
     ax.set_xlim(case.xlim/scaleX)
     ax.set_ylim(case.ylim/scaleY)
