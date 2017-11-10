@@ -22,8 +22,7 @@ setup(name='turbulucid',
       install_requires=[
                         'numpy',
                         'scipy',
-                        'matplotlib',
-                        'h5py',
+                        'matplotlib'
                        ],
       license="GNU GPL 3",
       classifiers=[
