@@ -1,4 +1,9 @@
-""" 
+# This file is part of turbulucid
+# (c) Timofey Mukha
+# The code is released under the GNU GPL Version 3 licence.
+# See LICENCE.txt and the Legal section in the User Guide for more information
+
+"""
 ASSMPTIONS
     * The averaging direction is the z axis
     * The geometry is "fit in" between to x-y planes.

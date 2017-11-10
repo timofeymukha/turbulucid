@@ -1,3 +1,8 @@
+# This file is part of turbulucid
+# (c) Timofey Mukha
+# The code is released under the GNU GPL Version 3 licence.
+# See LICENCE.txt and the Legal section in the User Guide for more information
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
