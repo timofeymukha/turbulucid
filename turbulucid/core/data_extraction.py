@@ -14,7 +14,7 @@ from vtk.util.numpy_support import vtk_to_numpy
 from scipy.interpolate import interp1d
 from collections import OrderedDict
 
-__all__ = ["interpolate_dataset", "profile_along_line", "tangents", "normals",
+__all__ = ["profile_along_line", "tangents", "normals",
            "dist", "sort_indices"]
 
 
