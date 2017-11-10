@@ -52,11 +52,10 @@ def profile_along_line(case, p1, p2, correctDistance=False,
 
     """
     # Convert point to ndarrays
-    zValue = case.zValue
 
     # Add the z-value to the points.
-    p1 = np.append(np.array(p1), zValue)
-    p2 = np.append(np.array(p2), zValue)
+    p1 = np.append(np.array(p1), 0)
+    p2 = np.append(np.array(p2), 0)
 
     # Compute the plane-normal as a cross-product
     unit = (p2 - p1)/np.linalg.norm(p2 - p1)

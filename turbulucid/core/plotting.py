@@ -180,9 +180,9 @@ def plot_vectors(case, field, color=None,
         minY = np.min(case.cellCentres[:, 1])
         maxY = np.max(case.cellCentres[:, 1])
 
-        plane.SetOrigin(minX, minY, case.zValue)
-        plane.SetPoint1(minX, maxY, case.zValue)
-        plane.SetPoint2(maxX, minY, case.zValue)
+        plane.SetOrigin(minX, minY, 0)
+        plane.SetPoint1(minX, maxY, 0)
+        plane.SetPoint2(maxX, minY, 0)
         plane.Update()
 
         probeFilter = vtk.vtkProbeFilter()
@@ -290,9 +290,9 @@ def plot_streamlines(case, field, color=None,
         planeResolution = (50, 50)
     plane.SetResolution(planeResolution[0], planeResolution[1])
 
-    plane.SetOrigin(case.bounds[0], case.bounds[2], case.zValue)
-    plane.SetPoint1(case.bounds[0], case.bounds[3], case.zValue)
-    plane.SetPoint2(case.bounds[1], case.bounds[2], case.zValue)
+    plane.SetOrigin(case.bounds[0], case.bounds[2], 0)
+    plane.SetPoint1(case.bounds[0], case.bounds[3], 0)
+    plane.SetPoint2(case.bounds[1], case.bounds[2], 0)
     plane.Update()
 
     probeFilter = vtk.vtkProbeFilter()
