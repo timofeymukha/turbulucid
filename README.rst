@@ -24,15 +24,12 @@ working with VTK data, so why the need for a new package?
 The answer is that while the above-mentioned tools are excellent for general
 inspection of large 3d datasets, they do not provide the means for producing
 *publication-quality* plots of 2d data.
-An example of such a plot, produced with turbulucid, is shown
-in :numref:`fig-cover` below.
+An example of such a plot, produced with turbulucid, is shown below.
 
 .. _fig-cover:
 
-.. figure:: figures/cover.png
-:align: center
-
-   A fancy plot that would be hard to produce using software like Paraview.
+.. figure:: docs/figures/cover.png
+   :align: center
 
 Also, while VTK provides an abundance of filters for extracting specific
 parts of a dataset, the object-oriented API is hard to learn and quite verbose.
