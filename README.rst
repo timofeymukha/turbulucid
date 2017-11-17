@@ -31,8 +31,6 @@ An example of such a plot, produced with turbulucid, is shown below.
 .. figure:: docs/figures/cover.png
    :align: center
 
-   A fancy plot that would be hard to produce using software like Paraview.
-
 Also, while VTK provides an abundance of filters for extracting specific
 parts of a dataset, the object-oriented API is hard to learn and quite verbose.
 Turbulucid provides easier access to the data and a set of functions for
