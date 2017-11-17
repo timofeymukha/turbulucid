@@ -14,7 +14,7 @@
     "source activate test-environment",
     "conda install -c conda-forge vtk",
     "python -c \"import vtk; print(vtk.VTK_VERSION)\"",
-    "python setup.py install",
+    "python setup.py develop",
   ],
   "script": [
     "pytest tests"

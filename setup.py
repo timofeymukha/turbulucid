@@ -22,7 +22,8 @@ setup(name='turbulucid',
       install_requires=[
                         'numpy',
                         'scipy',
-                        'matplotlib'
+                        'matplotlib',
+                        'pytest'
                        ],
       license="GNU GPL 3",
       classifiers=[
