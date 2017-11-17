@@ -25,12 +25,12 @@ The answer is that while the above-mentioned tools are excellent for general
 inspection of large 3d datasets, they do not provide the means for producing
 *publication-quality* plots of 2d data.
 An example of such a plot, produced with turbulucid, is shown
-in :numref:`fig-cover` below.
+ below.
 
 .. _fig-cover:
 
 .. figure:: docs/figures/cover.png
-:align: center
+   :align: center
 
    A fancy plot that would be hard to produce using software like Paraview.
 
