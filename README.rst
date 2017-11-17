@@ -29,7 +29,7 @@ in :numref:`fig-cover` below.
 
 .. _fig-cover:
 
-.. figure:: figures/cover.png
+.. figure:: docs/figures/cover.png
 :align: center
 
    A fancy plot that would be hard to produce using software like Paraview.
