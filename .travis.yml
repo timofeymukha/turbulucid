@@ -1,0 +1,27 @@
+{
+  "language": "python",
+  "python": "3.5",
+  "install": [
+    "sudo apt-get update",
+    "wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;",
+    "bash miniconda.sh -b -p $HOME/miniconda",
+    "export PATH=\"$HOME/miniconda/bin:$PATH\"",
+    "hash -r",
+    "conda config --set always_yes yes --set changeps1 no",
+    "conda update -q conda",
+    "conda config --set anaconda_upload no",
+    "conda install conda-build",
+    "conda info -a",
+    "conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION vtk",
+    "source activate test-environment",
+    "conda build conda.recipe",
+    "conda install --use-local turbulucid",
+    "meshmagick -h",
+    "conda list",
+    "python -c \"import vtk; print(vtk.VTK_VERSION)\""
+  ],
+  "script": [
+    "pytest --pyargs turbulucid"
+  ],
+  "os": "linux"
+}
