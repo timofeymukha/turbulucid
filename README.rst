@@ -24,8 +24,7 @@ working with VTK data, so why the need for a new package?
 The answer is that while the above-mentioned tools are excellent for general
 inspection of large 3d datasets, they do not provide the means for producing
 *publication-quality* plots of 2d data.
-An example of such a plot, produced with turbulucid, is shown
- below.
+An example of such a plot, produced with turbulucid, is shown below.
 
 .. _fig-cover:
 
