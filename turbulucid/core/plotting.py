@@ -91,6 +91,8 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
             point1 = np.array(point1)/[scaleX, scaleY]
             segments.append((point0, point1))
     collection = LineCollection(segments, **kwargs)
+    if "color" not in kwargs:
+        collection.set_color("Black")
 
     ax.add_collection(collection)
     ax.set_xlim(case.xlim/scaleX)

@@ -1,6 +1,9 @@
 turbulucid
 ==========
 
+.. image:: https://travis-ci.org/timofeymukha/turbulucid.svg?branch=master
+    :target: https://travis-ci.org/timofeymukha/turbulucid
+
 What?
 -----
 
@@ -27,7 +30,7 @@ in :numref:`fig-cover` below.
 .. _fig-cover:
 
 .. figure:: figures/cover.png
-   :align: center
+:align: center
 
    A fancy plot that would be hard to produce using software like Paraview.
 
@@ -45,9 +48,3 @@ The plotting functions use matplotlib, and return associated matplotlib
 objects.
 This allows the user to harness the full customization power of matplotlib
 to make the plots look exactly as desired.
-
-.. toctree::
-   :caption: Table of Contents
-
-   legal
-   user
