@@ -19,7 +19,7 @@ def create_single_cell(z, axis, angle):
     points.InsertPoint(3, 0.0, 1.0, z)
 
     strips = vtk.vtkCellArray()
-    strips.InsertNextCell(4) # number of points
+    strips.InsertNextCell(4)
     strips.InsertCellPoint(0)
     strips.InsertCellPoint(1)
     strips.InsertCellPoint(2)
@@ -59,8 +59,6 @@ def write_data(data, path, format):
     writer.Write()
 
     return writer.GetFileName()
-
-
 
 
 # Fixtures for testing different types of initial data

@@ -130,13 +130,12 @@ def test_create_boundary_polydata(read_test_case_block):
         assert dataI.Points.shape[0] == len(correctPoints[boundary])
 
         flag = 0
-        #for i in range(dataI.Points.shape[0]):
-            #for j in range(dataI.Points.shape[0]):
-            #    print(np.any(dataI.Points[i, :] - correctPoints[boundary][j]))
-            #    if not np.any(dataI.Points[i, :] - correctPoints[boundary][j]):
-            #        print(dataI.Points[i, :], j)
-            #        flag = 1
-            #assert flag == 1
-            #flag = 0
-
-
+#        for i in range(dataI.Points.shape[0]):
+#            for j in range(dataI.Points.shape[0]):
+#                print(np.any(dataI.Points[i, :] - correctPoints[boundary][j]))
+#                if not np.any(dataI.Points[i, :] -
+#                              correctPoints[boundary][j]):
+#                    print(dataI.Points[i, :], j)
+#                    flag = 1
+#            assert flag == 1
+#            flag = 0

@@ -8,4 +8,5 @@
 /*.egg-info
 .idea
 .cache
+.coverage
 /docs/_build/
