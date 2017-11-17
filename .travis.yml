@@ -19,5 +19,5 @@
   "script": [
     "pytest tests"
   ],
-  "os": "linux"
+  "os": ["linux", "osx"]
 }
