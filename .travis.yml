@@ -22,7 +22,7 @@
     "python setup.py install",
   ],
   "script": [
-    "pytest --pyargs turbulucid"
+    "pytest --pyargs"
   ],
   "os": "linux"
 }
