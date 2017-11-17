@@ -17,10 +17,9 @@
     "conda install matplotlib",
     "conda install scipy",
     "conda install -c conda-forge vtk",
-    "conda build conda.recipe",
-    "conda install --use-local turbulucid",
+    "python -c \"import vtk; print(vtk.VTK_VERSION)\"",
     "conda list",
-    "python -c \"import vtk; print(vtk.VTK_VERSION)\""
+    "python setup.py install",
   ],
   "script": [
     "pytest --pyargs turbulucid"
