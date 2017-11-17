@@ -10,17 +10,14 @@
     "conda config --set always_yes yes --set changeps1 no",
     "conda update -q conda",
     "conda config --set anaconda_upload no",
-    "conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy",
+    "conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib pytest",
     "source activate test-environment",
-    "conda install matplotlib",
-    "conda install pytest",
     "conda install -c conda-forge vtk",
     "python -c \"import vtk; print(vtk.VTK_VERSION)\"",
-    "conda list",
     "python setup.py install",
   ],
   "script": [
-    "pytest"
+    "pytest tests"
   ],
   "os": "linux"
 }
