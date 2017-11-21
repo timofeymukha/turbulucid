@@ -48,11 +48,17 @@ def create_single_cell(z, axis, angle):
     return filter.GetOutput()
 
 
-def write_data(data, path, format):
+def write_data(data, writerType, path):
     """Write data to a temporary directory and return the path to the file.
 
     """
-    writer = vtk.vtkPolyDataWriter()
+    if writerType == "legacy":
+        writer = vtk.vtkPolyDataWriter()
+        format = "vtk"
+    else:
+        writer = vtk.vtkXMLPolyDataWriter()
+        format = "vtu"
+
     filename = path.join("test." + format).strpath
     writer.SetFileName(filename)
     writer.SetInputData(data)
@@ -79,12 +85,15 @@ def different_axis(request):
 
 
 # Test for the direction of the normal being [0, 0, 1]
-def normal_direction(fixture, tmpdir):
+def normal_direction(fixture, writer, tmpdir):
     data = fixture
 
-    filename = write_data(data, tmpdir, "vtk")
+    filename = write_data(data, writer, tmpdir)
 
-    reader = LegacyReader(filename)
+    if writer == "legacy":
+        reader = LegacyReader(filename)
+    else:
+        reader = XMLReader(filename)
     readerData = reader.data
 
     vtkNormals = vtk.vtkPolyDataNormals()
@@ -99,24 +108,40 @@ def normal_direction(fixture, tmpdir):
 
 
 def test_legacy_normal_direction_different_z(different_z, tmpdir):
-    normal_direction(different_z, tmpdir)
+    normal_direction(different_z, "legacy", tmpdir)
 
 
 def test_legacy_normal_direction_different_angle(different_angle, tmpdir):
-    normal_direction(different_angle, tmpdir)
+    normal_direction(different_angle, "legacy", tmpdir)
 
 
 def test_legacy_normal_direction_different_axis(different_axis, tmpdir):
-    normal_direction(different_axis, tmpdir)
+    normal_direction(different_axis, "legacy", tmpdir)
+
+
+def test_xml_normal_direction_different_z(different_z, tmpdir):
+    normal_direction(different_z, "xml", tmpdir)
+
+
+def test_xml_normal_direction_different_angle(different_angle, tmpdir):
+    normal_direction(different_angle, "xml", tmpdir)
+
+
+def test_xml_normal_direction_different_axis(different_axis, tmpdir):
+    normal_direction(different_axis, "xml", tmpdir)
 
 
 # Test for z value of the resulting data being 0
-def zvalue(fixture, tmpdir):
+def zvalue(fixture, writer, tmpdir):
     data = fixture
 
-    filename = write_data(data, tmpdir, "vtk")
+    filename = write_data(data, writer, tmpdir)
 
-    reader = LegacyReader(filename)
+    if writer == "legacy":
+        reader = LegacyReader(filename)
+    else:
+        reader = XMLReader(filename)
+
     readerData = reader.data
 
     for pointI in range(readerData.GetBlock(0).GetNumberOfPoints()):
@@ -125,21 +150,33 @@ def zvalue(fixture, tmpdir):
 
 
 def test_legacy_zvalue_different_z(different_z, tmpdir):
-    zvalue(different_z, tmpdir)
+    zvalue(different_z, "legacy", tmpdir)
 
 
 def test_legacy_zvalue_different_angle(different_angle, tmpdir):
-    zvalue(different_angle, tmpdir)
+    zvalue(different_angle, "legacy", tmpdir)
 
 
 def test_legacy_zvalue_different_axis(different_axis, tmpdir):
-    zvalue(different_axis, tmpdir)
+    zvalue(different_axis, "legacy", tmpdir)
+
+
+def test_xml_zvalue_different_z(different_z, tmpdir):
+    zvalue(different_z, "xml", tmpdir)
+
+
+def test_xml_zvalue_different_angle(different_angle, tmpdir):
+    zvalue(different_angle, "xml", tmpdir)
+
+
+def test_xml_zvalue_different_axis(different_axis, tmpdir):
+    zvalue(different_axis, "xml", tmpdir)
 
 
 # Test multiblock structure
-def test_block_structure(tmpdir):
+def test_legacy_block_structure(tmpdir):
     data = create_single_cell(0, [0, 1, 0], 0)
-    filename = write_data(data, tmpdir, "vtk")
+    filename = write_data(data, "legacy", tmpdir)
     reader = LegacyReader(filename)
     readerData = reader.data
 
@@ -150,11 +187,35 @@ def test_block_structure(tmpdir):
            "boundary")
 
 
-# Test boundary field data
-def test_boundary_field_data(tmpdir):
+def test_xml_block_structure(tmpdir):
     data = create_single_cell(0, [0, 1, 0], 0)
-    filename = write_data(data, tmpdir, "vtk")
+    filename = write_data(data, "xml", tmpdir)
+    reader = XMLReader(filename)
+    readerData = reader.data
+
+    assert(readerData.GetNumberOfBlocks() == 2)
+    assert(readerData.GetMetaData(0).Get(vtk.vtkCompositeDataSet.NAME()) ==
+           "internalField")
+    assert(readerData.GetMetaData(1).Get(vtk.vtkCompositeDataSet.NAME()) ==
+           "boundary")
+
+
+# Test boundary field data
+def test_legacy_boundary_field_data(tmpdir):
+    data = create_single_cell(0, [0, 1, 0], 0)
+    filename = write_data(data, "legacy", tmpdir)
     reader = LegacyReader(filename)
+    readerData = reader.data
+    w = dsa.WrapDataObject(readerData.GetBlock(0))
+
+    assert("boundaries" in w.FieldData.keys())
+    assert(w.FieldData["boundaries"].GetNumberOfTuples() == 1)
+
+
+def test_xml_boundary_field_data(tmpdir):
+    data = create_single_cell(0, [0, 1, 0], 0)
+    filename = write_data(data, "xml", tmpdir)
+    reader = XMLReader(filename)
     readerData = reader.data
     w = dsa.WrapDataObject(readerData.GetBlock(0))
 

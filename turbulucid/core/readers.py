@@ -15,7 +15,8 @@ import abc
 from vtk.util.numpy_support import numpy_to_vtk
 from vtk.util.numpy_support import vtk_to_numpy
 
-__all__ = ["Reader", "LegacyReader", "mark_boundary_cells", "NativeReader"]
+__all__ = ["Reader", "LegacyReader", "mark_boundary_cells", "NativeReader",
+           "XMLReader"]
 
 
 def mark_boundary_cells(internalData, boundaryDataDict):
@@ -164,6 +165,47 @@ class LegacyReader(Reader):
         Reader.__init__(self, filename)
 
         self._vtkReader = vtk.vtkPolyDataReader()
+        self._fileName = filename
+
+        self._vtkReader.SetFileName(self._fileName)
+        self._vtkReader.Update()
+
+        internalData = self._transform()
+        if clean:
+            internalData = self._clean(internalData)
+        internalData.BuildLinks()
+
+        n = internalData.GetNumberOfCells()
+        pids = np.arange(n)
+
+        internalData.GetAttributes(vtk.vtkDataObject.CELL).SetPedigreeIds(
+            numpy_to_vtk(pids))
+
+        boundaryData = self._extract_boundary_data(internalData)
+        bDict = {'boundary': boundaryData}
+        mark_boundary_cells(internalData, bDict)
+        self._data = self._assemble_multiblock_data(internalData, boundaryData)
+
+    @property
+    def vtkReader(self):
+        return self._vtkReader
+
+    @property
+    def fileName(self):
+        return self._fileName
+
+    @property
+    def data(self):
+        return self._data
+
+
+class XMLReader(Reader):
+    """Reader for data in XML VTK format, i.e. .vtu."""
+
+    def __init__(self, filename, clean=False):
+        Reader.__init__(self, filename)
+
+        self._vtkReader = vtk.vtkXMLPolyDataReader()
         self._fileName = filename
 
         self._vtkReader.SetFileName(self._fileName)
