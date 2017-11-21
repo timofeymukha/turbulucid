@@ -13,7 +13,7 @@ from collections import OrderedDict
 import os
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
-from .readers import NativeReader, LegacyReader
+from .readers import NativeReader, LegacyReader, XMLReader
 
 __all__ = ["Case"]
 
@@ -422,6 +422,8 @@ class Case:
             return NativeReader(fileName).data
         elif fileExt == ".vtk":
             return LegacyReader(fileName, clean=clean).data
+        elif fileExt == ".vtu":
+            return XMLReader(fileName, clean=clean).data
         else:
             raise ValueError("Unsupported file format.")
 
