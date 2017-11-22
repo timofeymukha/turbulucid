@@ -307,3 +307,54 @@ def sort_indices(case, name, axis):
         return np.argsort(points[:, 1])
     else:
         raise ValueError("axis should be x or y.")
+
+
+def sample_by_plane(case, resolution):
+    """Sample the field values by a Cartesian grid.
+
+    Parameters
+    ----------
+    case : Case
+        The case to extract data from.
+    resolution : pair
+        The resolution of the plane, (number of rows, number of cols).
+
+    Returns
+    -------
+    (ndarray, dictionary)
+        The first element of the tuple is an array of coordinates of
+        the points on the plane. The second is a dictionary with the
+        case's fields as keys and arrays of values of these fields as
+        values.
+
+    """
+    plane = vtk.vtkPlaneSource()
+    plane.SetResolution(resolution[0], resolution[1])
+
+    plane.SetOrigin(case.bounds[0], case.bounds[2], 0)
+    plane.SetPoint1(case.bounds[0], case.bounds[3], 0)
+    plane.SetPoint2(case.bounds[1], case.bounds[2], 0)
+    plane.Update()
+
+    probeFilter = vtk.vtkProbeFilter()
+    probeFilter.SetSourceData(case.vtkData.VTKObject)
+    probeFilter.SetInputConnection(plane.GetOutputPort())
+    probeFilter.Update()
+
+    probeData = dsa.WrapDataObject(probeFilter.GetOutput())
+    points = probeData.Points[:, [0, 1]]
+
+    #validPointsIdx = probeData.PointData['vtkValidPointMask']
+    #validPointsIdx = np.nonzero(validPointsIdx)
+    #points = points[validPointsIdx, :]
+
+    data = {}
+    for key in probeData.PointData.keys():
+        if probeData.PointData[key].ndim == 1:
+            #data[key] = np.array(probeData.PointData[key][validPointsIdx])
+            data[key] = np.array(probeData.PointData[key])
+        else:
+            #data[key] = np.array(probeData.PointData[key][validPointsIdx, :])
+            data[key] = np.array(probeData.PointData[key])
+
+    return points, data

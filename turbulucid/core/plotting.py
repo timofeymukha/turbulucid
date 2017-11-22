@@ -6,7 +6,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from matplotlib import tri
 import matplotlib.pyplot as plt
 import numpy as np
 import vtk
@@ -15,6 +14,7 @@ from mpl_toolkits import axes_grid1
 from matplotlib.collections import PatchCollection
 from matplotlib.collections import LineCollection
 from matplotlib.patches import Polygon
+from .data_extraction import sample_by_plane
 
 
 __all__ = ["plot_boundaries", "plot_vectors", "plot_streamlines", "plot_field",
@@ -160,7 +160,7 @@ def plot_vectors(case, field, color=None,
     if type(field) == str:
         data = case[field]
     elif ((type(field) == vtk.numpy_interface.dataset_adapter.VTKArray) or
-         (type(field) == np.ndarray)):
+          (type(field) == np.ndarray)):
         case['temp'] = field
         data = case['temp']
     else:
@@ -173,6 +173,9 @@ def plot_vectors(case, field, color=None,
     if (scaleX <= 0) or (scaleY <= 0):
         raise ValueError("Scaling factors must be positive.")
 
+    if plotBoundaries:
+        plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
+
     if sampleByPlane:
         plane = vtk.vtkPlaneSource()
         if planeResolution is not None:
@@ -180,51 +183,50 @@ def plot_vectors(case, field, color=None,
         else:
             plane.SetResolution(50, 50)
 
-        minX = np.min(case.cellCentres[:, 0])
-        maxX = np.max(case.cellCentres[:, 0])
-        minY = np.min(case.cellCentres[:, 1])
-        maxY = np.max(case.cellCentres[:, 1])
+        points, sampledData = sample_by_plane(case, planeResolution)
 
-        plane.SetOrigin(minX, minY, 0)
-        plane.SetPoint1(minX, maxY, 0)
-        plane.SetPoint2(maxX, minY, 0)
-        plane.Update()
+        pointsX = points[:, 0]
+        pointsY = points[:, 1]
 
-        probeFilter = vtk.vtkProbeFilter()
-        probeFilter.SetSourceData(case.vtkData.VTKObject)
-        probeFilter.SetInputConnection(plane.GetOutputPort())
-        probeFilter.Update()
-
-        probeData = dsa.WrapDataObject(probeFilter.GetOutput())
-        pointsX = probeData.Points[:, 0]
-        pointsY = probeData.Points[:, 1]
         if type(field) == str:
-            data = probeData.PointData[field]
+            data = sampledData[field]
         else:
-            data = np.copy(probeData.PointData['temp'])
+            data = np.copy(sampledData['temp'])
             case.__delitem__('temp')
 
-        validPointsIdx = probeData.PointData['vtkValidPointMask']
-        validPointsIdx = np.nonzero(validPointsIdx)
-        pointsX = pointsX[validPointsIdx]
-        pointsY = pointsY[validPointsIdx]
-        data = data[validPointsIdx]
+        validPointsIdx = sampledData['vtkValidPointMask']
+        data = np.ma.array(data)
+        data[np.nonzero(1 - validPointsIdx), 0] = np.ma.masked
+        data[np.nonzero(1 - validPointsIdx), 1] = np.ma.masked
 
     if normalize:
         norms = np.linalg.norm(data, axis=1)
-        idx = np.nonzero(norms)[0]
-        for i in range(data.shape[1]):
-            data[idx, i] /= norms
+        for j in range(data.shape[1]):
+            for i in range(data.shape[0]):
+                if norms[i] != 0:
+                    data[i, j] /= norms[i]
 
-    if plotBoundaries:
-        plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
-
-    if (color is None) or sampleByPlane:
+    if color is None:
         return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
                           data[:, 1], **kwargs)
+
+    if sampleByPlane:
+        if type(color) == str:
+            colorData = sampledData[color].reshape(planeResolution[1]+1,
+                                                   planeResolution[0]+1)
+            return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
+                              data[:, 1], colorData, **kwargs)
+        else:
+            colorData = np.ma.masked_array(color, mask=1-validPointsIdx)
+            return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
+                              data[:, 1], colorData, **kwargs)
     else:
-        return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
-                          data[:, 1], color, **kwargs)
+        if type(color) == str:
+            return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
+                              data[:, 1], case[color], **kwargs)
+        else:
+            return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
+                              data[:, 1], color, **kwargs)
 
 
 def plot_streamlines(case, field, color=None,
@@ -293,26 +295,15 @@ def plot_streamlines(case, field, color=None,
     plane = vtk.vtkPlaneSource()
     if planeResolution is None:
         planeResolution = (50, 50)
-    plane.SetResolution(planeResolution[0], planeResolution[1])
 
-    plane.SetOrigin(case.bounds[0], case.bounds[2], 0)
-    plane.SetPoint1(case.bounds[0], case.bounds[3], 0)
-    plane.SetPoint2(case.bounds[1], case.bounds[2], 0)
-    plane.Update()
-
-    probeFilter = vtk.vtkProbeFilter()
-    probeFilter.SetSourceData(case.vtkData.VTKObject)
-    probeFilter.SetInputConnection(plane.GetOutputPort())
-    probeFilter.Update()
-
-    probeData = dsa.WrapDataObject(probeFilter.GetOutput())
-    pointsX = probeData.Points[:, 0]
-    pointsY = probeData.Points[:, 1]
+    points, sampledData = sample_by_plane(case, planeResolution)
+    pointsX = points[:, 0]
+    pointsY = points[:, 1]
 
     if type(field) == str:
-        data = probeData.PointData[field]
+        data = sampledData[field]
     else:
-        data = np.copy(probeData.PointData['temp'])
+        data = np.copy(sampledData['temp'])
         case.__delitem__('temp')
 
     pointsX = pointsX.reshape(planeResolution[1]+1, planeResolution[0]+1)[:, 0]
@@ -329,12 +320,13 @@ def plot_streamlines(case, field, color=None,
         return plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
                               **kwargs)
     else:
-        return plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
-                              **kwargs)
-#       color = color.reshape((planeResolution[0]+1, planeResolution[1]+1),
-#                              order='F')
-#       plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
-#                      color=color, **kwargs)
+        if type(color) == str:
+            colorData = sampledData[color].reshape(planeResolution[1]+1,
+                                                   planeResolution[0]+1)
+        else:
+            colorData = color
+        plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
+                       color=colorData, **kwargs)
 
 
 def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
