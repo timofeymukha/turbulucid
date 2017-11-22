@@ -15,11 +15,11 @@ from scipy.interpolate import interp1d
 from collections import OrderedDict
 
 __all__ = ["profile_along_line", "tangents", "normals",
-           "dist", "sort_indices"]
+           "dist", "sort_indices", "sample_by_plane"]
 
 
 def profile_along_line(case, p1, p2, correctDistance=False,
-                       excludeBoundaries=False, debug=False):
+                       excludeBoundaries=False):
     """Extract a linear profile from the data.
 
     Returns the data itself and the its location in a coordinate
@@ -40,8 +40,6 @@ def profile_along_line(case, p1, p2, correctDistance=False,
     excludeBoundaries : bool
         Exclude boundary data when extracting the profile, default
         is False.
-    debug : bool
-        Debug switch, if True, additional output is given.
 
     Returns
     (ndarray, dictionary)
@@ -51,9 +49,6 @@ def profile_along_line(case, p1, p2, correctDistance=False,
         of these fields as values.
 
     """
-    # Convert point to ndarrays
-
-    # Add the z-value to the points.
     p1 = np.append(np.array(p1), 0)
     p2 = np.append(np.array(p2), 0)
 
@@ -156,16 +151,6 @@ def profile_along_line(case, p1, p2, correctDistance=False,
     # Correct the distance values
     if correctDistance:
         distance -= correction
-
-    if debug:
-        print("p1 ", p1)
-        print("p2 ", p2)
-        print("Plane normal", planeNormal)
-        print("Point id closest to p1 ", shiftPointId)
-        print("The point closest to p1", shiftPoint)
-        print("The distance correction is", correction)
-
-        return distance, dataNumpy, coords
 
     return distance, dataNumpy
 
