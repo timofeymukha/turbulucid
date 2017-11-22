@@ -157,6 +157,8 @@ class Case:
             raise ValueError("The dimensionality of the provided field "
                              "does not match that of the case.")
 
+        self.fields.append(item)
+
         cellData = self._vtkData.VTKObject.GetCellData()
         valuesVtk = vtk.vtkDoubleArray()
 
@@ -174,7 +176,29 @@ class Case:
         valuesVtk.SetName(item)
 
         cellData.AddArray(valuesVtk)
-        self.fields.append(item)
+
+        # Add boundary data by copying from boundary cells
+        for boundary in self.boundaries:
+            block = self.extract_block_by_name(boundary)
+            cellData = block.GetCellData()
+            valuesVtk = vtk.vtkDoubleArray()
+
+            nVals = self.boundary_data(boundary)[0][:, 0].size
+            bCellData = self.boundary_cell_data(boundary)[1][item]
+
+            if np.ndim(values) > 1:
+                valuesVtk.SetNumberOfComponents(values.shape[1])
+                valuesVtk.SetNumberOfTuples(nVals)
+                for i in range(nVals):
+                    valuesVtk.SetTupleValue(i, bCellData[i, :])
+            else:
+                valuesVtk.SetNumberOfComponents(1)
+                valuesVtk.SetNumberOfValues(nVals)
+                for i in range(nVals):
+                    valuesVtk.SetValue(i, bCellData[i])
+
+            valuesVtk.SetName(item)
+            cellData.AddArray(valuesVtk)
 
     def __delitem__(self, item):
         """Delete an internal field form the case.
@@ -187,6 +211,10 @@ class Case:
         """
         self.vtkData.VTKObject.GetCellData().RemoveArray(item)
         self.fields.remove(item)
+
+        for boundary in self.boundaries:
+            block = self.extract_block_by_name(boundary)
+            block.GetCellData().RemoveArray(item)
 
     def _compute_plot_limits(self):
         """ Compute xlim and ylim."""
@@ -335,7 +363,7 @@ class Case:
             data[key] = np.array(dataVTK[key])
 
         if sort is None:
-            return points, data
+            return points[:, [0, 1]], data
         elif sort == "x":
             ind = np.argsort(points[:, 0])
         elif sort == "y":
@@ -346,7 +374,7 @@ class Case:
         for key in data:
             data[key] = data[key][ind]
 
-        return points, data
+        return points[:, [0, 1]], data
 
     def extract_block_by_name(self, name):
         """Extract a block from the case by a given name."""
@@ -386,7 +414,7 @@ class Case:
             data[key] = np.array(dataVTK[key])
 
         if sort is None:
-            return points, data
+            return points[:, [0, 1]], data
         elif sort == "x":
             ind = np.argsort(points[:, 0])
         elif sort == "y":
@@ -397,7 +425,7 @@ class Case:
         for key in data:
             data[key] = data[key][ind]
 
-        return points, data
+        return points[:, [0, 1]], data
 
     def read(self, clean):
         """Read in the data from a file.
