@@ -174,12 +174,12 @@ def tangents(case, name):
     block = case.extract_block_by_name(name)
     nCells = block.GetNumberOfCells()
 
-    tangents = np.zeros([nCells, 3])
+    tangents = np.zeros([nCells, 2])
 
     for cellI in range(nCells):
         cell = block.GetCell(cellI)
-        point0 = np.array(cell.GetPoints().GetPoint(0))
-        point1 = np.array(cell.GetPoints().GetPoint(1))
+        point0 = np.array(cell.GetPoints().GetPoint(0))[:2]
+        point1 = np.array(cell.GetPoints().GetPoint(1))[:2]
         tangents[cellI, :] = (point1 - point0)/np.linalg.norm(point1 - point0)
 
     return tangents
@@ -204,18 +204,20 @@ def normals(case, name):
     t = tangents(case, name)
 
     n = np.zeros(t.shape)
+    print(t.shape)
+    print(n.shape)
     z = np.array([0, 0, 1])
-
-    for i in range(n.shape[0]):
-        n[i] = np.cross(t[i, :], z)
 
     boundaryCoords = case.boundary_data(name)[0]
     cellCoords = case.boundary_cell_data(name)[0]
     d = cellCoords - boundaryCoords
 
     for i in range(n.shape[0]):
-        n[i] = np.cross(t[i, :], z)
-        # Ensure it is outward
+        print(np.append(t[i, :], 0))
+
+        n[i] = np.cross(np.append(t[i, :], 0), z)[:2]
+
+        # Ensure normal is outward
         if np.dot(n[i], d[i]) > 0:
             n[i] = -n[i]
 
