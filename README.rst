@@ -70,6 +70,12 @@ unpack.
 Then navigate to the root catalog of the code in a terminal and execute
 :code:`python setup.py install`.
 
+Dive in!
+--------
+A great place to learn how to use the package is the tutorial availble in `docs/tutorial <https://github.com/timofeymukha/turbulucid/blob/master/docs/tutorial/turbulucid_tutorial.ipynb>`_.
+
+A compilation of all the docstrings is availble at the project's `Github pages <https://timofeymukha.github.io/turbulucid/>`_.
+
 Legal information
 -----------------
 
