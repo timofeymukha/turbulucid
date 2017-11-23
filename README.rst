@@ -72,7 +72,7 @@ Then navigate to the root catalog of the code in a terminal and execute
 
 Dive in!
 --------
-A great place to learn how to use the package is the tutorial availble in `docs/tutorial <https://github.com/timofeymukha/turbulucid/docs/turbulucid_tutorial>`_.
+A great place to learn how to use the package is the tutorial availble in `docs/tutorial <https://github.com/timofeymukha/turbulucid/docs/tutorial/turbulucid_tutorial.ipynb>`_.
 
 Legal information
 -----------------
