@@ -31,8 +31,7 @@ print(sys.path)
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'numpydoc',
-    'sphinx.ext.autosummary'
+    'sphinx.ext.napoleon',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -280,13 +279,14 @@ texinfo_documents = [
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
 
-def skip(app, what, name, obj, skip, options):
-    if name == "__init__":
-        return False
-    return skip
+#def skip(app, what, name, obj, skip, options):
+#    if name == "__init__":
+#        return False
+#    return skip
 
-def setup(app):
-    app.connect("autodoc-skip-member", skip)
+#def setup(app):
+#    app.connect("autodoc-skip-member", skip)
 
 numfig = True
 napoleon_google_docstring = True
+numpydoc_show_inherited_class_members = False
