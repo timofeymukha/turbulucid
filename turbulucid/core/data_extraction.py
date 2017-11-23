@@ -204,8 +204,6 @@ def normals(case, name):
     t = tangents(case, name)
 
     n = np.zeros(t.shape)
-    print(t.shape)
-    print(n.shape)
     z = np.array([0, 0, 1])
 
     boundaryCoords = case.boundary_data(name)[0]
@@ -213,7 +211,6 @@ def normals(case, name):
     d = cellCoords - boundaryCoords
 
     for i in range(n.shape[0]):
-        print(np.append(t[i, :], 0))
 
         n[i] = np.cross(np.append(t[i, :], 0), z)[:2]
 
