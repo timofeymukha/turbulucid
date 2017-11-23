@@ -133,7 +133,6 @@ class Reader():
         patchFeatureEdgesFilter.NonManifoldEdgesOff()
         patchFeatureEdgesFilter.ManifoldEdgesOff()
 
-
         patchFeatureEdgesFilter.SetInputData(internalData)
         patchFeatureEdgesFilter.Update()
 
@@ -188,14 +187,17 @@ class LegacyReader(Reader):
 
     @property
     def vtkReader(self):
+        """The VTK reader for the data."""
         return self._vtkReader
 
     @property
     def fileName(self):
+        """The path to the file with the data."""
         return self._fileName
 
     @property
     def data(self):
+        """The read in data."""
         return self._data
 
 
@@ -229,14 +231,17 @@ class XMLReader(Reader):
 
     @property
     def vtkReader(self):
+        """The VTK reader for the data."""
         return self._vtkReader
 
     @property
     def fileName(self):
+        """The path to the file with the data."""
         return self._fileName
 
     @property
     def data(self):
+        """The read in data."""
         return self._data
 
 
@@ -255,12 +260,15 @@ class NativeReader(Reader):
 
     @property
     def vtkReader(self):
+        """The VTK reader for the data."""
         return self._vtkReader
 
     @property
     def fileName(self):
+        """The path to the file with the data."""
         return self._fileName
 
     @property
     def data(self):
+        """The read in data."""
         return self._data
