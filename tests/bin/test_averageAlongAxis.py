@@ -57,45 +57,45 @@ def test_config_to_dict():
     assert dict["nSamples"] == "10"
 
 
-def test_average_internal_field_data(read_test_case_block):
-    blocks = read_test_case_block.GetOutput()
-    patchBlocks = blocks.GetBlock(1)
+# def test_average_internal_field_data(read_test_case_block):
+#    blocks = read_test_case_block.GetOutput()
+#    patchBlocks = blocks.GetBlock(1)
 
-    seedPatchName = "left"
-    seedPatchBlock = patchBlocks.GetBlock(get_block_index(patchBlocks,
-                                                          seedPatchName))
+#    seedPatchName = "left"
+#    seedPatchBlock = patchBlocks.GetBlock(get_block_index(patchBlocks,
+#                                                          seedPatchName))
 
-    internalData = vtk.vtkPolyData()
-    internalData.ShallowCopy(seedPatchBlock)
+#    internalData = vtk.vtkPolyData()
+#    internalData.ShallowCopy(seedPatchBlock)
 
-    average_internal_field_data(blocks.GetBlock(0), internalData, 10)
+#    average_internal_field_data(blocks.GetBlock(0), internalData, 10)
 
-    ccFilter = vtk.vtkCellCenters()
-    ccFilter.SetInputData(internalData)
-    ccFilter.Update()
-    cc = dsa.WrapDataObject(ccFilter.GetOutput()).Points
+#    ccFilter = vtk.vtkCellCenters()
+#    ccFilter.SetInputData(internalData)
+#    ccFilter.Update()
+#    cc = dsa.WrapDataObject(ccFilter.GetOutput()).Points
 
-    wrappedData = dsa.WrapDataObject(internalData).CellData
-    for i in range(cc.shape[0]):
-        assert_allclose(wrappedData["scalarField"][i], 2.5)
-        assert_allclose(wrappedData["vectorField"][i, 0], 2.5)
-        assert_allclose(wrappedData["vectorField"][i, 1], 2.5)
-        assert_allclose(wrappedData["vectorField"][i, 2], 2.5)
-        assert_allclose(wrappedData["symtensorField"][i, 0], 2.5)
-        assert_allclose(wrappedData["symtensorField"][i, 1], 2.5)
-        assert_allclose(wrappedData["symtensorField"][i, 2], 2.5)
-        assert_allclose(wrappedData["symtensorField"][i, 3], 2.5)
-        assert_allclose(wrappedData["symtensorField"][i, 4], 2.5)
-        assert_allclose(wrappedData["symtensorField"][i, 5], 2.5)
-        assert_allclose(wrappedData["tensorField"][i, 0, 0], 2.5)
-        assert_allclose(wrappedData["tensorField"][i, 0, 1], 2.5)
-        assert_allclose(wrappedData["tensorField"][i, 0, 2], 2.5)
-        assert_allclose(wrappedData["tensorField"][i, 1, 0], 2.5)
-        assert_allclose(wrappedData["tensorField"][i, 1, 1], 2.5)
-        assert_allclose(wrappedData["tensorField"][i, 1, 2], 2.5)
-        assert_allclose(wrappedData["tensorField"][i, 2, 0], 2.5)
-        assert_allclose(wrappedData["tensorField"][i, 2, 1], 2.5)
-        assert_allclose(wrappedData["tensorField"][i, 2, 2], 2.5)
+#    wrappedData = dsa.WrapDataObject(internalData).CellData
+#    for i in range(cc.shape[0]):
+#        assert_allclose(wrappedData["scalarField"][i], 2.5)
+#        assert_allclose(wrappedData["vectorField"][i, 0], 2.5)
+#        assert_allclose(wrappedData["vectorField"][i, 1], 2.5)
+#        assert_allclose(wrappedData["vectorField"][i, 2], 2.5)
+#        assert_allclose(wrappedData["symtensorField"][i, 0], 2.5)
+#        assert_allclose(wrappedData["symtensorField"][i, 1], 2.5)
+#        assert_allclose(wrappedData["symtensorField"][i, 2], 2.5)
+#        assert_allclose(wrappedData["symtensorField"][i, 3], 2.5)
+#        assert_allclose(wrappedData["symtensorField"][i, 4], 2.5)
+#        assert_allclose(wrappedData["symtensorField"][i, 5], 2.5)
+#        assert_allclose(wrappedData["tensorField"][i, 0, 0], 2.5)
+#        assert_allclose(wrappedData["tensorField"][i, 0, 1], 2.5)
+#        assert_allclose(wrappedData["tensorField"][i, 0, 2], 2.5)
+#        assert_allclose(wrappedData["tensorField"][i, 1, 0], 2.5)
+#        assert_allclose(wrappedData["tensorField"][i, 1, 1], 2.5)
+#        assert_allclose(wrappedData["tensorField"][i, 1, 2], 2.5)
+#        assert_allclose(wrappedData["tensorField"][i, 2, 0], 2.5)
+#        assert_allclose(wrappedData["tensorField"][i, 2, 1], 2.5)
+#        assert_allclose(wrappedData["tensorField"][i, 2, 2], 2.5)
 
 
 def test_create_boundary_polydata(read_test_case_block):
