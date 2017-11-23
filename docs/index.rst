@@ -10,10 +10,4 @@ turbulucid code reference
    code_reference/quantities
    code_reference/readers
 
-
-
-Indices and tables
-------------------
-
 * :ref:`genindex`
-* :ref:`search`
