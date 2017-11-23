@@ -74,7 +74,7 @@ Dive in!
 --------
 A great place to learn how to use the package is the tutorial availble in `docs/tutorial <https://github.com/timofeymukha/turbulucid/blob/master/docs/tutorial/turbulucid_tutorial.ipynb>`_.
 
-A compilation of all the docstrings is availble at the project's `Github pages <https://timofeymukha.github.io/turbulucid/>_`.
+A compilation of all the docstrings is availble at the project's `Github pages <https://timofeymukha.github.io/turbulucid/>`_.
 
 Legal information
 -----------------
@@ -88,7 +88,7 @@ Timofey Mukha.
 
 Please take special notice of the following disclaimers.
 
-.. important:: Disclaimer of warranty
+.. admonition:: Disclaimer of warranty
 
    THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY APPLICABLE
    LAW. EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR
