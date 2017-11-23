@@ -1,5 +1,0 @@
-python:
-   version: 3.5
-
-conda:
-    file: condanv.yml

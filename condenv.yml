@@ -1,9 +1,0 @@
-name: docs
-channels:
-  - conda-forge
-dependencies:
-  - numpy
-  - scipy
-  - matplotlib
-  - sphinx
-  - vtk
