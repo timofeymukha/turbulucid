@@ -21,10 +21,10 @@ import os
 #sys.path.insert(0, os.path.abspath('.'))
 
 sys.path.insert(0, os.path.abspath('..'))
+
+print(sys.path)
 # -- General configuration ------------------------------------------------
 
-# If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -33,9 +33,6 @@ extensions = [
     'sphinx.ext.autodoc',
     'numpydoc',
     'sphinx.ext.autosummary'
-    #'sphinx.ext.intersphinx',
-    #'sphinx.ext.coverage',
-    #'sphinx.ext.mathjax',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -212,17 +209,6 @@ htmlhelp_basename = 'turbuluciddoc'
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
-# The paper size ('letterpaper' or 'a4paper').
-#'papersize': 'letterpaper',
-
-# The font size ('10pt', '11pt' or '12pt').
-#'pointsize': '10pt',
-
-# Additional stuff for the LaTeX preamble.
-#'preamble': '',
-
-# Latex figure (float) alignment
-#'figure_align': 'htbp',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
@@ -303,3 +289,4 @@ def setup(app):
     app.connect("autodoc-skip-member", skip)
 
 numfig = True
+napoleon_google_docstring = True
