@@ -1,0 +1,407 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>The Case class &mdash; turbulucid 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="turbulucid 0.1 documentation" href="../index.html"/>
+        <link rel="next" title="Plotting" href="plotting.html"/>
+        <link rel="prev" title="turbulucid code reference" href="../index.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> turbulucid
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">The Case class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_extraction.html">Data extraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantities.html">Quantities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="readers.html">Reader classes</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">turbulucid</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>The Case class</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/code_reference/case.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="the-case-class">
+<h1>The Case class<a class="headerlink" href="#the-case-class" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="turbulucid.Case">
+<em class="property">class </em><code class="descclassname">turbulucid.</code><code class="descname">Case</code><span class="sig-paren">(</span><em>fileName</em>, <em>clean=False</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.Case" title="Permalink to this definition">¶</a></dt>
+<dd><p>A class representing a simulation case.</p>
+<dl class="attribute">
+<dt id="turbulucid.Case.blockData">
+<code class="descname">blockData</code><a class="headerlink" href="#turbulucid.Case.blockData" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>vtkMultiBlockDataSet</em> – the multiblock data assembled by the
+reader.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.Case.boundaries">
+<code class="descname">boundaries</code><a class="headerlink" href="#turbulucid.Case.boundaries" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list</em> – A list of names of the boundaries present the case.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="turbulucid.Case.boundary_cell_data">
+<code class="descname">boundary_cell_data</code><span class="sig-paren">(</span><em>boundary</em>, <em>sort=None</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.Case.boundary_cell_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return cell-centre coordinates and data from cells adjacent
+to a specific boundary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>boundary</strong> (<em>str</em>) – The name of the boundary.</li>
+<li><strong>sort</strong> (<em>{None</em><em>, </em><em>'x'</em><em>, </em><em>'y'}</em><em>, </em><em>optional</em>) – Whether to sort the data along a coordinate. Use ‘x’ and
+‘y’ to sort along x and y, respectively. Default is no
+sorting.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Two ndarrays</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="turbulucid.Case.boundary_data">
+<code class="descname">boundary_data</code><span class="sig-paren">(</span><em>boundary</em>, <em>sort=None</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.Case.boundary_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return cell-center coordinates and data from a boundary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>boundary</strong> (<em>str</em>) – The name of the boundary.</li>
+<li><strong>sort</strong> (<em>str</em>) – Whether to sort the data along a coordinate. Use “x” and
+“y” to sort along x and y, respectively. Default is no
+sorting.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The coordinates of the boundary face centres.
+The corresponding data.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Two ndarrays</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.Case.bounds">
+<code class="descname">bounds</code><a class="headerlink" href="#turbulucid.Case.bounds" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>tuple</em> – (min(x), max(x), min(y), max(y)).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.Case.cellCentres">
+<code class="descname">cellCentres</code><a class="headerlink" href="#turbulucid.Case.cellCentres" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>wrapped VTKArray</em> – the cell centres of the read data</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="turbulucid.Case.extract_block_by_name">
+<code class="descname">extract_block_by_name</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.Case.extract_block_by_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract a block from the case by a given name.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="turbulucid.Case.extract_boundary_cells">
+<code class="descname">extract_boundary_cells</code><span class="sig-paren">(</span><em>boundary</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.Case.extract_boundary_cells" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract cells adjacent to a certain boundary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>boundary</strong> (<em>str</em>) – The name of the boundary.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">vtkExtractSelection</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.Case.fields">
+<code class="descname">fields</code><a class="headerlink" href="#turbulucid.Case.fields" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list of str</em> – The names of the fields present in the case.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="turbulucid.Case.read">
+<code class="descname">read</code><span class="sig-paren">(</span><em>clean</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.Case.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read in the data from a file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>clean</strong> (<em>bool</em>) – Whether to attempt cleaning the case of degenerate cells upon
+read.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> – If the provided file does not exist.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="turbulucid.Case.rotate">
+<code class="descname">rotate</code><span class="sig-paren">(</span><em>angle</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.Case.rotate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rotate the geometry of the case around the z axis.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dx</strong> (<em>angle</em>) – Rotation angle in degrees.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="turbulucid.Case.translate">
+<code class="descname">translate</code><span class="sig-paren">(</span><em>dx</em>, <em>dy</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.Case.translate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Translate the geometry of the case.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>dx</strong> (<em>float</em>) – The translation along the x axis.</li>
+<li><strong>dy</strong> (<em>float</em>) – The translation along the y axis.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.Case.vtkData">
+<code class="descname">vtkData</code><a class="headerlink" href="#turbulucid.Case.vtkData" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>wrapped PolyData</em> – The actual data read by the reader.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="turbulucid.Case.write">
+<code class="descname">write</code><span class="sig-paren">(</span><em>writePath</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.Case.write" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save the case to a .vtm format.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>writePath</strong> (<em>str</em>) – The name of the file.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.Case.xlim">
+<code class="descname">xlim</code><a class="headerlink" href="#turbulucid.Case.xlim" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list of two floats</em> – The x limits that cover the
+geometry of the case, plus small a margin.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.Case.ylim">
+<code class="descname">ylim</code><a class="headerlink" href="#turbulucid.Case.ylim" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list of two floats</em> – The y limits that cover the
+geometry of the case, plus a small margin.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="plotting.html" class="btn btn-neutral float-right" title="Plotting" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../index.html" class="btn btn-neutral" title="turbulucid code reference" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Timofey Mukha.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

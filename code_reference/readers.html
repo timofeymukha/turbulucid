@@ -1,0 +1,278 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Reader classes &mdash; turbulucid 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../genindex.html"/>
+        <link rel="search" title="Search" href="../search.html"/>
+    <link rel="top" title="turbulucid 0.1 documentation" href="../index.html"/>
+        <link rel="prev" title="Quantities" href="quantities.html"/> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> turbulucid
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="case.html">The Case class</a></li>
+<li class="toctree-l1"><a class="reference internal" href="plotting.html">Plotting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data_extraction.html">Data extraction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quantities.html">Quantities</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Reader classes</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">turbulucid</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+ 
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+    <li>Reader classes</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/code_reference/readers.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="reader-classes">
+<h1>Reader classes<a class="headerlink" href="#reader-classes" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="turbulucid.LegacyReader">
+<em class="property">class </em><code class="descclassname">turbulucid.</code><code class="descname">LegacyReader</code><span class="sig-paren">(</span><em>filename</em>, <em>clean=False</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.LegacyReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reader for data in legacy VTK format, i.e. .vtk.</p>
+<dl class="attribute">
+<dt id="turbulucid.LegacyReader.data">
+<code class="descname">data</code><a class="headerlink" href="#turbulucid.LegacyReader.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>The read in data.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.LegacyReader.fileName">
+<code class="descname">fileName</code><a class="headerlink" href="#turbulucid.LegacyReader.fileName" title="Permalink to this definition">¶</a></dt>
+<dd><p>The path to the file with the data.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.LegacyReader.vtkReader">
+<code class="descname">vtkReader</code><a class="headerlink" href="#turbulucid.LegacyReader.vtkReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>The VTK reader for the data.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="turbulucid.XMLReader">
+<em class="property">class </em><code class="descclassname">turbulucid.</code><code class="descname">XMLReader</code><span class="sig-paren">(</span><em>filename</em>, <em>clean=False</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.XMLReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reader for data in XML VTK format, i.e. .vtu.</p>
+<dl class="attribute">
+<dt id="turbulucid.XMLReader.data">
+<code class="descname">data</code><a class="headerlink" href="#turbulucid.XMLReader.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>The read in data.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.XMLReader.fileName">
+<code class="descname">fileName</code><a class="headerlink" href="#turbulucid.XMLReader.fileName" title="Permalink to this definition">¶</a></dt>
+<dd><p>The path to the file with the data.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.XMLReader.vtkReader">
+<code class="descname">vtkReader</code><a class="headerlink" href="#turbulucid.XMLReader.vtkReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>The VTK reader for the data.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="turbulucid.NativeReader">
+<em class="property">class </em><code class="descclassname">turbulucid.</code><code class="descname">NativeReader</code><span class="sig-paren">(</span><em>fileName</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.NativeReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reader for native turbulucid format.</p>
+<dl class="attribute">
+<dt id="turbulucid.NativeReader.data">
+<code class="descname">data</code><a class="headerlink" href="#turbulucid.NativeReader.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>The read in data.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.NativeReader.fileName">
+<code class="descname">fileName</code><a class="headerlink" href="#turbulucid.NativeReader.fileName" title="Permalink to this definition">¶</a></dt>
+<dd><p>The path to the file with the data.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="turbulucid.NativeReader.vtkReader">
+<code class="descname">vtkReader</code><a class="headerlink" href="#turbulucid.NativeReader.vtkReader" title="Permalink to this definition">¶</a></dt>
+<dd><p>The VTK reader for the data.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="quantities.html" class="btn btn-neutral" title="Quantities" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Timofey Mukha.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
