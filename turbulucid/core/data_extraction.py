@@ -15,7 +15,7 @@ from scipy.interpolate import interp1d
 from collections import OrderedDict
 
 __all__ = ["profile_along_line", "tangents", "normals",
-           "dist", "sort_indices", "sample_by_plane"]
+           "dist", "sort_indices", "sample_by_plane", "edge_lengths"]
 
 
 def profile_along_line(case, p1, p2, correctDistance=False,
@@ -256,6 +256,34 @@ def dist(case, name, corrected=True):
             dNormal[i] = np.linalg.norm(np.dot(d[i, :], n[i, :])*n[i, :])
 
         return dNormal
+
+
+def edge_lengths(case, name):
+    """Compute the lengths of boundary edges.
+
+    Parameters
+    ----------
+    case : Case
+        The case to extract data from.
+    name : str
+        The name of the boundary.
+
+    Returns
+    -------
+    ndarray
+        The lengths of each edge of the boundary.
+
+    """
+    sizes = np.zeros(case.boundary_data(name)[0].shape[0])
+
+    block = case.extract_block_by_name(name)
+    for c in range(block.GetNumberOfCells()):
+        point0 = block.GetCell(c).GetPoints().GetPoint(0)[:2]
+        point1 = block.GetCell(c).GetPoints().GetPoint(1)[:2]
+
+        sizes[c] = np.sqrt((point1[0] - point0[0])**2 +
+                           (point1[1] - point0[1])**2)
+
 
 
 def sort_indices(case, name, axis):
