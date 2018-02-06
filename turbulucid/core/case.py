@@ -21,7 +21,7 @@ class Case:
     """A class representing a simulation case.
 
     """
-    def __init__(self, fileName, clean=False):
+    def __init__(self, fileName, clean=False, pointData=False):
         """
         Create Case from file.
 
@@ -37,7 +37,7 @@ class Case:
         self.fileName = fileName
 
         # Read in the data
-        self._blockData = self.read(clean)
+        self._blockData = self.read(clean, pointData)
 
         # Compute the cell-centres
         self._cellCentres = vtk.vtkCellCenters()
@@ -426,7 +426,7 @@ class Case:
 
         return points[:, [0, 1]], data
 
-    def read(self, clean):
+    def read(self, clean, pointData):
         """Read in the data from a file.
 
         Parameters
@@ -434,6 +434,9 @@ class Case:
         clean : bool
             Whether to attempt cleaning the case of degenerate cells upon
             read.
+        pointData : bool
+            Whether the file contains point data instead of cell data.
+            Cell data will be computed by interpolation.
 
         Raises
         ------
@@ -448,9 +451,10 @@ class Case:
         if fileExt == ".vtm":
             return NativeReader(fileName).data
         elif fileExt == ".vtk":
-            return LegacyReader(fileName, clean=clean).data
+            return LegacyReader(fileName, clean=clean,
+                                pointData=pointData).data
         elif fileExt == ".vtu":
-            return XMLReader(fileName, clean=clean).data
+            return XMLReader(fileName, clean=clean, pointData=pointData).data
         else:
             raise ValueError("Unsupported file format.")
 

@@ -160,7 +160,7 @@ class Reader():
 class LegacyReader(Reader):
     """Reader for data in legacy VTK format, i.e. .vtk."""
 
-    def __init__(self, filename, clean=False):
+    def __init__(self, filename, clean=False, pointData=False):
         Reader.__init__(self, filename)
 
         self._vtkReader = vtk.vtkPolyDataReader()
@@ -172,6 +172,14 @@ class LegacyReader(Reader):
         internalData = self._transform()
         if clean:
             internalData = self._clean(internalData)
+
+        if pointData:
+            interp = vtk.vtkPointDataToCellData()
+            interp.SetInputData(internalData)
+            interp.PassPointDataOff()
+            interp.Update()
+            internalData = interp.GetOutput()
+
         internalData.BuildLinks()
 
         n = internalData.GetNumberOfCells()
@@ -204,7 +212,7 @@ class LegacyReader(Reader):
 class XMLReader(Reader):
     """Reader for data in XML VTK format, i.e. .vtu."""
 
-    def __init__(self, filename, clean=False):
+    def __init__(self, filename, clean=False, pointData=False):
         Reader.__init__(self, filename)
 
         self._vtkReader = vtk.vtkXMLPolyDataReader()
@@ -216,6 +224,14 @@ class XMLReader(Reader):
         internalData = self._transform()
         if clean:
             internalData = self._clean(internalData)
+
+        if pointData:
+            interp = vtk.vtkPointDataToCellData()
+            interp.SetInputData(internalData)
+            interp.PassPointDataOff()
+            interp.Update()
+            internalData = interp.GetOutput()
+
         internalData.BuildLinks()
 
         n = internalData.GetNumberOfCells()
