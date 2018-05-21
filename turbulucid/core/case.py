@@ -165,7 +165,7 @@ class Case:
             valuesVtk.SetNumberOfComponents(values.shape[1])
             valuesVtk.SetNumberOfTuples(values.shape[0])
             for i in range(values.shape[0]):
-                valuesVtk.SetTupleValue(i, values[i, :])
+                valuesVtk.SetTuple(i, values[i, :])
         else:
             valuesVtk.SetNumberOfComponents(1)
             valuesVtk.SetNumberOfValues(values.shape[0])
@@ -182,14 +182,14 @@ class Case:
             cellData = block.GetCellData()
             valuesVtk = vtk.vtkDoubleArray()
 
-            nVals = self.boundary_data(boundary)[0][:, 0].size
+            nVals = self.boundary_cell_data(boundary)[0][:, 0].size
             bCellData = self.boundary_cell_data(boundary)[1][item]
 
             if np.ndim(values) > 1:
                 valuesVtk.SetNumberOfComponents(values.shape[1])
                 valuesVtk.SetNumberOfTuples(nVals)
                 for i in range(nVals):
-                    valuesVtk.SetTupleValue(i, bCellData[i, :])
+                    valuesVtk.SetTuple(i, bCellData[i, :])
             else:
                 valuesVtk.SetNumberOfComponents(1)
                 valuesVtk.SetNumberOfValues(nVals)
