@@ -284,6 +284,7 @@ def edge_lengths(case, name):
         sizes[c] = np.sqrt((point1[0] - point0[0])**2 +
                            (point1[1] - point0[1])**2)
 
+    return sizes
 
 
 def sort_indices(case, name, axis):
