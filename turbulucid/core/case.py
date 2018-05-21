@@ -453,10 +453,10 @@ class Case:
         elif fileExt == ".vtk":
             return LegacyReader(fileName, clean=clean,
                                 pointData=pointData).data
-        elif fileExt == ".vtu":
+        elif (fileExt == ".vtu") or (fileExt == ".vtp"):
             return XMLReader(fileName, clean=clean, pointData=pointData).data
         else:
-            raise ValueError("Unsupported file format.")
+            raise ValueError("Unsupported file format.", fileName, fileExt)
 
     def write(self, writePath):
         """Save the case to a .vtm format.
