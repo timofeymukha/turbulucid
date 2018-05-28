@@ -475,7 +475,7 @@ def create_boundary_polydata(patchBlocks, patchData, bounds):
         boundaryIPoints = dsa.WrapDataObject(patchFeatureEdgesData).Points
 
         b4Points = np.ones(boundaryIPoints.shape[0])*bounds[4]
-        b5Points = np.ones(boundaryIPoints.shape[0])*bounds[4]
+        b5Points = np.ones(boundaryIPoints.shape[0])*bounds[5]
         # The patch is an x-y plane
         if (np.allclose(boundaryIPoints[:, 2], b4Points, atol=1e-8, rtol=1e-5) or
             np.allclose(boundaryIPoints[:, 2], b5Points, atol=1e-8, rtol=1e-5)):
