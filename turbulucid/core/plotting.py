@@ -200,11 +200,10 @@ def plot_vectors(case, field, colorField=None,
         data[np.nonzero(1 - validPointsIdx), 1] = np.ma.masked
 
     if normalize:
-        norms = np.linalg.norm(data, axis=1)
-        for j in range(data.shape[1]):
-            for i in range(data.shape[0]):
-                if norms[i] != 0:
-                    data[i, j] /= norms[i]
+        norms = np.linalg.norm(data[:, [0, 1]], axis=1)
+        for i in range(data.shape[0]):
+            if norms[i] != 0:
+                data[i, :] /= norms[i]
 
     if colorField is None:
         return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
