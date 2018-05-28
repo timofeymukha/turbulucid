@@ -228,7 +228,7 @@ def average_internal_field_data(block, internalData, nSamples):
         probeData = dsa.WrapDataObject(probeFilter.GetOutput()).PointData
 
         for field in avrgFields:
-            if avrgFields[field].shape[1] == 9: # a tensor
+            if avrgFields[field].shape[1] == 9:  # a tensor
                 reshaped = probeData[field].reshape((nSamples, 9))
                 avrgFields[field][seed] = np.mean(reshaped, axis=0)
             else:
@@ -296,7 +296,7 @@ def average_patch_data(data, boundaryData, nSamples, bounds):
             probeData = dsa.WrapDataObject(probeFilter.GetOutput()).PointData
 
             for field in avergFields:
-                if avergFields[field].shape[1] == 9: #tensor
+                if avergFields[field].shape[1] == 9:  #tensor
                     reshaped = probeData[field].reshape((nSamples, 9))
                     avergFields[field][seed] = np.mean(reshaped, axis=0)
                 else:
@@ -474,9 +474,11 @@ def create_boundary_polydata(patchBlocks, patchData, bounds):
 
         boundaryIPoints = dsa.WrapDataObject(patchFeatureEdgesData).Points
 
+        b4Points = np.ones(boundaryIPoints.shape[0])*bounds[4]
+        b5Points = np.ones(boundaryIPoints.shape[0])*bounds[4]
         # The patch is an x-y plane
-        if (np.all(boundaryIPoints[:, 2] == bounds[4]) or
-                np.all(boundaryIPoints[:, 2] == bounds[5])):
+        if (np.allclose(boundaryIPoints[:, 2], b4Points, atol=1e-8, rtol=1e-5) or
+            np.allclose(boundaryIPoints[:, 2], b5Points, atol=1e-8, rtol=1e-5)):
             continue
         else:
 
@@ -487,7 +489,6 @@ def create_boundary_polydata(patchBlocks, patchData, bounds):
             # Find ids of the cells in the x-y plane
             cellIds = vtk.vtkIntArray()
             for i in range(patchFeatureEdgesData.GetNumberOfCells()):
-                cellI = patchFeatureEdgesData.GetCell(i)
                 pointIds = vtk.vtkIdList()
                 patchFeatureEdgesData.GetCellPoints(i, pointIds)
 
