@@ -1,7 +1,8 @@
-  language: python
-  python:
-    - "3.6"
-    - "2.7"
+  language: c
+  env:
+    # All supported python versions
+    - TRAVIS_PYTHON_VERSION=2.7
+    - TRAVIS_PYTHON_VERSION=3.5
   install:
     - sudo apt-get update
     - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
