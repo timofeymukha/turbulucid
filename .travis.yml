@@ -25,7 +25,7 @@
     - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib pytest pytest-pep8 pytest-cov
     - source activate test-environment
     - conda install -c conda-forge vtk
-    - python -c \"import vtk; print(vtk.VTK_VERSION)\"
+    - python -c "import vtk; print(vtk.VTK_VERSION)"
     - python setup.py develop"
 
   script:
