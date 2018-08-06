@@ -5,10 +5,17 @@
   install:
     - sudo apt-get update
     - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-        wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+        MINICONDA_PYVERSION=2 ;
       else
-        wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-      fi
+        MINICONDA_PYVERSION=3 ;
+      fi ;
+      if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+        MINICONDA_OS=Linux ;
+      else
+        MINICONDA_OS=MacOSX ;
+      fi ;
+      echo "Fetching Python $MINICONDA_PYVERSION miniconda for $MINICONDA_OS" ;
+      wget https://repo.continuum.io/miniconda/Miniconda$MINICONDA_PYVERSION-$MINICONDA_VERSION-$MINICONDA_OS-x86_64.sh -O miniconda.sh
     - bash miniconda.sh -b -p $HOME/miniconda
     - export PATH="$HOME/miniconda/bin:$PATH"
     - hash -r
@@ -17,7 +24,7 @@
     - conda config --set anaconda_upload no
     - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy scipy matplotlib pytest pytest-pep8 pytest-cov
     - source activate test-environment
-     -conda install -c conda-forge vtk
+    - conda install -c conda-forge vtk
     - python -c \"import vtk; print(vtk.VTK_VERSION)\"
     - python setup.py develop"
 
