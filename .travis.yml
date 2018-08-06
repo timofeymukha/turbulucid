@@ -33,3 +33,4 @@
 
   os:
     - linux
+    - osx
