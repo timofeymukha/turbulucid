@@ -17,7 +17,7 @@ from numpy.testing import assert_allclose
 def read_test_case_1():
     """Return the reader to the first test case."""
 
-    casePath = path.join(turbulucid.__path__[0], "..", "tests", "datasets",
+    casePath = path.join(turbulucid.__path__[0], "datasets",
                          "test_case_1", "test_case_1.foam")
     return read(casePath)
 
@@ -26,7 +26,7 @@ def read_test_case_1():
 def read_test_case_block():
     """Return the reader to the test case ."""
 
-    casePath = path.join(turbulucid.__path__[0], "..", "tests", "datasets",
+    casePath = path.join(turbulucid.__path__[0], "datasets",
                          "test_case_block", "test_case_block.foam")
     return read(casePath)
 
@@ -53,7 +53,7 @@ def test_get_block_index(read_test_case_1):
 
 
 def test_config_to_dict():
-    configPath = path.join(turbulucid.__path__[0], "..", "tests", "datasets",
+    configPath = path.join(turbulucid.__path__[0], "datasets",
                            "test_case_1", "averagingConfig")
     dict = config_to_dict(configPath)
     assert dict["case"] == "testpath"

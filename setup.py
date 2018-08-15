@@ -3,8 +3,19 @@
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
-from setuptools import setup
+from setuptools import setup, find_packages
+import os
 
+def package_files(directory):
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        for filename in filenames:
+            paths.append(os.path.join(path, filename)[22:])
+    return paths
+
+extra_files = package_files(os.path.join('.', 'turbulucid', 'datasets'))
+
+print extra_files
 setup(name='turbulucid',
       version='0.1',
       description='A package for post-processing of 2D flow fields.',
@@ -12,12 +23,16 @@ setup(name='turbulucid',
 
       author='Timofey Mukha',
       author_email='timofey.mukha@it.uu.se',
-      packages=['turbulucid'],
+      packages=find_packages(),
       scripts=[],
       entry_points={
           'console_scripts': [
               'averageAlongAxis=turbulucid.bin.averageAlongAxis:main'
           ]
+      },
+      include_package_data=True,
+      package_data={
+          'turbulucid.datasets':extra_files
       },
       install_requires=[
                         'numpy',

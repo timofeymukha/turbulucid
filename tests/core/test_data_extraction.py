@@ -14,7 +14,7 @@ from numpy.testing import assert_allclose
 
 
 def test_dist_orthogonal():
-    casePath = path.join(turbulucid.__path__[0], "..", "tests", "datasets",
+    casePath = path.join(turbulucid.__path__[0], "datasets",
                          "test_case_block", "averaged.vtm")
     case = turbulucid.Case(casePath)
 
