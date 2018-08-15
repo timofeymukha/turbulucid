@@ -48,27 +48,28 @@ to make the plots look exactly as desired.
 
 Installing
 ----------
-Turbulucid is mainly tested using both Python 3 and 2, but Python 3
-is recommended.
+Turbulucid is tested using both Python 3 and 2, but using Python 3 is recommended.
 It should work on any platform, where the packages described below also work.
 It has been used extensively on both Windows and Linux.
+Travis CI is used to test for possible installation errors after each commit.
 
 For turbulucid to work, several other packages have to installed.
-Three packages are :code:`numpy`, :code:`scipy` and :code:`matplotlib`.
+Four packages are :code:`numpy`, :code:`scipy`, :code:`matplotlib`, and :code:`pytest`.
 These are easy to obtain and are part of many python distributions, in
 particular, Anaconda.
 
 Turbulucid also depends on python bindings for VTK, i.e the :code:`vtk` package.
 The version of VTK should be at least 7.0.0.
-Hopefully later versions work as well, but this has not been tested.
-With Anaconda VTK can be obtained by running
+With Anaconda, VTK can be obtained by running
 :code:`conda install -c conda-forge vtk` in the terminal.
+Currently, this installs version 8.1.1 of the software.
 
 Installing the package is easy.
-Simply clone the git repository or download it as an archive and then
-unpack.
+Simply clone the git repository or download it as an archive and then unpack.
 Then navigate to the root catalog of the code in a terminal and execute
 :code:`python setup.py install`.
+This may require root priviliges, if you lack them, the :code:`--user` flag can be used.
+Alternatively, the :code:`--prefix` flag can be used to directly specify the installation path.
 
 Dive in!
 --------
