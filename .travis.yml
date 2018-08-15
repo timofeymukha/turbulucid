@@ -27,7 +27,7 @@
     - conda install -c conda-forge vtk
     - which python
     - python -c "import vtk; print(vtk.VTK_VERSION)"
-    - python setup.py develop
+    - python setup.py install
 
   script:
    - pytest --cov=turbulucid --pep8 tests
