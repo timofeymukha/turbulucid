@@ -71,6 +71,16 @@ Then navigate to the root catalog of the code in a terminal and execute
 This may require root priviliges, if you lack them, the :code:`--user` flag can be used.
 Alternatively, the :code:`--prefix` flag can be used to directly specify the installation path.
 
+Using :code:`conda`, it is posisble to test the package in a separate environment::
+
+   conda create -n test-environment python=2.7 numpy scipy matplotlib pytest
+   source activate test-environment
+   conda install -c conda-forge vtk
+   python setup.py install
+   
+For more info regarding Anaconda environments refer to `<https://conda.io/docs/user-guide/tasks/manage-environments.html>`_
+   
+
 Dive in!
 --------
 A great place to learn how to use the package is the tutorial availble in `docs/tutorial <https://github.com/timofeymukha/turbulucid/blob/master/docs/tutorial/turbulucid_tutorial.ipynb>`_.
