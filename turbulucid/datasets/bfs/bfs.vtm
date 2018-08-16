@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<VTKFile type="vtkMultiBlockDataSet" version="1.0" byte_order="LittleEndian" header_type="UInt32" compressor="vtkZLibDataCompressor">
+  <vtkMultiBlockDataSet>
+    <DataSet index="0" name="internalField" file="average/average_0.vtp">
+    </DataSet>
+    <DataSet index="1" name="inletB" file="average/average_1.vtp">
+    </DataSet>
+    <DataSet index="2" name="outletB" file="average/average_2.vtp">
+    </DataSet>
+    <DataSet index="3" name="stepB" file="average/average_3.vtp">
+    </DataSet>
+    <DataSet index="4" name="lowB1" file="average/average_4.vtp">
+    </DataSet>
+    <DataSet index="5" name="lowB2" file="average/average_5.vtp">
+    </DataSet>
+    <DataSet index="6" name="upB" file="average/average_6.vtp">
+    </DataSet>
+  </vtkMultiBlockDataSet>
+</VTKFile>
