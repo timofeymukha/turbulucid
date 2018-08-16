@@ -95,6 +95,8 @@ All are stored as .vtm VTK files that can also be opened in e.g. Paraview.
 Dive in!
 --------
 A great place to learn how to use the package is the tutorial availble in `docs/tutorial <https://github.com/timofeymukha/turbulucid/blob/master/docs/tutorial/turbulucid_tutorial.ipynb>`_.
+You can view the tutorial directly in the browser.
+To run it on your machine, you need to install Jupyter, please refer to `<https://jupyter.org>`_ for associated documentation.
 
 A compilation of all the docstrings is availble at the project's `Github pages <https://timofeymukha.github.io/turbulucid/>`_.
 
