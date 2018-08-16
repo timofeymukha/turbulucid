@@ -1,9 +1,19 @@
 # This file is part of turbulucid
-# (c) Timofey Mukha
+# (c) 2018 Timofey Mukha
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
-from setuptools import setup
+from setuptools import setup, find_packages
+import os
+
+def package_files(directory):
+    paths = []
+    for (path, directories, filenames) in os.walk(directory):
+        for filename in filenames:
+            paths.append(os.path.join(path, filename)[22:])
+    return paths
+
+extra_files = package_files(os.path.join('.', 'turbulucid', 'datasets'))
 
 setup(name='turbulucid',
       version='0.1',
@@ -12,12 +22,16 @@ setup(name='turbulucid',
 
       author='Timofey Mukha',
       author_email='timofey.mukha@it.uu.se',
-      packages=['turbulucid'],
+      packages=find_packages(),
       scripts=[],
       entry_points={
           'console_scripts': [
               'averageAlongAxis=turbulucid.bin.averageAlongAxis:main'
           ]
+      },
+      include_package_data=True,
+      package_data={
+          'turbulucid.datasets':extra_files
       },
       install_requires=[
                         'numpy',

@@ -1,5 +1,5 @@
 # This file is part of turbulucid
-# (c) Timofey Mukha
+# (c) 2018 Timofey Mukha
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
@@ -15,7 +15,7 @@ from scipy.interpolate import interp1d
 from collections import OrderedDict
 
 __all__ = ["profile_along_line", "tangents", "normals",
-           "dist", "sort_indices", "sample_by_plane"]
+           "dist", "sort_indices", "sample_by_plane", "edge_lengths"]
 
 
 def profile_along_line(case, p1, p2, correctDistance=False,
@@ -258,6 +258,35 @@ def dist(case, name, corrected=True):
         return dNormal
 
 
+def edge_lengths(case, name):
+    """Compute the lengths of boundary edges.
+
+    Parameters
+    ----------
+    case : Case
+        The case to extract data from.
+    name : str
+        The name of the boundary.
+
+    Returns
+    -------
+    ndarray
+        The lengths of each edge of the boundary.
+
+    """
+    sizes = np.zeros(case.boundary_data(name)[0].shape[0])
+
+    block = case.extract_block_by_name(name)
+    for c in range(block.GetNumberOfCells()):
+        point0 = block.GetCell(c).GetPoints().GetPoint(0)[:2]
+        point1 = block.GetCell(c).GetPoints().GetPoint(1)[:2]
+
+        sizes[c] = np.sqrt((point1[0] - point0[0])**2 +
+                           (point1[1] - point0[1])**2)
+
+    return sizes
+
+
 def sort_indices(case, name, axis):
     """Compute indices sorting the values on a boundary along an axis.
 
@@ -315,9 +344,12 @@ def sample_by_plane(case, resolution):
     plane = vtk.vtkPlaneSource()
     plane.SetResolution(resolution[0], resolution[1])
 
-    plane.SetOrigin(case.bounds[0], case.bounds[2], 0)
-    plane.SetPoint1(case.bounds[0], case.bounds[3], 0)
-    plane.SetPoint2(case.bounds[1], case.bounds[2], 0)
+    smallDy = (case.bounds[3] - case.bounds[2])/10000
+    smallDx = (case.bounds[1] - case.bounds[0])/10000
+
+    plane.SetOrigin(case.bounds[0] - smallDx, case.bounds[2] - smallDy, 0)
+    plane.SetPoint1(case.bounds[0] - smallDx, case.bounds[3] + smallDy, 0)
+    plane.SetPoint2(case.bounds[1] + smallDx, case.bounds[2] - smallDy, 0)
     plane.Update()
 
     probeFilter = vtk.vtkProbeFilter()

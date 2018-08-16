@@ -1,5 +1,5 @@
 # This file is part of turbulucid
-# (c) Timofey Mukha
+# (c) 2018 Timofey Mukha
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
@@ -21,7 +21,7 @@ class Case:
     """A class representing a simulation case.
 
     """
-    def __init__(self, fileName, clean=False):
+    def __init__(self, fileName, clean=False, pointData=False):
         """
         Create Case from file.
 
@@ -37,7 +37,7 @@ class Case:
         self.fileName = fileName
 
         # Read in the data
-        self._blockData = self.read(clean)
+        self._blockData = self.read(clean, pointData)
 
         # Compute the cell-centres
         self._cellCentres = vtk.vtkCellCenters()
@@ -165,7 +165,7 @@ class Case:
             valuesVtk.SetNumberOfComponents(values.shape[1])
             valuesVtk.SetNumberOfTuples(values.shape[0])
             for i in range(values.shape[0]):
-                valuesVtk.SetTupleValue(i, values[i, :])
+                valuesVtk.SetTuple(i, values[i, :])
         else:
             valuesVtk.SetNumberOfComponents(1)
             valuesVtk.SetNumberOfValues(values.shape[0])
@@ -182,14 +182,14 @@ class Case:
             cellData = block.GetCellData()
             valuesVtk = vtk.vtkDoubleArray()
 
-            nVals = self.boundary_data(boundary)[0][:, 0].size
+            nVals = self.boundary_cell_data(boundary)[0][:, 0].size
             bCellData = self.boundary_cell_data(boundary)[1][item]
 
             if np.ndim(values) > 1:
                 valuesVtk.SetNumberOfComponents(values.shape[1])
                 valuesVtk.SetNumberOfTuples(nVals)
                 for i in range(nVals):
-                    valuesVtk.SetTupleValue(i, bCellData[i, :])
+                    valuesVtk.SetTuple(i, bCellData[i, :])
             else:
                 valuesVtk.SetNumberOfComponents(1)
                 valuesVtk.SetNumberOfValues(nVals)
@@ -426,7 +426,7 @@ class Case:
 
         return points[:, [0, 1]], data
 
-    def read(self, clean):
+    def read(self, clean, pointData):
         """Read in the data from a file.
 
         Parameters
@@ -434,6 +434,9 @@ class Case:
         clean : bool
             Whether to attempt cleaning the case of degenerate cells upon
             read.
+        pointData : bool
+            Whether the file contains point data instead of cell data.
+            Cell data will be computed by interpolation.
 
         Raises
         ------
@@ -448,11 +451,12 @@ class Case:
         if fileExt == ".vtm":
             return NativeReader(fileName).data
         elif fileExt == ".vtk":
-            return LegacyReader(fileName, clean=clean).data
-        elif fileExt == ".vtu":
-            return XMLReader(fileName, clean=clean).data
+            return LegacyReader(fileName, clean=clean,
+                                pointData=pointData).data
+        elif (fileExt == ".vtu") or (fileExt == ".vtp"):
+            return XMLReader(fileName, clean=clean, pointData=pointData).data
         else:
-            raise ValueError("Unsupported file format.")
+            raise ValueError("Unsupported file format.", fileName, fileExt)
 
     def write(self, writePath):
         """Save the case to a .vtm format.

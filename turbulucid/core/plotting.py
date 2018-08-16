@@ -1,5 +1,5 @@
 # This file is part of turbulucid
-# (c) Timofey Mukha
+# (c) 2018 Timofey Mukha
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
@@ -102,7 +102,7 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     return collection
 
 
-def plot_vectors(case, field, color=None,
+def plot_vectors(case, field, colorField=None,
                  normalize=False, scaleX=1, scaleY=1,
                  sampleByPlane=False, planeResolution=None,
                  plotBoundaries=True,
@@ -119,8 +119,9 @@ def plot_vectors(case, field, color=None,
     field : str or ndarray
         Either a string with the name of the field as found in the case
         or an ndarray with the data.
-    color : ndarray
-        Data used to colour the vectors.
+    colorField : string or ndarray
+        Data used to colour the vectors, either name of the field or
+        an array.
     normalize : bool, optional
         Whether to normalize the the length of the vectors.
         Default is False.
@@ -200,36 +201,35 @@ def plot_vectors(case, field, color=None,
         data[np.nonzero(1 - validPointsIdx), 1] = np.ma.masked
 
     if normalize:
-        norms = np.linalg.norm(data, axis=1)
-        for j in range(data.shape[1]):
-            for i in range(data.shape[0]):
-                if norms[i] != 0:
-                    data[i, j] /= norms[i]
+        norms = np.linalg.norm(data[:, [0, 1]], axis=1)
+        for i in range(data.shape[0]):
+            if norms[i] != 0:
+                data[i, :] /= norms[i]
 
-    if color is None:
+    if colorField is None:
         return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
                           data[:, 1], **kwargs)
 
     if sampleByPlane:
-        if type(color) == str:
-            colorData = sampledData[color].reshape(planeResolution[1]+1,
-                                                   planeResolution[0]+1)
+        if type(colorField) == str:
+            colorData = sampledData[colorField].reshape(planeResolution[1] + 1,
+                                                        planeResolution[0] + 1)
             return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
                               data[:, 1], colorData, **kwargs)
         else:
-            colorData = np.ma.masked_array(color, mask=1-validPointsIdx)
+            colorData = np.ma.masked_array(colorField, mask=1 - validPointsIdx)
             return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
                               data[:, 1], colorData, **kwargs)
     else:
-        if type(color) == str:
+        if type(colorField) == str:
             return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
-                              data[:, 1], case[color], **kwargs)
+                              data[:, 1], case[colorField], **kwargs)
         else:
             return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
-                              data[:, 1], color, **kwargs)
+                              data[:, 1], colorField, **kwargs)
 
 
-def plot_streamlines(case, field, color=None,
+def plot_streamlines(case, field, colorField=None,
                      scaleX=1, scaleY=1,
                      planeResolution=None,
                      plotBoundaries=True,
@@ -248,8 +248,9 @@ def plot_streamlines(case, field, color=None,
         The vector field used for computing the streamlines. Either a
         string with the name of the field as found in the case or an
         ndarray with the data.
-    color : ndarray
-        Data used to colour the vectors.
+    colorField : string or ndarray
+        Data used to colour the vectors, either name of the field or
+        an array.
     normalize : bool, optional
         Whether to normalize the the length of the vectors.
         Default is False.
@@ -316,15 +317,15 @@ def plot_streamlines(case, field, color=None,
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
 
-    if color is None:
+    if colorField is None:
         return plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
                               **kwargs)
     else:
-        if type(color) == str:
-            colorData = sampledData[color].reshape(planeResolution[1]+1,
-                                                   planeResolution[0]+1)
+        if type(colorField) == str:
+            colorData = sampledData[colorField].reshape(planeResolution[1] + 1,
+                                                        planeResolution[0] + 1)
         else:
-            colorData = color
+            colorData = colorField
         plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
                        color=colorData, **kwargs)
 
@@ -378,8 +379,8 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
         data = case[field]
     elif ((type(field) == vtk.numpy_interface.dataset_adapter.VTKArray) or
           (type(field) == np.ndarray)):
-        case['temp'] = field
-        data = case['temp']
+        #case['temp'] = field
+        data = field
     else:
         raise TypeError("field should be a name of an existing field or an"
                         " array of values. Got "+str(type(field)))

@@ -3,10 +3,12 @@
 
 # Setuptools distribution folder.
 /dist/
+/build/
 
 # Python egg metadata, regenerated from source files by setuptools.
 /*.egg-info
 .idea
 .cache
+.pytest_cache
 .coverage
 /docs/_build/
