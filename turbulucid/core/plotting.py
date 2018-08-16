@@ -119,8 +119,9 @@ def plot_vectors(case, field, colorField=None,
     field : str or ndarray
         Either a string with the name of the field as found in the case
         or an ndarray with the data.
-    colorField : ndarray
-        Data used to colour the vectors.
+    colorField : string or ndarray
+        Data used to colour the vectors, either name of the field or
+        an array.
     normalize : bool, optional
         Whether to normalize the the length of the vectors.
         Default is False.
@@ -228,7 +229,7 @@ def plot_vectors(case, field, colorField=None,
                               data[:, 1], colorField, **kwargs)
 
 
-def plot_streamlines(case, field, color=None,
+def plot_streamlines(case, field, colorField=None,
                      scaleX=1, scaleY=1,
                      planeResolution=None,
                      plotBoundaries=True,
@@ -247,8 +248,9 @@ def plot_streamlines(case, field, color=None,
         The vector field used for computing the streamlines. Either a
         string with the name of the field as found in the case or an
         ndarray with the data.
-    color : ndarray
-        Data used to colour the vectors.
+    colorField : string or ndarray
+        Data used to colour the vectors, either name of the field or
+        an array.
     normalize : bool, optional
         Whether to normalize the the length of the vectors.
         Default is False.
@@ -315,15 +317,15 @@ def plot_streamlines(case, field, color=None,
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
 
-    if color is None:
+    if colorField is None:
         return plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
                               **kwargs)
     else:
-        if type(color) == str:
-            colorData = sampledData[color].reshape(planeResolution[1]+1,
-                                                   planeResolution[0]+1)
+        if type(colorField) == str:
+            colorData = sampledData[colorField].reshape(planeResolution[1] + 1,
+                                                        planeResolution[0] + 1)
         else:
-            colorData = color
+            colorData = colorField
         plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
                        color=colorData, **kwargs)
 
