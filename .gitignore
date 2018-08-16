@@ -12,3 +12,4 @@
 .pytest_cache
 .coverage
 /docs/_build/
+/docs/tutorial/.ipynb_checkpoints/
