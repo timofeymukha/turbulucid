@@ -13,6 +13,8 @@
 
   
   
+  
+  
 
   
 
@@ -22,28 +24,21 @@
 
   
 
-  
-  
-    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  
-
-  
-
-  
-        <link rel="index" title="Index"
-              href="../genindex.html"/>
-        <link rel="search" title="Search" href="../search.html"/>
-    <link rel="top" title="turbulucid 0.1 documentation" href="../index.html"/>
-        <link rel="next" title="Data extraction" href="data_extraction.html"/>
-        <link rel="prev" title="The Case class" href="case.html"/> 
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Data extraction" href="data_extraction.html" />
+    <link rel="prev" title="The Case class" href="case.html" /> 
 
   
   <script src="../_static/js/modernizr.min.js"></script>
 
 </head>
 
-<body class="wy-body-for-nav" role="document">
+<body class="wy-body-for-nav">
 
+   
   <div class="wy-grid-for-nav">
 
     
@@ -84,7 +79,10 @@
           
             
             
-                <ul class="current">
+              
+            
+            
+              <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="case.html">The Case class</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Plotting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data_extraction.html">Data extraction</a></li>
@@ -101,34 +99,54 @@
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
       
-      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
-        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="../index.html">turbulucid</a>
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">turbulucid</a>
+        
       </nav>
 
 
-      
       <div class="wy-nav-content">
+        
         <div class="rst-content">
+        
           
 
- 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 <div role="navigation" aria-label="breadcrumbs navigation">
+
   <ul class="wy-breadcrumbs">
-    <li><a href="../index.html">Docs</a> &raquo;</li>
-      
-    <li>Plotting</li>
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+      <li>Plotting</li>
+    
+    
       <li class="wy-breadcrumbs-aside">
         
-          
+            
             <a href="../_sources/code_reference/plotting.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
+    
   </ul>
+
+  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
@@ -182,7 +200,7 @@ If one or both scaling factors are non-positive.</li>
 
 <dl class="function">
 <dt id="turbulucid.core.plotting.plot_vectors">
-<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">plot_vectors</code><span class="sig-paren">(</span><em>case</em>, <em>field</em>, <em>color=None</em>, <em>normalize=False</em>, <em>scaleX=1</em>, <em>scaleY=1</em>, <em>sampleByPlane=False</em>, <em>planeResolution=None</em>, <em>plotBoundaries=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.plot_vectors" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">plot_vectors</code><span class="sig-paren">(</span><em>case</em>, <em>field</em>, <em>colorField=None</em>, <em>normalize=False</em>, <em>scaleX=1</em>, <em>scaleY=1</em>, <em>sampleByPlane=False</em>, <em>planeResolution=None</em>, <em>plotBoundaries=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.plot_vectors" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot a vector field.</p>
 <p>This function wraps pyplot.quiver. See that function’s documentation
 for additional keyword argumnets.</p>
@@ -194,7 +212,8 @@ for additional keyword argumnets.</p>
 <li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case that the vector field belongs to.</li>
 <li><strong>field</strong> (<em>str</em><em> or </em><em>ndarray</em>) – Either a string with the name of the field as found in the case
 or an ndarray with the data.</li>
-<li><strong>color</strong> (<em>ndarray</em>) – Data used to colour the vectors.</li>
+<li><strong>colorField</strong> (<em>string</em><em> or </em><em>ndarray</em>) – Data used to colour the vectors, either name of the field or
+an array.</li>
 <li><strong>normalize</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to normalize the the length of the vectors.
 Default is False.</li>
 <li><strong>scaleX</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the abscissa.</li>
@@ -228,7 +247,7 @@ If one or both scaling factors are non-positive.</li>
 
 <dl class="function">
 <dt id="turbulucid.core.plotting.plot_streamlines">
-<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">plot_streamlines</code><span class="sig-paren">(</span><em>case</em>, <em>field</em>, <em>color=None</em>, <em>scaleX=1</em>, <em>scaleY=1</em>, <em>planeResolution=None</em>, <em>plotBoundaries=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.plot_streamlines" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">plot_streamlines</code><span class="sig-paren">(</span><em>case</em>, <em>field</em>, <em>colorField=None</em>, <em>scaleX=1</em>, <em>scaleY=1</em>, <em>planeResolution=None</em>, <em>plotBoundaries=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.plot_streamlines" title="Permalink to this definition">¶</a></dt>
 <dd><p>Produce a streamline plot.</p>
 <p>This function wraps pyplot.streamplot. See that functions
 documentation for additional customization parameters.</p>
@@ -242,7 +261,8 @@ to.</li>
 <li><strong>field</strong> (<em>str</em><em> or </em><em>ndarray</em>) – The vector field used for computing the streamlines. Either a
 string with the name of the field as found in the case or an
 ndarray with the data.</li>
-<li><strong>color</strong> (<em>ndarray</em>) – Data used to colour the vectors.</li>
+<li><strong>colorField</strong> (<em>string</em><em> or </em><em>ndarray</em>) – Data used to colour the vectors, either name of the field or
+an array.</li>
 <li><strong>normalize</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to normalize the the length of the vectors.
 Default is False.</li>
 <li><strong>scaleX</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the abscissa.</li>
@@ -330,15 +350,16 @@ as a fraction of the width of the colorbar.</li>
 
 
            </div>
+           
           </div>
           <footer>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="data_extraction.html" class="btn btn-neutral float-right" title="Data extraction" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="data_extraction.html" class="btn btn-neutral float-right" title="Data extraction" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="case.html" class="btn btn-neutral" title="The Case class" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="case.html" class="btn btn-neutral" title="The Case class" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -351,7 +372,7 @@ as a fraction of the width of the colorbar.</li>
 
     </p>
   </div>
-  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
 
@@ -370,9 +391,11 @@ as a fraction of the width of the colorbar.</li>
         var DOCUMENTATION_OPTIONS = {
             URL_ROOT:'../',
             VERSION:'0.1',
+            LANGUAGE:'None',
             COLLAPSE_INDEX:false,
             FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
         };
     </script>
       <script type="text/javascript" src="../_static/jquery.js"></script>
@@ -381,19 +404,13 @@ as a fraction of the width of the colorbar.</li>
 
   
 
-  
-  
-    <script type="text/javascript" src="../_static/js/theme.js"></script>
-  
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
   <script type="text/javascript">
       jQuery(function () {
-          SphinxRtdTheme.StickyNav.enable();
+          SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-   
+  </script> 
 
 </body>
 </html>
