@@ -71,7 +71,7 @@ Then navigate to the root catalog of the code in a terminal and execute
 This may require root priviliges, if you lack them, the :code:`--user` flag can be used.
 Alternatively, the :code:`--prefix` flag can be used to directly specify the installation path.
 
-Using :code:`conda`, it is posisble to test the package in a separate environment::
+Using :code:`conda`, it is possible to test the package in a separate environment::
 
    conda create -n test-environment python=2.7 numpy scipy matplotlib pytest
    source activate test-environment
@@ -83,10 +83,10 @@ For more info regarding Anaconda environments refer to `<https://conda.io/docs/u
 Validation
 ----------
 
-Turbulucid comes with a test of unit tests, covering part of its functionality.
+Turbulucid comes with a number of unit tests, covering part of its functionality.
 Expanding the test suite is a work in progress.
 The tests are ran on Travis after each commit.
-To run the tests on your machine go to the top-level directory of turbulucid and run :code:`pytest tests`.
+To run the tests on your machine, go to the top-level directory of turbulucid and run :code:`pytest tests`.
 
 The best way to validate the functionality is to apply turbulucid to post-processing some simple dataset, which can also be opened in another software in order to compare results.
 To that end, three datasets are provided in the turbulucid/datasets folder.
