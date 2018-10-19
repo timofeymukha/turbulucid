@@ -140,16 +140,17 @@ def profile_along_line(case, p1, p2, correctDistance=False,
         else:
             dataNumpy[key] = np.array(data[key])[order]
 
-    # Find the point (not cell-center!) closest to p1, get correction
-    planeCut.SetInputData(case.vtkData.VTKObject)
-    planeCut.Update()
 
-    shiftPointId = cutData.VTKObject.FindPoint(p1)
-    shiftPoint = cutData.Points[shiftPointId, :]
-    correction = np.linalg.norm(shiftPoint - p1)
 
     # Correct the distance values
     if correctDistance:
+        # Find the point (not cell-center!) closest to p1, get correction
+        planeCut.SetInputData(case.vtkData.VTKObject)
+        planeCut.Update()
+    
+        shiftPointId = cutData.VTKObject.FindPoint(p1)
+        shiftPoint = cutData.Points[shiftPointId, :]
+        correction = np.linalg.norm(shiftPoint - p1)
         distance -= correction
 
     return distance, dataNumpy
