@@ -49,7 +49,7 @@ def profile_along_line(case, p1, p2, correctDistance=False,
         of these fields as values.
 
     """
-    p1 = np.append(np.array(p1), 0)
+    p1 = np.append(np.array(p1), case.vtkData.GetPoints()[0, 2])
     p2 = np.append(np.array(p2), 0)
 
     # Compute the plane-normal as a cross-product
