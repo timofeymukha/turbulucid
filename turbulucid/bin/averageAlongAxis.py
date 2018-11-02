@@ -85,13 +85,15 @@ def print_progress(current, total, freq=10., tabLevel=0):
         print(tabs+"Done about "+str(int(current/total*100.))+"%")
 
 
-def read(casePath):
+def read(casePath, debug):
     """Read the case from a given path to .foam file.
 
     Parameters
     ----------
     casePath : str
-        the path to the .foam file.
+        The path to the .foam file.
+    debug : bool
+        Debug switch
 
     Returns
     -------
@@ -108,21 +110,29 @@ def read(casePath):
     if not os.path.exists(casePath):
         raise ValueError("Provided path to .foam file invalid!")
 
+    if debug:
+        print("    Opening the case")
     # Case reader
     reader = vtk.vtkOpenFOAMReader()
     reader.SetFileName(casePath)
     reader.Update()
 
+    if debug:
+        print("    Changing reader parameters")
     reader.CreateCellToPointOff()
     reader.DisableAllPointArrays()
     reader.EnableAllPatchArrays()
     reader.DecomposePolyhedraOff()
-
     reader.Update()
 
+    if debug:
+        print("The available timesteps are", vtk_to_numpy(reader.GetTimeValues()))
     reader.SetTimeValue(vtk_to_numpy(reader.GetTimeValues())[-1])
     reader.Update()
     reader.UpdateInformation()
+
+    if debug:
+        print("The used timevalue is", vtk_to_numpy((reader.GetTimeValues())))
 
     return reader
 
@@ -187,18 +197,24 @@ def get_cell_points(polyData, cellId):
     return cellPointsIds
 
 
-def average_internal_field_data(block, internalData, nSamples):
+def average_internal_field_data(block, internalData, nSamples, debug):
 
     blockCellData = block.GetCellData()
     bounds = block.GetBounds()
     smallDz = (bounds[5] - bounds[2])/10000
 
+    if debug:
+        print("    Computing cell centers of the seed patch")
     patchCellCenters = vtk.vtkCellCenters()
     patchCellCenters.SetInputData(internalData)
     patchCellCenters.Update()
 
     patchCellCenters = patchCellCenters.GetOutput()
     nSeedPoints = patchCellCenters.GetNumberOfPoints()
+
+    if debug:
+        print("    The number of seed points is", nSeedPoints)
+
 
     line = vtk.vtkLineSource()
     probeFilter = vtk.vtkProbeFilter()
@@ -211,10 +227,12 @@ def average_internal_field_data(block, internalData, nSamples):
     for field in range(nFields):
         name = blockCellData.GetArrayName(field)
         nCols = blockCellData.GetArray(field).GetNumberOfComponents()
+        if debug:
+            print("    Will average field", name, "with", nCols, "components")
         avrgFields[name] = np.zeros((nSeedPoints, nCols))
 
     for seed in range(int(nSeedPoints)):
-        print_progress(seed, nSeedPoints)
+        print_progress(seed, nSeedPoints, tabLevel=1)
 
         seedPoint = patchCellCenters.GetPoint(seed)
         line.SetResolution(nSamples-1)
@@ -234,8 +252,11 @@ def average_internal_field_data(block, internalData, nSamples):
             else:
                 avrgFields[field][seed] = np.mean(probeData[field], axis=0)
 
+    if debug:
+        print("    Assigning sampled data to the internal field")
     wrappedPatchData = dsa.WrapDataObject(internalData)
     for field in avrgFields:
+        print("        Assigning field", field)
         fieldI = avrgFields[field]
         nComp = fieldI.shape[1]
 
@@ -379,7 +400,7 @@ def get_closest_cell(point, internalData):
     return foundCellId, distance[foundCellId]
 
 
-def mark_boundary_cells(patchData, patchPolys):
+def mark_boundary_cells(patchData, patchPolys, debug):
     """Find the internal cell adjacent to each cell in the boundary
     data.
 
@@ -400,17 +421,23 @@ def mark_boundary_cells(patchData, patchPolys):
     locator.Update()
 
     for boundary in patchPolys:
+        if debug:
+            print("    Marking cells for patch", boundary)
 
+        if debug:
+            print("    Computing edge centers")
         polyI = patchPolys[boundary]
         cellCenters.SetInputData(polyI)
         cellCenters.Update()
 
         points = dsa.WrapDataObject(cellCenters.GetOutput()).Points
+        if debug:
+            print("    Found", points.shape[0], "centers")
 
         cell = vtk.vtkGenericCell()
         tol2 = 0.0
         pcoords = [0, 0, 0]
-        weights = []
+        weights = [0, 0, 0]
 
         for i in range(points.shape[0]):
             pointI = points[i, :]
@@ -428,6 +455,8 @@ def mark_boundary_cells(patchData, patchPolys):
                       distance, "away.")
                 boundaryCellsConn[boundary][i] = foundCellId
 
+    if debug:
+        print("    Assigning the connectivity lists as FieldData")
     for key in boundaryCellsConn:
         if np.any(boundaryCellsConn[key] == -1):
             print("ERROR: some connectivity not established for boundary "+key)
@@ -456,13 +485,16 @@ def add_boundary_names_to_fielddata(polyData, boundaryData):
     polyData.GetFieldData().AddArray(boundaryNames)
 
 
-def create_boundary_polydata(patchBlocks, patchData, bounds):
+def create_boundary_polydata(patchBlocks, patchData, bounds, debug):
 
     patchFeatureEdgesFilter = vtk.vtkFeatureEdges()
 
     patchPolys = OrderedDict()
 
     for patchName in get_block_names(patchBlocks):
+        if debug:
+            print("    Extracting edges for patch", patchName)
+
         # Get the patch data
         patchBlockI = patchBlocks.GetBlock(get_block_index(patchBlocks,
                                                            patchName))
@@ -474,21 +506,34 @@ def create_boundary_polydata(patchBlocks, patchData, bounds):
 
         boundaryIPoints = dsa.WrapDataObject(patchFeatureEdgesData).Points
 
+        if debug:
+            print("    Found", boundaryIPoints.shape[0], "edge points")
+
         b4Points = np.ones(boundaryIPoints.shape[0])*bounds[4]
         b5Points = np.ones(boundaryIPoints.shape[0])*bounds[5]
         # The patch is an x-y plane
-        if (np.allclose(boundaryIPoints[:, 2], b4Points, atol=1e-8, rtol=1e-5) or
-            np.allclose(boundaryIPoints[:, 2], b5Points, atol=1e-8, rtol=1e-5)):
+
+        if (np.allclose(boundaryIPoints[:, 2], b4Points, atol=1e-6, rtol=1e-4) or
+            np.allclose(boundaryIPoints[:, 2], b5Points, atol=1e-6, rtol=1e-4)):
+            if debug:
+                print("    The patch appears to lie in the x-y plane, ignoring it")
             continue
         else:
 
             # Select the points located at the boundary of the patch
+            print(patchData.GetPoint(0)[2])
+            print(np.abs(boundaryIPoints[:, 2]))
 
-            idx = boundaryIPoints[:, 2] == patchData.GetPoint(0)[2]
+            idx = np.abs(boundaryIPoints[:, 2] - patchData.GetPoint(0)[2]) < 3e-4
+
+            if debug:
+                print("    Found", np.sum(idx), "edge points with the same z-values as the seed patch")
 
             # Find ids of the cells in the x-y plane
             cellIds = vtk.vtkIntArray()
             for i in range(patchFeatureEdgesData.GetNumberOfCells()):
+
+                # Get ids of the points of cell i
                 pointIds = vtk.vtkIdList()
                 patchFeatureEdgesData.GetCellPoints(i, pointIds)
 
@@ -518,6 +563,8 @@ def create_boundary_polydata(patchBlocks, patchData, bounds):
 
             newPoly.ShallowCopy(cleaner.GetOutput())
 
+            if debug:
+                print("    Created polyData with", newPoly.GetNumberOfCells(), "cells")
             patchPolys[patchName] = newPoly
     return patchPolys
 
@@ -605,9 +652,23 @@ def main():
         print("ERROR: required parameter not specified in config file.")
         raise
 
+    try:
+        debug = int(config["debug"])
+    except KeyError:
+        debug = 0
+        pass
+
+    if debug:
+        print("The debug switch is on")
+        print("")
+        print("The case path is "+casePath)
+        print("The name of the seed patch is "+seedPatchName)
+        print("The number of samples to be taken along z is "+str(nSamples))
+        print("The produced filename will be "+writePath)
+
     # Case reader
     print("Reading")
-    reader = read(casePath)
+    reader = read(casePath, debug)
     print("Done")
 
     # Writer
@@ -629,17 +690,17 @@ def main():
 
     print("Sampling and averaging internal field")
     zero_out_arrays(internalData)
-    average_internal_field_data(internalBlock, internalData, nSamples)
+    average_internal_field_data(internalBlock, internalData, nSamples, debug)
 
     print("Creating boundary polyData")
-    boundaryData = create_boundary_polydata(patchBlocks, internalData, bounds)
+    boundaryData = create_boundary_polydata(patchBlocks, internalData, bounds, debug)
 
     print("Averaging data for patches")
     average_patch_data(caseData, boundaryData, nSamples, bounds)
     add_boundary_names_to_fielddata(internalData, boundaryData)
 
     print("Marking boundary cells.")
-    mark_boundary_cells(internalData, boundaryData)
+    mark_boundary_cells(internalData, boundaryData, debug)
 
     print("Assembling multi-block structure")
     multiBlock = assemble_multiblock(internalData, boundaryData)
