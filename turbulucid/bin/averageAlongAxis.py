@@ -85,7 +85,7 @@ def print_progress(current, total, freq=10., tabLevel=0):
         print(tabs+"Done about "+str(int(current/total*100.))+"%")
 
 
-def read(casePath, debug):
+def read(casePath, debug=False):
     """Read the case from a given path to .foam file.
 
     Parameters
@@ -197,7 +197,7 @@ def get_cell_points(polyData, cellId):
     return cellPointsIds
 
 
-def average_internal_field_data(block, internalData, nSamples, debug):
+def average_internal_field_data(block, internalData, nSamples, debug=False):
 
     blockCellData = block.GetCellData()
     bounds = block.GetBounds()
@@ -400,7 +400,7 @@ def get_closest_cell(point, internalData):
     return foundCellId, distance[foundCellId]
 
 
-def mark_boundary_cells(patchData, patchPolys, debug):
+def mark_boundary_cells(patchData, patchPolys, debug=False):
     """Find the internal cell adjacent to each cell in the boundary
     data.
 
@@ -485,7 +485,7 @@ def add_boundary_names_to_fielddata(polyData, boundaryData):
     polyData.GetFieldData().AddArray(boundaryNames)
 
 
-def create_boundary_polydata(patchBlocks, patchData, bounds, debug):
+def create_boundary_polydata(patchBlocks, patchData, bounds, debug=False):
 
     patchFeatureEdgesFilter = vtk.vtkFeatureEdges()
 
@@ -653,9 +653,9 @@ def main():
         raise
 
     try:
-        debug = int(config["debug"])
+        debug = bool(int(config["debug"]))
     except KeyError:
-        debug = 0
+        debug = False
         pass
 
     if debug:
