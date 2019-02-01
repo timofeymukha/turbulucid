@@ -85,13 +85,15 @@ def print_progress(current, total, freq=10., tabLevel=0):
         print(tabs+"Done about "+str(int(current/total*100.))+"%")
 
 
-def read(casePath, debug=False):
+def read(casePath, time, debug=False):
     """Read the case from a given path to .foam file.
 
     Parameters
     ----------
     casePath : str
         The path to the .foam file.
+    time : float
+        The time step to load, default to latest time
     debug : bool
         Debug switch
 
@@ -124,15 +126,24 @@ def read(casePath, debug=False):
     reader.EnableAllPatchArrays()
     reader.DecomposePolyhedraOff()
     reader.Update()
+    reader.UpdateInformation()
+
+    info = reader.GetExecutive().GetOutputInformation(0)
 
     if debug:
         print("The available timesteps are", vtk_to_numpy(reader.GetTimeValues()))
-    reader.SetTimeValue(vtk_to_numpy(reader.GetTimeValues())[-1])
+
+    print(time)
+    if time is None:
+        print("Selecting the latest available time step")
+        info.Set(vtk.vtkStreamingDemandDrivenPipeline.UPDATE_TIME_STEP(),
+                vtk_to_numpy(reader.GetTimeValues())[-1])
+    else:
+        print("Selecting the time step", time)
+        info.Set(vtk.vtkStreamingDemandDrivenPipeline.UPDATE_TIME_STEP(), time)
+
     reader.Update()
     reader.UpdateInformation()
-
-    if debug:
-        print("The used timevalue is", vtk_to_numpy((reader.GetTimeValues())))
 
     return reader
 
@@ -674,7 +685,6 @@ def main():
     try:
         casePath = config["case"]
         seedPatchName = config["patch"]
-        time = float(config["time"])
         nSamples = int(config["nSamples"])
         writePath = config["file"]
     except KeyError:
@@ -685,6 +695,12 @@ def main():
         debug = bool(int(config["debug"]))
     except KeyError:
         debug = False
+        pass
+
+    try:
+        time = float(config["time"])
+    except KeyError:
+        time = None
         pass
 
     try:
@@ -703,9 +719,7 @@ def main():
 
     # Case reader
     print("Reading")
-    reader = read(casePath, debug)
-    print("Done")
-
+    reader = read(casePath, time, debug)
     # Writer
     writer = vtk.vtkXMLMultiBlockDataWriter()
     writer.SetFileName(writePath)
