@@ -400,18 +400,16 @@ def get_closest_cell(point, internalData, debug):
     subId = vtk.mutable(0)
     dist2 = vtk.mutable(0.0)
     pcoords = [0, 0, 0]
-    weights = [0, 0, 0]
+    weights = [0, 0, 0, 0]
 
 
     for i in range(distance.shape[0]):
         cellI = internalData.GetCell(i)
-        if debug:
-            print("kek")
         found = cellI.EvaluatePosition(point, closestPoint, subId,
                                        pcoords, dist2, weights)
         distance[i] = dist2
         if found == -1:
-            print("    ERROR: could not evaluate position for "
+            print("    WARNING: could not evaluate position for "
                   "cell", i)
 
     foundCellId = np.argmin(distance)
@@ -458,10 +456,12 @@ def mark_boundary_cells(patchData, patchPolys, debug):
         normals = np.zeros(points.shape)
         for i in range(polyI.GetNumberOfCells()):
             cellI = polyI.GetCell(i)
-            tan = cellI.GetPoints().GetPoint(1)[:] - cellI.GetPoints().GetPoint(0)[:]
-            nomrmals[i] = np.cross(tan, [0, 0, 1])
+            tan = np.array(cellI.GetPoints().GetPoint(1)) - np.array(cellI.GetPoints().GetPoint(0)[:])
+            normals[i] = np.cross(tan, [0, 0, 1])
+            normals[i] /= np.linalg.norm(normals[i])
 
-        print(normals)
+        if debug:
+            print("    The mean normal is ", np.mean(normals, axis=0))
         cell = vtk.vtkGenericCell()
         tol2 = 0.0
         pcoords = [0, 0, 0]
@@ -470,26 +470,22 @@ def mark_boundary_cells(patchData, patchPolys, debug):
         for i in range(points.shape[0]):
             pointI = points[i, :]
             foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
-            
+
+            # Attmept going along the normal
             if foundCellId == -1:
-                pointI[0] += 1e-6
+                print("    Failed to find adjacent cell for boundary point",
+                      pointI, "on boundary", boundary)
+                print("    Attempting to perturb location a long the normal")
+                pointI += 1e-6*normals[i]
                 foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
             if foundCellId == -1:
-                pointI[0] -= 1e-6
-                foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
-            if foundCellId == -1:
-                pointI[1] += 1e-6
-                foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
-            if foundCellId == -1:
-                pointI[1] -= 1e-6
+                pointI -= 1e-6*normals[i]
                 foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
 
 
             boundaryCellsConn[boundary][i] = foundCellId
 
             if foundCellId == -1:
-                print("Failed to find adjacent cell for boundary point",
-                      pointI, "on boundary", boundary)
                 print("    Attempting with slow algorithm based on minimum"
                       " distance")
                 foundCellId, distance = get_closest_cell(pointI, patchData, debug)
