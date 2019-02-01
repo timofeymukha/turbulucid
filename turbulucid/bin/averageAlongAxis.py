@@ -197,7 +197,7 @@ def get_cell_points(polyData, cellId):
     return cellPointsIds
 
 
-def average_internal_field_data(block, internalData, nSamples, debug=False):
+def average_internal_field_data(block, internalData, nSamples, debug, dry):
 
     blockCellData = block.GetCellData()
     bounds = block.GetBounds()
@@ -224,33 +224,36 @@ def average_internal_field_data(block, internalData, nSamples, debug=False):
 
     nFields = blockCellData.GetNumberOfArrays()
 
-    for field in range(nFields):
-        name = blockCellData.GetArrayName(field)
-        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
-        if debug:
-            print("    Will average field", name, "with", nCols, "components")
-        avrgFields[name] = np.zeros((nSeedPoints, nCols))
+    if not dry:
+        for field in range(nFields):
+            name = blockCellData.GetArrayName(field)
+            nCols = blockCellData.GetArray(field).GetNumberOfComponents()
+            if debug:
+                print("    Will average field", name, "with", nCols, "components")
+            avrgFields[name] = np.zeros((nSeedPoints, nCols))
 
-    for seed in range(int(nSeedPoints)):
-        print_progress(seed, nSeedPoints, tabLevel=1)
+        for seed in range(int(nSeedPoints)):
+            print_progress(seed, nSeedPoints, tabLevel=1)
 
-        seedPoint = patchCellCenters.GetPoint(seed)
-        line.SetResolution(nSamples-1)
-        line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
-        line.SetPoint2(seedPoint[0], seedPoint[1], bounds[5]-smallDz)
-        line.Update()
+            seedPoint = patchCellCenters.GetPoint(seed)
+            line.SetResolution(nSamples-1)
+            line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
+            line.SetPoint2(seedPoint[0], seedPoint[1], bounds[5]-smallDz)
+            line.Update()
 
-        probeFilter.SetInputConnection(line.GetOutputPort())
-        probeFilter.Update()
+            probeFilter.SetInputConnection(line.GetOutputPort())
+            probeFilter.Update()
 
-        probeData = dsa.WrapDataObject(probeFilter.GetOutput()).PointData
+            probeData = dsa.WrapDataObject(probeFilter.GetOutput()).PointData
 
-        for field in avrgFields:
-            if avrgFields[field].shape[1] == 9:  # a tensor
-                reshaped = probeData[field].reshape((nSamples, 9))
-                avrgFields[field][seed] = np.mean(reshaped, axis=0)
-            else:
-                avrgFields[field][seed] = np.mean(probeData[field], axis=0)
+            for field in avrgFields:
+                if avrgFields[field].shape[1] == 9:  # a tensor
+                    reshaped = probeData[field].reshape((nSamples, 9))
+                    avrgFields[field][seed] = np.mean(reshaped, axis=0)
+                else:
+                    avrgFields[field][seed] = np.mean(probeData[field], axis=0)
+    else:
+        print("    This is a dry run, will not actually average")
 
     if debug:
         print("    Assigning sampled data to the internal field")
@@ -360,7 +363,7 @@ def get_point_ids(polyData, points):
     return ids
 
 
-def get_closest_cell(point, internalData):
+def get_closest_cell(point, internalData, debug):
     """For a given point, find the cell located closest to it.
 
     Based on vtkCell.EvaluatePosition.
@@ -371,6 +374,8 @@ def get_closest_cell(point, internalData):
         The point for which to find the closest cell.
     internalData : polydata
         The polydata with the cells.
+    debug : bool
+        Debug switch
 
     Returns
     -------
@@ -384,10 +389,13 @@ def get_closest_cell(point, internalData):
     subId = vtk.mutable(0)
     dist2 = vtk.mutable(0.0)
     pcoords = [0, 0, 0]
-    weights = []
+    weights = [0, 0, 0]
+
 
     for i in range(distance.shape[0]):
         cellI = internalData.GetCell(i)
+        if debug:
+            print("kek")
         found = cellI.EvaluatePosition(point, closestPoint, subId,
                                        pcoords, dist2, weights)
         distance[i] = dist2
@@ -400,7 +408,7 @@ def get_closest_cell(point, internalData):
     return foundCellId, distance[foundCellId]
 
 
-def mark_boundary_cells(patchData, patchPolys, debug=False):
+def mark_boundary_cells(patchData, patchPolys, debug):
     """Find the internal cell adjacent to each cell in the boundary
     data.
 
@@ -429,11 +437,20 @@ def mark_boundary_cells(patchData, patchPolys, debug=False):
         polyI = patchPolys[boundary]
         cellCenters.SetInputData(polyI)
         cellCenters.Update()
-
         points = dsa.WrapDataObject(cellCenters.GetOutput()).Points
         if debug:
             print("    Found", points.shape[0], "centers")
 
+        if debug:
+            print("    Computing normals")
+
+        normals = np.zeros(points.shape)
+        for i in range(polyI.GetNumberOfCells()):
+            cellI = polyI.GetCell(i)
+            tan = cellI.GetPoints().GetPoint(1)[:] - cellI.GetPoints().GetPoint(0)[:]
+            nomrmals[i] = np.cross(tan, [0, 0, 1])
+
+        print(normals)
         cell = vtk.vtkGenericCell()
         tol2 = 0.0
         pcoords = [0, 0, 0]
@@ -442,6 +459,21 @@ def mark_boundary_cells(patchData, patchPolys, debug=False):
         for i in range(points.shape[0]):
             pointI = points[i, :]
             foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
+            
+            if foundCellId == -1:
+                pointI[0] += 1e-6
+                foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
+            if foundCellId == -1:
+                pointI[0] -= 1e-6
+                foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
+            if foundCellId == -1:
+                pointI[1] += 1e-6
+                foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
+            if foundCellId == -1:
+                pointI[1] -= 1e-6
+                foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
+
+
             boundaryCellsConn[boundary][i] = foundCellId
 
             if foundCellId == -1:
@@ -449,7 +481,7 @@ def mark_boundary_cells(patchData, patchPolys, debug=False):
                       pointI, "on boundary", boundary)
                 print("    Attempting with slow algorithm based on minimum"
                       " distance")
-                foundCellId, distance = get_closest_cell(pointI, patchData)
+                foundCellId, distance = get_closest_cell(pointI, patchData, debug)
 
                 print("    Found cell with id", foundCellId, "located",
                       distance, "away.")
@@ -485,7 +517,7 @@ def add_boundary_names_to_fielddata(polyData, boundaryData):
     polyData.GetFieldData().AddArray(boundaryNames)
 
 
-def create_boundary_polydata(patchBlocks, patchData, bounds, debug=False):
+def create_boundary_polydata(patchBlocks, patchData, bounds, debug):
 
     patchFeatureEdgesFilter = vtk.vtkFeatureEdges()
 
@@ -521,9 +553,6 @@ def create_boundary_polydata(patchBlocks, patchData, bounds, debug=False):
         else:
 
             # Select the points located at the boundary of the patch
-            print(patchData.GetPoint(0)[2])
-            print(np.abs(boundaryIPoints[:, 2]))
-
             idx = np.abs(boundaryIPoints[:, 2] - patchData.GetPoint(0)[2]) < 3e-4
 
             if debug:
@@ -658,6 +687,12 @@ def main():
         debug = False
         pass
 
+    try:
+        dry = bool(int(config["dry"]))
+    except KeyError:
+        dry = False
+        pass
+
     if debug:
         print("The debug switch is on")
         print("")
@@ -690,7 +725,7 @@ def main():
 
     print("Sampling and averaging internal field")
     zero_out_arrays(internalData)
-    average_internal_field_data(internalBlock, internalData, nSamples, debug)
+    average_internal_field_data(internalBlock, internalData, nSamples, debug, dry)
 
     print("Creating boundary polyData")
     boundaryData = create_boundary_polydata(patchBlocks, internalData, bounds, debug)
