@@ -235,14 +235,14 @@ def average_internal_field_data(block, internalData, nSamples, debug, dry):
 
     nFields = blockCellData.GetNumberOfArrays()
 
-    if not dry:
-        for field in range(nFields):
-            name = blockCellData.GetArrayName(field)
-            nCols = blockCellData.GetArray(field).GetNumberOfComponents()
-            if debug:
-                print("    Will average field", name, "with", nCols, "components")
-            avrgFields[name] = np.zeros((nSeedPoints, nCols))
+    for field in range(nFields):
+        name = blockCellData.GetArrayName(field)
+        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
+        if debug:
+            print("    Will average field", name, "with", nCols, "components")
+        avrgFields[name] = np.zeros((nSeedPoints, nCols))
 
+    if not dry:
         for seed in range(int(nSeedPoints)):
             print_progress(seed, nSeedPoints, tabLevel=1)
 
