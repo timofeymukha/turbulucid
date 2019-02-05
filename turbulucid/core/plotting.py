@@ -430,28 +430,28 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
 
         polys.append(points)
 
-    patchCollection = PolyCollection(polys, **kwargs)
+    polyCollection = PolyCollection(polys, **kwargs)
 
     if "edgecolor" not in kwargs:
-        patchCollection.set_edgecolor("face")
+        polyCollection.set_edgecolor("face")
     data = np.copy(vtk_to_numpy(clippedData.GetCellData()['temp']))
-    patchCollection.set_array(data)
+    polyCollection.set_array(data)
 
     ax = plt.gca()
-    ax.add_collection(patchCollection)
-    ax.set_xlim(xlim/scaleX)
-    ax.set_ylim(ylim/scaleY)
-    ax.set_aspect('equal')
+    ax.add_collection(polyCollection)
 
     if colorbar:
-        add_colorbar(patchCollection)
-
+        add_colorbar(polyCollection)
 
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY)
 
+    ax.set_xlim(xlim/scaleX)
+    ax.set_ylim(ylim/scaleY)
+    ax.set_aspect('equal')
+
     case.__delitem__('temp')
-    return patchCollection
+    return polyCollection
 
 
 def plot_contour(case, field, value, scaleX=1, scaleY=1, **kwargs):
