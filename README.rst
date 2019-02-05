@@ -61,7 +61,7 @@ particular, Anaconda.
 Turbulucid also depends on python bindings for VTK, i.e the :code:`vtk` package.
 The version of VTK should be at least 7.0.0.
 With Anaconda, VTK can be obtained by running
-:code:`conda install -c conda-forge vtk` in the terminal.
+:code:`conda install vtk` in the terminal.
 Currently, this installs version 8.1.1 of the software.
 
 Installing the package is easy.
@@ -75,7 +75,7 @@ Using :code:`conda`, it is possible to test the package in a separate environmen
 
    conda create -n test-environment python=2.7 numpy scipy matplotlib pytest
    source activate test-environment
-   conda install -c conda-forge vtk
+   conda install vtk
    python setup.py install
    
 For more info regarding Anaconda environments refer to `<https://conda.io/docs/user-guide/tasks/manage-environments.html>`_
@@ -125,7 +125,7 @@ SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY
 SERVICING, REPAIR OR CORRECTION.
 
 Limitation of liability
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING WILL
 ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MODIFIES AND/OR CONVEYS THE
