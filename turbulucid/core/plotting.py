@@ -18,7 +18,7 @@ from .data_extraction import sample_by_plane
 
 
 __all__ = ["plot_boundaries", "plot_vectors", "plot_streamlines", "plot_field",
-           "add_colorbar"]
+           "add_colorbar", "plot_contour"]
 
 
 def add_colorbar(data, aspect=20, padFraction=0.5, **kwargs):
@@ -420,3 +420,73 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY)
     return patchCollection
+
+
+def plot_contour(case, field, value, scaleX=1, scaleY=1, **kwargs):
+    """Plot a contour plot of a scalar field.
+
+    The cell data is first interpolated to points in order to
+    use vtkContourFilter to extract the contour line.
+    The kwargs are passed to the constructor of a LineCollection
+    and can be used to customize the plotted line, e.g. its colour.
+
+    Parameters
+    ----------
+    case : Case
+        The case to draw the boundaries for.
+    field : string
+        The field to extract the contour from.
+    value : float
+        The value associated with the contour.
+    scaleX : float, optional
+        A scaling factor for the abscissa.
+    scaleY : float, optional
+        A scaling factor for the ordinate.
+    **kwargs
+        Additional options to pass to pyplot.tricontour.
+
+    Raises
+    ------
+    ValueError
+        If one or both scaling factors are non-positive.
+
+    Returns
+    -------
+    LineCollection
+        Collection of line segments defining the contour line.
+
+    """
+    if (scaleX <= 0) or (scaleY <= 0):
+        raise ValueError("Scaling factors must be positive.")
+
+    toPoint = vtk.vtkCellDataToPointData()
+    toPoint.SetInputData(case.vtkData.VTKObject)
+    toPoint.Update()
+    pointData = toPoint.GetOutput()
+    pointData.GetPointData().SetActiveScalars(field)
+
+    contour = vtk.vtkContourFilter()
+    contour.SetInputData(pointData)
+    contour.SetValue(0, value)
+    contour.Update()
+    contour = dsa.WrapDataObject(contour.GetOutput())
+
+    ax = plt.gca()
+    segments = []
+    for c in range(contour.GetNumberOfCells()):
+        point0 = contour.GetCell(c).GetPoints().GetPoint(0)[:2]
+        point1 = contour.GetCell(c).GetPoints().GetPoint(1)[:2]
+
+        point0 = np.array(point0)/[scaleX, scaleY]
+        point1 = np.array(point1)/[scaleX, scaleY]
+        segments.append((point0, point1))
+    collection = LineCollection(segments, **kwargs)
+    if "color" not in kwargs:
+        collection.set_color("Black")
+
+    ax.add_collection(collection)
+    ax.set_xlim(case.xlim/scaleX)
+    ax.set_ylim(case.ylim/scaleY)
+    ax.set_aspect('equal')
+
+    return collection
