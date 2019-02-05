@@ -15,7 +15,8 @@ from scipy.interpolate import interp1d
 from collections import OrderedDict
 
 __all__ = ["profile_along_line", "tangents", "normals",
-           "dist", "sort_indices", "sample_by_plane", "edge_lengths"]
+           "dist", "sort_indices", "sample_by_plane", "edge_lengths",
+           "isoline"]
 
 
 def profile_along_line(case, p1, p2, correctDistance=False,
@@ -375,3 +376,40 @@ def sample_by_plane(case, resolution):
             data[key] = np.array(probeData.PointData[key])
 
     return points, data
+
+
+def isoline(case, field, value):
+    """Extract an isoline of a scalar field.
+
+    The cell data is first interpolated to points in order to
+    use vtkContourFilter to extract the isoline.
+
+    Parameters
+    ----------
+    case : Case
+        The case to draw the boundaries for.
+    field : string
+        The field to extract the contour from.
+    value : float
+        The value associated with the contour.
+
+    Returns
+    -------
+    ndarray
+        Points defining the isoline.
+
+    """
+
+    toPoint = vtk.vtkCellDataToPointData()
+    toPoint.SetInputData(case.vtkData.VTKObject)
+    toPoint.Update()
+    pointData = toPoint.GetOutput()
+    pointData.GetPointData().SetActiveScalars(field)
+
+    contour = vtk.vtkContourFilter()
+    contour.SetInputData(pointData)
+    contour.SetValue(0, value)
+    contour.Update()
+    contour = dsa.WrapDataObject(contour.GetOutput())
+
+    return  np.array(contour.GetPoints()[:, :2])
