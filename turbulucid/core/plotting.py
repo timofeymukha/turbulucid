@@ -10,10 +10,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
+from vtk.util.numpy_support import vtk_to_numpy
 from mpl_toolkits import axes_grid1
 from matplotlib.collections import PatchCollection
+from matplotlib.collections import PolyCollection
 from matplotlib.collections import LineCollection
-from matplotlib.patches import Polygon
 from .data_extraction import sample_by_plane
 
 
@@ -330,7 +331,7 @@ def plot_streamlines(case, field, colorField=None,
                        color=colorData, **kwargs)
 
 
-def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
+def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBoundaries=True,
                colorbar=True, **kwargs):
 
     """Plot a field.
@@ -354,6 +355,10 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
         A scaling factor for the abscissa.
     scaleY : float, optional
         A scaling factor for the ordinate.
+    xlim : list with two elements
+        Limits for the plotted data in the x direction. Default to no limits.
+    ylim : list with two elements
+        Limits for the plotted data in the y direction. Default to no limits.
     plotBoundaries : bool, optional
         Whether to plot the boundary of the geometry as a black line.
     colorbar : bool, optional
@@ -375,50 +380,77 @@ def plot_field(case, field, scaleX=1, scaleY=1, plotBoundaries=True,
         The collection of polygons defining the cells.
 
     """
+
+    if xlim is None:
+        xlim = case.xlim
+    else:
+        xlim = np.array(xlim)
+
+    if ylim is None:
+        ylim = case.ylim
+    else:
+        ylim = np.array(ylim)
+
     if type(field) == str:
-        data = case[field]
+        case['temp'] = case[field]
     elif ((type(field) == vtk.numpy_interface.dataset_adapter.VTKArray) or
           (type(field) == np.ndarray)):
-        #case['temp'] = field
-        data = field
+        case['temp'] = field
     else:
         raise TypeError("field should be a name of an existing field or an"
                         " array of values. Got "+str(type(field)))
 
-    if np.ndim(data) > 1:
+    if np.ndim(case['temp']) > 1:
         raise ValueError("The selected field appears to not be a scalar!")
 
     if (scaleX <= 0) or (scaleY <= 0):
         raise ValueError("Scaling factors must be positive.")
 
+    #init to case.vtkData in case we do not need clipping
+    clippedData = case.vtkData
+
+    if np.any(xlim - case.xlim) or np.any(ylim - case.ylim):
+        clipper = vtk.vtkClipPolyData()
+        box = vtk.vtkBox()
+        box.SetBounds(xlim[0], xlim[1], ylim[0], ylim[1], -1, 1)
+        clipper.SetClipFunction(box)
+        clipper.SetInputData(case.vtkData.VTKObject)
+        clipper.SetInsideOut(1)
+        clipper.Update()
+        clippedData = dsa.WrapDataObject(clipper.GetOutput())
+
     polys = []
-    for i in range(case.vtkData.GetNumberOfCells()):
-        cell = case.vtkData.GetCell(i)
+    for i in range(clippedData.GetNumberOfCells()):
+        cell = clippedData.GetCell(i)
         nPoints = cell.GetNumberOfPoints()
         points = np.zeros((nPoints, 2))
         for pointI in range(nPoints):
             points[pointI, :] = cell.GetPoints().GetPoint(pointI)[:2]
             points[pointI, :] /= [scaleX, scaleY]
 
-        polys.append(Polygon(points))
+        polys.append(points)
 
-    patchCollection = PatchCollection(polys, **kwargs)
+    patchCollection = PolyCollection(polys, **kwargs)
 
     if "edgecolor" not in kwargs:
         patchCollection.set_edgecolor("face")
+    data = np.copy(vtk_to_numpy(clippedData.GetCellData()['temp']))
     patchCollection.set_array(data)
 
     ax = plt.gca()
     ax.add_collection(patchCollection)
-    ax.set_xlim(case.xlim/scaleX)
-    ax.set_ylim(case.ylim/scaleY)
+    ax.set_xlim(xlim/scaleX)
+    ax.set_ylim(ylim/scaleY)
     ax.set_aspect('equal')
 
     if colorbar:
         add_colorbar(patchCollection)
 
+
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY)
+
+    case.__delitem__('temp')
     return patchCollection
 
 
