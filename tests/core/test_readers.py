@@ -14,7 +14,6 @@ from numpy.testing import assert_allclose
 import pytest
 
 
-@pytest.fixture()
 def create_single_cell(z, axis, angle):
 
     points = vtk.vtkPoints()

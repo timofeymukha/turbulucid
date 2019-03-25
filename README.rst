@@ -48,31 +48,55 @@ to make the plots look exactly as desired.
 
 Installing
 ----------
-Turbulucid is mainly tested using both Python 3 and 2, but Python 3
-is recommended.
+Turbulucid is tested using both Python 3 and 2, but using Python 3 is recommended.
 It should work on any platform, where the packages described below also work.
 It has been used extensively on both Windows and Linux.
+Travis CI is used to test for possible installation errors after each commit.
 
 For turbulucid to work, several other packages have to installed.
-Three packages are :code:`numpy`, :code:`scipy` and :code:`matplotlib`.
+Four packages are :code:`numpy`, :code:`scipy`, :code:`matplotlib`, and :code:`pytest`.
 These are easy to obtain and are part of many python distributions, in
 particular, Anaconda.
 
 Turbulucid also depends on python bindings for VTK, i.e the :code:`vtk` package.
 The version of VTK should be at least 7.0.0.
-Hopefully later versions work as well, but this has not been tested.
-With Anaconda VTK can be obtained by running
-:code:`conda install -c conda-forge vtk` in the terminal.
+With Anaconda, VTK can be obtained by running
+:code:`conda install vtk` in the terminal.
+Currently, this installs version 8.1.1 of the software.
 
 Installing the package is easy.
-Simply clone the git repository or download it as an archive and then
-unpack.
+Simply clone the git repository or download it as an archive and then unpack.
 Then navigate to the root catalog of the code in a terminal and execute
 :code:`python setup.py install`.
+This may require root priviliges, if you lack them, the :code:`--user` flag can be used.
+Alternatively, the :code:`--prefix` flag can be used to directly specify the installation path.
+
+Using :code:`conda`, it is possible to test the package in a separate environment::
+
+   conda create -n test-environment python=2.7 numpy scipy matplotlib pytest
+   source activate test-environment
+   conda install vtk
+   python setup.py install
+   
+For more info regarding Anaconda environments refer to `<https://conda.io/docs/user-guide/tasks/manage-environments.html>`_
+
+Validation
+----------
+
+Turbulucid comes with a number of unit tests, covering part of its functionality.
+Expanding the test suite is a work in progress.
+The tests are ran on Travis after each commit.
+To run the tests on your machine, go to the top-level directory of turbulucid and run :code:`pytest tests`.
+
+The best way to validate the functionality is to apply turbulucid to post-processing some simple dataset, which can also be opened in another software in order to compare results.
+To that end, three datasets are provided in the turbulucid/datasets folder.
+All are stored as .vtm VTK files that can also be opened in e.g. Paraview.
 
 Dive in!
 --------
 A great place to learn how to use the package is the tutorial availble in `docs/tutorial <https://github.com/timofeymukha/turbulucid/blob/master/docs/tutorial/turbulucid_tutorial.ipynb>`_.
+You can view the tutorial directly in the browser.
+To run it on your machine, you need to install Jupyter, please refer to `<https://jupyter.org>`_ for associated documentation.
 
 A compilation of all the docstrings is availble at the project's `Github pages <https://timofeymukha.github.io/turbulucid/>`_.
 
@@ -101,7 +125,7 @@ SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY
 SERVICING, REPAIR OR CORRECTION.
 
 Limitation of liability
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING WILL
 ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MODIFIES AND/OR CONVEYS THE
