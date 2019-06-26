@@ -11,6 +11,7 @@ import vtk
 import turbulucid
 from turbulucid.bin.averageAlongAxis import *
 from numpy.testing import assert_allclose
+import warnings
 
 
 @pytest.fixture
@@ -116,7 +117,8 @@ def test_create_boundary_polydata(read_test_case_block):
 
     bounds = [0, 1, 0, 1, 0, 1]
 
-    boundaryData = create_boundary_polydata(patchBlocks, internalData, bounds, False)
+    boundaryData = create_boundary_polydata(patchBlocks, internalData,
+                                            bounds, False)
 
     correctKeys = ["inlet", "outlet", "bottomWall", "topWall"]
     correctPoints = {}
