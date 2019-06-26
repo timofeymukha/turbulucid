@@ -157,6 +157,7 @@ class Reader():
         return multiBlock
 
 
+
 class LegacyReader(Reader):
     """Reader for data in legacy VTK format, i.e. .vtk."""
 

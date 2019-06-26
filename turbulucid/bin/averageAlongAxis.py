@@ -17,6 +17,7 @@ import numpy as np
 from vtk.numpy_interface import dataset_adapter as dsa
 from vtk.util.numpy_support import *
 from collections import OrderedDict
+import vtk
 from sys import exit
 
 
@@ -225,7 +226,6 @@ def average_internal_field_data(block, internalData, nSamples, debug, dry):
 
     if debug:
         print("    The number of seed points is", nSeedPoints)
-
 
     line = vtk.vtkLineSource()
     probeFilter = vtk.vtkProbeFilter()
@@ -475,11 +475,11 @@ def mark_boundary_cells(patchData, patchPolys, debug):
             if foundCellId == -1:
                 print("    Failed to find adjacent cell for boundary point",
                       pointI, "on boundary", boundary)
-                print("    Attempting to perturb location a long the normal")
+                print("    Attempting to perturb location along the normal")
                 pointI += 1e-6*normals[i]
                 foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
             if foundCellId == -1:
-                pointI -= 1e-6*normals[i]
+                pointI -= 2e-6*normals[i]
                 foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
 
 
@@ -560,7 +560,7 @@ def create_boundary_polydata(patchBlocks, patchData, bounds, debug):
         else:
 
             # Select the points located at the boundary of the patch
-            idx = np.abs(boundaryIPoints[:, 2] - patchData.GetPoint(0)[2]) < 3e-4
+            idx = np.abs(boundaryIPoints[:, 2] - patchData.GetPoint(0)[2]) < 1e-4
 
             if debug:
                 print("    Found", np.sum(idx), "edge points with the same z-values as the seed patch")
