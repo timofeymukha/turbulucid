@@ -19,7 +19,7 @@ def read_test_case_1():
 
     casePath = path.join(turbulucid.__path__[0], "datasets",
                          "test_case_1", "test_case_1.foam")
-    return read(casePath)
+    return read(casePath, 0.0)
 
 
 @pytest.fixture
@@ -28,7 +28,7 @@ def read_test_case_block():
 
     casePath = path.join(turbulucid.__path__[0], "datasets",
                          "test_case_block", "test_case_block.foam")
-    return read(casePath)
+    return read(casePath, 0.0)
 
 
 def test_get_block_names(read_test_case_1):
@@ -116,7 +116,7 @@ def test_create_boundary_polydata(read_test_case_block):
 
     bounds = [0, 1, 0, 1, 0, 1]
 
-    boundaryData = create_boundary_polydata(patchBlocks, internalData, bounds)
+    boundaryData = create_boundary_polydata(patchBlocks, internalData, bounds, False)
 
     correctKeys = ["inlet", "outlet", "bottomWall", "topWall"]
     correctPoints = {}
