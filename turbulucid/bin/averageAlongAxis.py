@@ -125,7 +125,7 @@ def read(casePath, time, debug=False):
     reader.CreateCellToPointOff()
     reader.DisableAllPointArrays()
     reader.EnableAllPatchArrays()
-    reader.DecomposePolyhedraOff()
+    reader.DecomposePolyhedraOn()
     reader.Update()
     reader.UpdateInformation()
 
@@ -134,11 +134,10 @@ def read(casePath, time, debug=False):
     if debug:
         print("The available timesteps are", vtk_to_numpy(reader.GetTimeValues()))
 
-    print(time)
     if time is None:
         print("Selecting the latest available time step")
         info.Set(vtk.vtkStreamingDemandDrivenPipeline.UPDATE_TIME_STEP(),
-                vtk_to_numpy(reader.GetTimeValues())[-1])
+                 vtk_to_numpy(reader.GetTimeValues())[-1])
     else:
         print("Selecting the time step", time)
         info.Set(vtk.vtkStreamingDemandDrivenPipeline.UPDATE_TIME_STEP(), time)
@@ -257,12 +256,24 @@ def average_internal_field_data(block, internalData, nSamples, debug, dry):
 
             probeData = dsa.WrapDataObject(probeFilter.GetOutput()).PointData
 
+            validPoints = probeData['vtkValidPointMask']
+            idx = np.where(validPoints > 0)[0]
+
+            if idx.size != nSamples and debug:
+                print("Warning:", nSamples - idx.size, "sampled points for seed point", seedPoint[0], seedPoint[1],
+                      "are invalid and will be filtered out.")
+
+            # NB: We count on the fill value for the data at invalid points to be zero
+            oneByN = 0
+            if np.sum(validPoints) > 0:
+                oneByN = 1/np.sum(validPoints)
+
             for field in avrgFields:
                 if avrgFields[field].shape[1] == 9:  # a tensor
                     reshaped = probeData[field].reshape((nSamples, 9))
-                    avrgFields[field][seed] = np.mean(reshaped, axis=0)
+                    avrgFields[field][seed] = oneByN*np.sum(reshaped, axis=0)
                 else:
-                    avrgFields[field][seed] = np.mean(probeData[field], axis=0)
+                    avrgFields[field][seed] = oneByN*np.sum(probeData[field], axis=0)
     else:
         print("    This is a dry run, will not actually average")
 
@@ -283,7 +294,7 @@ def average_internal_field_data(block, internalData, nSamples, debug, dry):
             wrappedPatchData.CellData[field][:, :] = fieldI[:, :]
 
 
-def average_patch_data(data, boundaryData, nSamples, bounds):
+def average_patch_data(data, boundaryData, nSamples, bounds, debug):
 
     avergFields = OrderedDict()
 
@@ -298,12 +309,18 @@ def average_patch_data(data, boundaryData, nSamples, bounds):
         print("Patch "+boundary)
 
         polyI = boundaryData[boundary]
+
+        if debug:
+            print("    Zeroing out arrays")
         zero_out_arrays(polyI)
 
         blockNumber = get_block_index(data.GetBlock(1), boundary)
         patchBlock = data.GetBlock(1).GetBlock(blockNumber)
         patchBlockData = patchBlock.GetCellData()
         nSeedPoints = polyI.GetNumberOfCells()
+        if debug:
+            print("    The number of seed points (cell centres) is", nSeedPoints)
+            print("    Computing cell centres")
 
         cellCenters.SetInputData(polyI)
         cellCenters.Update()
@@ -318,11 +335,13 @@ def average_patch_data(data, boundaryData, nSamples, bounds):
         probeFilter.SetSourceData(patchBlock)
 
         for seed in range(nSeedPoints):
+            if debug:
+                print_progress(seed, nSeedPoints, tabLevel=1)
 
             seedPoint = cellCenters.GetOutput().GetPoint(seed)
             line.SetResolution(nSamples - 1)
             line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
-            line.SetPoint2((seedPoint[0], seedPoint[1], bounds[5]-smallDz))
+            line.SetPoint2(seedPoint[0], seedPoint[1], bounds[5]-smallDz)
             line.Update()
 
             probeFilter.SetInputConnection(line.GetOutputPort())
@@ -331,13 +350,15 @@ def average_patch_data(data, boundaryData, nSamples, bounds):
             probeData = dsa.WrapDataObject(probeFilter.GetOutput()).PointData
 
             for field in avergFields:
-                if avergFields[field].shape[1] == 9:  #tensor
+                if avergFields[field].shape[1] == 9:
                     reshaped = probeData[field].reshape((nSamples, 9))
                     avergFields[field][seed] = np.mean(reshaped, axis=0)
                 else:
                     avergFields[field][seed] = np.mean(probeData[field],
                                                        axis=0)
 
+        if debug:
+            print("Wrapping polydata")
         wrappedPoly = dsa.WrapDataObject(polyI)
 
         for field in avergFields:
@@ -401,7 +422,6 @@ def get_closest_cell(point, internalData, debug):
     dist2 = vtk.mutable(0.0)
     pcoords = [0, 0, 0]
     weights = [0, 0, 0, 0]
-
 
     for i in range(distance.shape[0]):
         cellI = internalData.GetCell(i)
@@ -482,7 +502,6 @@ def mark_boundary_cells(patchData, patchPolys, debug):
                 pointI -= 2e-6*normals[i]
                 foundCellId = locator.FindCell(pointI, tol2, cell, pcoords, weights)
 
-
             boundaryCellsConn[boundary][i] = foundCellId
 
             if foundCellId == -1:
@@ -553,14 +572,14 @@ def create_boundary_polydata(patchBlocks, patchData, bounds, debug):
         # The patch is an x-y plane
 
         if (np.allclose(boundaryIPoints[:, 2], b4Points, atol=1e-6, rtol=1e-4) or
-            np.allclose(boundaryIPoints[:, 2], b5Points, atol=1e-6, rtol=1e-4)):
+           np.allclose(boundaryIPoints[:, 2], b5Points, atol=1e-6, rtol=1e-4)):
             if debug:
                 print("    The patch appears to lie in the x-y plane, ignoring it")
             continue
         else:
 
             # Select the points located at the boundary of the patch
-            idx = np.abs(boundaryIPoints[:, 2] - patchData.GetPoint(0)[2]) < 1e-4
+            idx = np.abs(boundaryIPoints[:, 2] - patchData.GetPoint(0)[2]) < 1e-5
 
             if debug:
                 print("    Found", np.sum(idx), "edge points with the same z-values as the seed patch")
@@ -741,7 +760,7 @@ def main():
     boundaryData = create_boundary_polydata(patchBlocks, internalData, bounds, debug)
 
     print("Averaging data for patches")
-    average_patch_data(caseData, boundaryData, nSamples, bounds)
+    average_patch_data(caseData, boundaryData, nSamples, bounds, debug)
     add_boundary_names_to_fielddata(internalData, boundaryData)
 
     print("Marking boundary cells.")
