@@ -356,9 +356,9 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
     scaleY : float, optional
         A scaling factor for the ordinate.
     xlim : list with two elements
-        Limits for the plotted data in the x direction. Default to no limits.
+        Limits for the plotted data in the x direction. Defaults to no limits.
     ylim : list with two elements
-        Limits for the plotted data in the y direction. Default to no limits.
+        Limits for the plotted data in the y direction. Defaults to no limits.
     plotBoundaries : bool, optional
         Whether to plot the boundary of the geometry as a black line.
     colorbar : bool, optional
