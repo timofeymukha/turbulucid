@@ -283,6 +283,24 @@ class Case:
 
         self._transform(transform)
 
+    def scale(self, scaleX, scaleY):
+        """Scale the geometry of the case.
+
+        The coordinates get divided by the scaling factors.
+
+        Parameters
+        ----------
+        scaleX : float
+            The scaling factor along x.
+        scaleY : float
+            The scaling factor along y.
+
+        """
+        transform = vtk.vtkTransform()
+        transform.Scale(1/scaleX, 1/scaleY, 0)
+        transform.Update()
+        self._transform(transform)
+
     def rotate(self, angle):
         """Rotate the geometry of the case around the z axis.
 
@@ -471,3 +489,4 @@ class Case:
         writer.SetFileName(writePath)
         writer.SetInputData(self._blockData)
         writer.Write()
+
