@@ -17,34 +17,35 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Plotting" href="plotting.html" />
     <link rel="prev" title="turbulucid code reference" href="../index.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -161,14 +162,30 @@
 <dl class="attribute">
 <dt id="turbulucid.Case.blockData">
 <code class="descname">blockData</code><a class="headerlink" href="#turbulucid.Case.blockData" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>vtkMultiBlockDataSet</em> – the multiblock data assembled by the
+<dd><p>the multiblock data assembled by the
 reader.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">vtkMultiBlockDataSet</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="turbulucid.Case.boundaries">
 <code class="descname">boundaries</code><a class="headerlink" href="#turbulucid.Case.boundaries" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list</em> – A list of names of the boundaries present the case.</p>
+<dd><p>A list of names of the boundaries present the case.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -228,13 +245,29 @@ The corresponding data.</p>
 <dl class="attribute">
 <dt id="turbulucid.Case.bounds">
 <code class="descname">bounds</code><a class="headerlink" href="#turbulucid.Case.bounds" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>tuple</em> – (min(x), max(x), min(y), max(y)).</p>
+<dd><p>(min(x), max(x), min(y), max(y)).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">tuple</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="turbulucid.Case.cellCentres">
 <code class="descname">cellCentres</code><a class="headerlink" href="#turbulucid.Case.cellCentres" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>wrapped VTKArray</em> – the cell centres of the read data</p>
+<dd><p>the cell centres of the read data</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">wrapped VTKArray</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -264,7 +297,15 @@ The corresponding data.</p>
 <dl class="attribute">
 <dt id="turbulucid.Case.fields">
 <code class="descname">fields</code><a class="headerlink" href="#turbulucid.Case.fields" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of str</em> – The names of the fields present in the case.</p>
+<dd><p>The names of the fields present in the case.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list of str</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -283,7 +324,7 @@ Cell data will be computed by interpolation.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> – If the provided file does not exist.</p>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code> – If the provided file does not exist.</p>
 </td>
 </tr>
 </tbody>
@@ -299,6 +340,25 @@ Cell data will be computed by interpolation.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dx</strong> (<em>angle</em>) – Rotation angle in degrees.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="turbulucid.Case.scale">
+<code class="descname">scale</code><span class="sig-paren">(</span><em>scaleX</em>, <em>scaleY</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.Case.scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scale the geometry of the case.</p>
+<p>The coordinates get divided by the scaling factors.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>scaleX</strong> (<em>float</em>) – The scaling factor along x.</li>
+<li><strong>scaleY</strong> (<em>float</em>) – The scaling factor along y.</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
@@ -325,7 +385,15 @@ Cell data will be computed by interpolation.</li>
 <dl class="attribute">
 <dt id="turbulucid.Case.vtkData">
 <code class="descname">vtkData</code><a class="headerlink" href="#turbulucid.Case.vtkData" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>wrapped PolyData</em> – The actual data read by the reader.</p>
+<dd><p>The actual data read by the reader.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">wrapped PolyData</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -345,15 +413,31 @@ Cell data will be computed by interpolation.</li>
 <dl class="attribute">
 <dt id="turbulucid.Case.xlim">
 <code class="descname">xlim</code><a class="headerlink" href="#turbulucid.Case.xlim" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of two floats</em> – The x limits that cover the
+<dd><p>The x limits that cover the
 geometry of the case, plus small a margin.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list of two floats</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="turbulucid.Case.ylim">
 <code class="descname">ylim</code><a class="headerlink" href="#turbulucid.Case.ylim" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of two floats</em> – The y limits that cover the
+<dd><p>The y limits that cover the
 geometry of the case, plus a small margin.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list of two floats</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
@@ -371,7 +455,7 @@ geometry of the case, plus a small margin.</p>
         <a href="plotting.html" class="btn btn-neutral float-right" title="Plotting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../index.html" class="btn btn-neutral" title="turbulucid code reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../index.html" class="btn btn-neutral float-left" title="turbulucid code reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -380,7 +464,7 @@ geometry of the case, plus a small margin.</p>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, Timofey Mukha.
+        &copy; Copyright 2017, Timofey Mukha
 
     </p>
   </div>
@@ -397,32 +481,16 @@ geometry of the case, plus a small margin.</p>
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../',
-            VERSION:'0.1',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../_static/jquery.js"></script>
-      <script type="text/javascript" src="../_static/underscore.js"></script>
-      <script type="text/javascript" src="../_static/doctools.js"></script>
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

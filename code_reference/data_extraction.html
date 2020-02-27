@@ -17,34 +17,35 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Quantities" href="quantities.html" />
     <link rel="prev" title="Plotting" href="plotting.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -155,6 +156,108 @@
   <div class="section" id="data-extraction">
 <h1>Data extraction<a class="headerlink" href="#data-extraction" title="Permalink to this headline">¶</a></h1>
 <dl class="function">
+<dt id="turbulucid.core.data_extraction.edge_lengths">
+<code class="descclassname">turbulucid.core.data_extraction.</code><code class="descname">edge_lengths</code><span class="sig-paren">(</span><em>case</em>, <em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.data_extraction.edge_lengths" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the lengths of boundary edges.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case to extract data from.</li>
+<li><strong>name</strong> (<em>str</em>) – The name of the boundary.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The lengths of each edge of the boundary.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="turbulucid.core.data_extraction.isoline">
+<code class="descclassname">turbulucid.core.data_extraction.</code><code class="descname">isoline</code><span class="sig-paren">(</span><em>case</em>, <em>field</em>, <em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.data_extraction.isoline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract an isoline of a scalar field.</p>
+<p>The cell data is first interpolated to points in order to
+use vtkContourFilter to extract the isoline.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case to draw the boundaries for.</li>
+<li><strong>field</strong> (<em>string</em>) – The field to extract the contour from.</li>
+<li><strong>value</strong> (<em>float</em>) – The value associated with the contour.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Points defining the isoline.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="turbulucid.core.data_extraction.dist">
+<code class="descclassname">turbulucid.core.data_extraction.</code><code class="descname">dist</code><span class="sig-paren">(</span><em>case</em>, <em>name</em>, <em>corrected=True</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.data_extraction.dist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the distances between the boundary and the adjacent
+cell-centre.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case to extract data from.</li>
+<li><strong>name</strong> (<em>str</em>) – The name of the boundary.</li>
+<li><strong>corrected</strong> (<em>bool</em>) – If true, projects the distance between face center and cell
+center onto the wall-normal direction.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The value of the distance for each adjacent cell.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="turbulucid.core.data_extraction.normals">
+<code class="descclassname">turbulucid.core.data_extraction.</code><code class="descname">normals</code><span class="sig-paren">(</span><em>case</em>, <em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.data_extraction.normals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute outward unit normal vectors for a given boundary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case to extract data from.</li>
+<li><strong>name</strong> (<em>str</em>) – The name of the boundary.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The outward normal vectors</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
 <dt id="turbulucid.core.data_extraction.profile_along_line">
 <code class="descclassname">turbulucid.core.data_extraction.</code><code class="descname">profile_along_line</code><span class="sig-paren">(</span><em>case</em>, <em>p1</em>, <em>p2</em>, <em>correctDistance=False</em>, <em>excludeBoundaries=False</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.data_extraction.profile_along_line" title="Permalink to this definition">¶</a></dt>
 <dd><p>Extract a linear profile from the data.</p>
@@ -213,81 +316,6 @@ values.</p>
 </dd></dl>
 
 <dl class="function">
-<dt id="turbulucid.core.data_extraction.tangents">
-<code class="descclassname">turbulucid.core.data_extraction.</code><code class="descname">tangents</code><span class="sig-paren">(</span><em>case</em>, <em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.data_extraction.tangents" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute unit tangent vectors for a given boundary.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case to extract data from.</li>
-<li><strong>name</strong> (<em>str</em>) – The name of the boundary.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The tangent vectors</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="turbulucid.core.data_extraction.normals">
-<code class="descclassname">turbulucid.core.data_extraction.</code><code class="descname">normals</code><span class="sig-paren">(</span><em>case</em>, <em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.data_extraction.normals" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute outward unit normal vectors for a given boundary.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case to extract data from.</li>
-<li><strong>name</strong> (<em>str</em>) – The name of the boundary.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The outward normal vectors</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="turbulucid.core.data_extraction.dist">
-<code class="descclassname">turbulucid.core.data_extraction.</code><code class="descname">dist</code><span class="sig-paren">(</span><em>case</em>, <em>name</em>, <em>corrected=True</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.data_extraction.dist" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute the distances between the boundary and the adjacent
-cell-centre.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case to extract data from.</li>
-<li><strong>name</strong> (<em>str</em>) – The name of the boundary.</li>
-<li><strong>corrected</strong> (<em>bool</em>) – If true, projects the distance between face center and cell
-center onto the wall-normal direction.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The value of the distance for each adjacent cell.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
 <dt id="turbulucid.core.data_extraction.sort_indices">
 <code class="descclassname">turbulucid.core.data_extraction.</code><code class="descname">sort_indices</code><span class="sig-paren">(</span><em>case</em>, <em>name</em>, <em>axis</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.data_extraction.sort_indices" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute indices sorting the values on a boundary along an axis.</p>
@@ -312,6 +340,30 @@ center onto the wall-normal direction.</li>
 </table>
 </dd></dl>
 
+<dl class="function">
+<dt id="turbulucid.core.data_extraction.tangents">
+<code class="descclassname">turbulucid.core.data_extraction.</code><code class="descname">tangents</code><span class="sig-paren">(</span><em>case</em>, <em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.data_extraction.tangents" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute unit tangent vectors for a given boundary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case to extract data from.</li>
+<li><strong>name</strong> (<em>str</em>) – The name of the boundary.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The tangent vectors</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
 </div>
 
 
@@ -325,7 +377,7 @@ center onto the wall-normal direction.</li>
         <a href="quantities.html" class="btn btn-neutral float-right" title="Quantities" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="plotting.html" class="btn btn-neutral" title="Plotting" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="plotting.html" class="btn btn-neutral float-left" title="Plotting" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -334,7 +386,7 @@ center onto the wall-normal direction.</li>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, Timofey Mukha.
+        &copy; Copyright 2017, Timofey Mukha
 
     </p>
   </div>
@@ -351,32 +403,16 @@ center onto the wall-normal direction.</li>
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../',
-            VERSION:'0.1',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../_static/jquery.js"></script>
-      <script type="text/javascript" src="../_static/underscore.js"></script>
-      <script type="text/javascript" src="../_static/doctools.js"></script>
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>

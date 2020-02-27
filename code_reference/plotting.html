@@ -17,34 +17,35 @@
   
 
   
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
 
-  
-  
     
 
   
-
   <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
   <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Data extraction" href="data_extraction.html" />
     <link rel="prev" title="The Case class" href="case.html" /> 
-
-  
-  <script src="../_static/js/modernizr.min.js"></script>
-
 </head>
 
 <body class="wy-body-for-nav">
 
    
   <div class="wy-grid-for-nav">
-
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search">
+        <div class="wy-side-nav-search" >
           
 
           
@@ -155,8 +156,98 @@
   <div class="section" id="plotting">
 <h1>Plotting<a class="headerlink" href="#plotting" title="Permalink to this headline">¶</a></h1>
 <dl class="function">
+<dt id="turbulucid.core.plotting.add_colorbar">
+<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">add_colorbar</code><span class="sig-paren">(</span><em>data</em>, <em>aspect=20</em>, <em>padFraction=0.5</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.add_colorbar" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a vertical colorbar to an image plot.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>data</strong> – The data with a .axes attribute.</li>
+<li><strong>aspect</strong> (<em>float</em><em>, </em><em>optional</em>) – The ratio between the height and the width of the colorbar.</li>
+<li><strong>padFraction</strong> (<em>float</em><em>, </em><em>optional</em>) – The horizontal distance between the figure and the colorbar
+as a fraction of the width of the colorbar.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The colorbar object</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">colorbar</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="turbulucid.core.plotting.plot_boundaries">
+<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">plot_boundaries</code><span class="sig-paren">(</span><em>case</em>, <em>scaleX=1</em>, <em>scaleY=1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.plot_boundaries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot the boundaries the domain.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case to draw the boundaries for.</li>
+<li><strong>scaleX</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the abscissa.</li>
+<li><strong>scaleY</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the ordinate.</li>
+<li><strong>**kwargs</strong> – Additional options to pass to pyplot.tricontour.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code> – If one or both scaling factors are non-positive.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Collection of line segments defining the boundary.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">LineCollection</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="turbulucid.core.plotting.plot_contour">
+<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">plot_contour</code><span class="sig-paren">(</span><em>case</em>, <em>field</em>, <em>value</em>, <em>scaleX=1</em>, <em>scaleY=1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.plot_contour" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot a contour plot of a scalar field.</p>
+<p>The cell data is first interpolated to points in order to
+use vtkContourFilter to extract the contour line.
+The kwargs are passed to the constructor of a LineCollection
+and can be used to customize the plotted line, e.g. its colour.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case to draw the boundaries for.</li>
+<li><strong>field</strong> (<em>string</em>) – The field to extract the contour from.</li>
+<li><strong>value</strong> (<em>float</em>) – The value associated with the contour.</li>
+<li><strong>scaleX</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the abscissa.</li>
+<li><strong>scaleY</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the ordinate.</li>
+<li><strong>**kwargs</strong> – Additional options to pass to pyplot.tricontour.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code> – If one or both scaling factors are non-positive.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Collection of line segments defining the contour line.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">LineCollection</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
 <dt id="turbulucid.core.plotting.plot_field">
-<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">plot_field</code><span class="sig-paren">(</span><em>case</em>, <em>field</em>, <em>scaleX=1</em>, <em>scaleY=1</em>, <em>plotBoundaries=True</em>, <em>colorbar=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.plot_field" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">plot_field</code><span class="sig-paren">(</span><em>case</em>, <em>field</em>, <em>scaleX=1</em>, <em>scaleY=1</em>, <em>xlim=None</em>, <em>ylim=None</em>, <em>plotBoundaries=True</em>, <em>colorbar=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.plot_field" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot a field.</p>
 <p>This function uses a matplotlib PatchCollection to compose the
 plot. Additional customization parameters can be passed to the
@@ -175,6 +266,8 @@ the name of the field as found in the case or an ndarray with
 the data.</li>
 <li><strong>scaleX</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the abscissa.</li>
 <li><strong>scaleY</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the ordinate.</li>
+<li><strong>xlim</strong> (<em>list with two elements</em>) – Limits for the plotted data in the x direction. Defaults to no limits.</li>
+<li><strong>ylim</strong> (<em>list with two elements</em>) – Limits for the plotted data in the y direction. Defaults to no limits.</li>
 <li><strong>plotBoundaries</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to plot the boundary of the geometry as a black line.</li>
 <li><strong>colorbar</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to add a vertical colorbar to the right of the plot.</li>
 <li><strong>**kwargs</strong> – Additional arguments to be passed to PatchCollection constructor.</li>
@@ -182,8 +275,8 @@ the data.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first simple">
-<li><code class="xref py py-exc docutils literal"><span class="pre">TypeError</span></code> – If field is neither a string or and ndarray.</li>
-<li><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> – If the field to be plotted has more dimensions than one.
+<li><code class="xref py py-exc docutils literal notranslate"><span class="pre">TypeError</span></code> – If field is neither a string or and ndarray.</li>
+<li><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code> – If the field to be plotted has more dimensions than one.
 If one or both scaling factors are non-positive.</li>
 </ul>
 </td>
@@ -192,6 +285,52 @@ If one or both scaling factors are non-positive.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">PatchCollection</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="turbulucid.core.plotting.plot_streamlines">
+<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">plot_streamlines</code><span class="sig-paren">(</span><em>case</em>, <em>field</em>, <em>colorField=None</em>, <em>scaleX=1</em>, <em>scaleY=1</em>, <em>planeResolution=None</em>, <em>plotBoundaries=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.plot_streamlines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce a streamline plot.</p>
+<p>This function wraps pyplot.streamplot. See that functions
+documentation for additional customization parameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case that the vector field used for the streamlines belongs
+to.</li>
+<li><strong>field</strong> (<em>str</em><em> or </em><em>ndarray</em>) – The vector field used for computing the streamlines. Either a
+string with the name of the field as found in the case or an
+ndarray with the data.</li>
+<li><strong>colorField</strong> (<em>string</em><em> or </em><em>ndarray</em>) – Data used to colour the vectors, either name of the field or
+an array.</li>
+<li><strong>normalize</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to normalize the the length of the vectors.
+Default is False.</li>
+<li><strong>scaleX</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the abscissa.</li>
+<li><strong>scaleY</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the ordinate.</li>
+<li><strong>planeResolution</strong> (<em>2-tuple</em><em>, </em><em>optional</em>) – Sets the amount of sampling points in the x and y directions.
+Note that this does not control the density of the streamlines.</li>
+<li><strong>plotBoundaries</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to plot the boundary of the geometry as a black line.</li>
+<li><strong>**kwargs</strong> – Additional arguments to be passed to pyplot.quiver.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first simple">
+<li><code class="xref py py-exc docutils literal notranslate"><span class="pre">TypeError</span></code> – If field is neither a string or and ndarray.</li>
+<li><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code> – If the data to be plotted has less dimensions than two.
+If one or both scaling factors are non-positive.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">As returned by pyplot.streamplot.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">StreamPlotSet</p>
 </td>
 </tr>
 </tbody>
@@ -229,8 +368,8 @@ sampling points in the x and y directions.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first simple">
-<li><code class="xref py py-exc docutils literal"><span class="pre">TypeError</span></code> – If field is neither a string or and ndarray.</li>
-<li><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> – If the data to be plotted has less dimensions than two.
+<li><code class="xref py py-exc docutils literal notranslate"><span class="pre">TypeError</span></code> – If field is neither a string or and ndarray.</li>
+<li><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code> – If the data to be plotted has less dimensions than two.
 If one or both scaling factors are non-positive.</li>
 </ul>
 </td>
@@ -239,107 +378,6 @@ If one or both scaling factors are non-positive.</li>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Quiver</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="turbulucid.core.plotting.plot_streamlines">
-<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">plot_streamlines</code><span class="sig-paren">(</span><em>case</em>, <em>field</em>, <em>colorField=None</em>, <em>scaleX=1</em>, <em>scaleY=1</em>, <em>planeResolution=None</em>, <em>plotBoundaries=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.plot_streamlines" title="Permalink to this definition">¶</a></dt>
-<dd><p>Produce a streamline plot.</p>
-<p>This function wraps pyplot.streamplot. See that functions
-documentation for additional customization parameters.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case that the vector field used for the streamlines belongs
-to.</li>
-<li><strong>field</strong> (<em>str</em><em> or </em><em>ndarray</em>) – The vector field used for computing the streamlines. Either a
-string with the name of the field as found in the case or an
-ndarray with the data.</li>
-<li><strong>colorField</strong> (<em>string</em><em> or </em><em>ndarray</em>) – Data used to colour the vectors, either name of the field or
-an array.</li>
-<li><strong>normalize</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to normalize the the length of the vectors.
-Default is False.</li>
-<li><strong>scaleX</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the abscissa.</li>
-<li><strong>scaleY</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the ordinate.</li>
-<li><strong>planeResolution</strong> (<em>2-tuple</em><em>, </em><em>optional</em>) – Sets the amount of sampling points in the x and y directions.
-Note that this does not control the density of the streamlines.</li>
-<li><strong>plotBoundaries</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to plot the boundary of the geometry as a black line.</li>
-<li><strong>**kwargs</strong> – Additional arguments to be passed to pyplot.quiver.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><ul class="first simple">
-<li><code class="xref py py-exc docutils literal"><span class="pre">TypeError</span></code> – If field is neither a string or and ndarray.</li>
-<li><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> – If the data to be plotted has less dimensions than two.
-If one or both scaling factors are non-positive.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">As returned by pyplot.streamplot.</p>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">StreamPlotSet</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="turbulucid.core.plotting.plot_boundaries">
-<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">plot_boundaries</code><span class="sig-paren">(</span><em>case</em>, <em>scaleX=1</em>, <em>scaleY=1</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.plot_boundaries" title="Permalink to this definition">¶</a></dt>
-<dd><p>Plot the boundaries the domain.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>case</strong> (<a class="reference internal" href="case.html#turbulucid.Case" title="turbulucid.Case"><em>Case</em></a>) – The case to draw the boundaries for.</li>
-<li><strong>scaleX</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the abscissa.</li>
-<li><strong>scaleY</strong> (<em>float</em><em>, </em><em>optional</em>) – A scaling factor for the ordinate.</li>
-<li><strong>**kwargs</strong> – Additional options to pass to pyplot.tricontour.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first"><code class="xref py py-exc docutils literal"><span class="pre">ValueError</span></code> – If one or both scaling factors are non-positive.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Collection of line segments defining the boundary.</p>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">LineCollection</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="turbulucid.core.plotting.add_colorbar">
-<code class="descclassname">turbulucid.core.plotting.</code><code class="descname">add_colorbar</code><span class="sig-paren">(</span><em>data</em>, <em>aspect=20</em>, <em>padFraction=0.5</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#turbulucid.core.plotting.add_colorbar" title="Permalink to this definition">¶</a></dt>
-<dd><p>Add a vertical colorbar to an image plot.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>data</strong> – The data with a .axes attribute.</li>
-<li><strong>aspect</strong> (<em>float</em><em>, </em><em>optional</em>) – The ratio between the height and the width of the colorbar.</li>
-<li><strong>padFraction</strong> (<em>float</em><em>, </em><em>optional</em>) – The horizontal distance between the figure and the colorbar
-as a fraction of the width of the colorbar.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The colorbar object</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">colorbar</p>
 </td>
 </tr>
 </tbody>
@@ -359,7 +397,7 @@ as a fraction of the width of the colorbar.</li>
         <a href="data_extraction.html" class="btn btn-neutral float-right" title="Data extraction" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="case.html" class="btn btn-neutral" title="The Case class" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="case.html" class="btn btn-neutral float-left" title="The Case class" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -368,7 +406,7 @@ as a fraction of the width of the colorbar.</li>
 
   <div role="contentinfo">
     <p>
-        &copy; Copyright 2017, Timofey Mukha.
+        &copy; Copyright 2017, Timofey Mukha
 
     </p>
   </div>
@@ -385,32 +423,16 @@ as a fraction of the width of the colorbar.</li>
   
 
 
-  
-
-    <script type="text/javascript">
-        var DOCUMENTATION_OPTIONS = {
-            URL_ROOT:'../',
-            VERSION:'0.1',
-            LANGUAGE:'None',
-            COLLAPSE_INDEX:false,
-            FILE_SUFFIX:'.html',
-            HAS_SOURCE:  true,
-            SOURCELINK_SUFFIX: '.txt'
-        };
-    </script>
-      <script type="text/javascript" src="../_static/jquery.js"></script>
-      <script type="text/javascript" src="../_static/underscore.js"></script>
-      <script type="text/javascript" src="../_static/doctools.js"></script>
-
-  
-
-  <script type="text/javascript" src="../_static/js/theme.js"></script>
-
   <script type="text/javascript">
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+
+  
+  
+    
+   
 
 </body>
 </html>
