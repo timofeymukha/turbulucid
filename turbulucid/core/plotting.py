@@ -179,11 +179,8 @@ def plot_vectors(case, field, colorField=None,
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
 
     if sampleByPlane:
-        plane = vtk.vtkPlaneSource()
-        if planeResolution is not None:
-            plane.SetResolution(planeResolution[0], planeResolution[1])
-        else:
-            plane.SetResolution(50, 50)
+        if planeResolution is None:
+            planeResolution = [50, 50]
 
         points, sampledData = sample_by_plane(case, planeResolution)
 
