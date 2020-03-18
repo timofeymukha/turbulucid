@@ -274,6 +274,10 @@ class NativeReader(Reader):
         self._vtkReader.Update()
         self._data = self._vtkReader.GetOutput()
 
+        for i in range(self._data.GetNumberOfBlocks()):
+            points = dsa.WrapDataObject(self._data.GetBlock(i)).Points
+            points[:, 2] = 0
+
     @property
     def vtkReader(self):
         """The VTK reader for the data."""
