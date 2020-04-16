@@ -344,7 +344,7 @@ def sample_by_plane(case, resolution):
 
     """
     plane = vtk.vtkPlaneSource()
-    plane.SetResolution(resolution[0], resolution[1])
+    plane.SetResolution(resolution[0]-1, resolution[1]-1)
 
     smallDy = (case.bounds[3] - case.bounds[2])/10000
     smallDx = (case.bounds[1] - case.bounds[0])/10000
@@ -352,6 +352,7 @@ def sample_by_plane(case, resolution):
     plane.SetOrigin(case.bounds[0] - smallDx, case.bounds[2] - smallDy, 0)
     plane.SetPoint1(case.bounds[0] - smallDx, case.bounds[3] + smallDy, 0)
     plane.SetPoint2(case.bounds[1] + smallDx, case.bounds[2] - smallDy, 0)
+
     plane.Update()
 
     probeFilter = vtk.vtkProbeFilter()
