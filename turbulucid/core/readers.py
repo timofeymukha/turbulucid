@@ -97,6 +97,11 @@ class Reader():
         axis = np.cross(meanNormal, [0, 0, 1])
         angle = np.rad2deg(np.arccos(np.dot(meanNormal, [0, 0, 1])))
 
+        # Do not rotate 180 degrees, no guarantee that it will be better
+        # than no rotation at all
+        if np.allclose([angle], [180]):
+            angle = 0
+
         transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
         transform.Update()
 
@@ -292,3 +297,13 @@ class NativeReader(Reader):
     def data(self):
         """The read in data."""
         return self._data
+
+    def _compute_normal(self):
+        vtkNormals = vtk.vtkPolyDataNormals()
+        vtkNormals.ComputeCellNormalsOn()
+        vtkNormals.SetInputData(self._vtkReader.GetOutput().GetBlock(0))
+        vtkNormals.Update()
+        normals = dsa.WrapDataObject(vtkNormals.GetOutput()).CellData["Normals"]
+        meanNormal = np.mean(normals, axis=0)
+        meanNormal /= np.linalg.norm(meanNormal)
+        return meanNormal
