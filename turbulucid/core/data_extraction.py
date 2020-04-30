@@ -223,7 +223,7 @@ def normals(case, name):
     return n
 
 
-def dist(case, name, corrected=True):
+def dist(case, name, corrected=True, sort=None):
     """Compute the distances between the boundary and the adjacent
     cell-centre.
 
@@ -236,6 +236,10 @@ def dist(case, name, corrected=True):
     corrected : bool
         If true, projects the distance between face center and cell
         center onto the wall-normal direction.
+    sort : {None, 'x', 'y'}, optional
+        Whether to sort the data along a coordinate. Use 'x' and
+        'y' to sort along x and y, respectively. Default is no
+        sorting.
 
     Returns
     -------
@@ -243,8 +247,8 @@ def dist(case, name, corrected=True):
         The value of the distance for each adjacent cell.
 
     """
-    boundaryCoords = case.boundary_data(name)[0]
-    cellCoords = case.boundary_cell_data(name)[0]
+    boundaryCoords = case.boundary_data(name, sort=sort)[0]
+    cellCoords = case.boundary_cell_data(name, sort=sort)[0]
 
     d = cellCoords - boundaryCoords
 
