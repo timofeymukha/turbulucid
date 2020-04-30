@@ -108,7 +108,10 @@ def normal_direction(fixture, writer, tmpdir):
     normals = dsa.WrapDataObject(vtkNormals.GetOutput()).CellData["Normals"]
     meanNormal = np.mean(normals, axis=0)
     meanNormal /= np.linalg.norm(meanNormal)
-    assert_allclose(meanNormal, [0, 0, 1], rtol=1e-5, atol=1e-5)
+    assert_allclose(meanNormal[:2], [0, 0], rtol=1e-5, atol=1e-5)
+
+    # Can be both +1 and -1, but aligned with z
+    assert_allclose([1], np.abs(meanNormal[-1]), rtol=1e-5, atol=1e-5)
 
 
 def test_legacy_normal_direction_different_z(different_z, tmpdir):
