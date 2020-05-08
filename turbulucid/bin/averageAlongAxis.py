@@ -207,6 +207,78 @@ def get_cell_points(polyData, cellId):
 
     return cellPointsIds
 
+def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
+
+    blockCellData = block.GetCellData()
+    bounds = block.GetBounds()
+    smallDz = (bounds[5] - bounds[2])/10000
+
+    if debug:
+        print("    Computing cell centers of the seed patch")
+    patchCellCenters = vtk.vtkCellCenters()
+    patchCellCenters.SetInputData(internalData)
+    patchCellCenters.Update()
+
+    patchCellCenters = patchCellCenters.GetOutput()
+    nSeedPoints = patchCellCenters.GetNumberOfPoints()
+
+    if debug:
+        print("    The number of seed points is", nSeedPoints)
+
+    line = vtk.vtkLineSource()
+    probeFilter = vtk.vtkProbeFilter()
+    probeFilter.SetSourceData(block)
+
+    avrgFields = OrderedDict()
+
+    nFields = blockCellData.GetNumberOfArrays()
+
+    for field in range(nFields):
+        name = blockCellData.GetArrayName(field)
+        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
+        if debug:
+            print("    Will average field", name, "with", nCols, "components")
+        avrgFields[name] = np.zeros((nSeedPoints, nCols))
+
+    lZ = bounds[5] - bounds[2]
+    zVals = np.linspace(lZ/(2*nSamples), lZ - lZ/(2*nSamples), nSamples)
+
+    samplingPoints = vtk.vtkPoints()
+    for i in range(nSeedPoints):
+        p = patchCellCenters.GetPoint(i)
+        for zi, zval in enumerate(zVals):
+            samplingPoints.InsertNextPoint(p[0], p[1], zval)
+
+    inputData = vtk.vtkPolyData()
+    inputData.SetPoints(samplingPoints)
+
+    probeFilter.SetInputData(inputData)
+    probeFilter.Update()
+    probeData = dsa.WrapDataObject(probeFilter.GetOutput())
+    print(np.reshape(probeData.GetPoints(), (-1, nSamples, 3)))
+
+    probedPointData = probeData.PointData
+    for field in avrgFields:
+        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
+        reshaped = np.reshape(probedPointData[field], (nSeedPoints, nSamples, nCols))
+        avrgFields[field] = np.mean(reshaped, axis=1)
+
+    if debug:
+        print("    Assigning sampled data to the internal field")
+    wrappedPatchData = dsa.WrapDataObject(internalData)
+    for field in avrgFields:
+        print("        Assigning field", field)
+        fieldI = avrgFields[field]
+        nComp = fieldI.shape[1]
+
+        if nComp == 1:  # scalar
+            wrappedPatchData.CellData[field][:] = fieldI[:, 0]
+        elif nComp == 9:  # tensor
+            wrappedPatchData.CellData[field][:] = fieldI.reshape(nSeedPoints,
+                                                                 3, 3)
+        else:
+            wrappedPatchData.CellData[field][:, :] = fieldI[:, :]
+
 
 def average_internal_field_data(block, internalData, nSamples, debug, dry):
 
@@ -754,7 +826,7 @@ def main():
 
     print("Sampling and averaging internal field")
     zero_out_arrays(internalData)
-    average_internal_field_data(internalBlock, internalData, nSamples, debug, dry)
+    new_average_internal_field_data(internalBlock, internalData, nSamples, debug, dry)
 
     print("Creating boundary polyData")
     boundaryData = create_boundary_polydata(patchBlocks, internalData, bounds, debug)
