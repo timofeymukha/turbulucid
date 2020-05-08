@@ -243,19 +243,22 @@ def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
     lZ = bounds[5] - bounds[2]
     zVals = np.linspace(lZ/(2*nSamples), lZ - lZ/(2*nSamples), nSamples)
 
+    print("    Generating sampling points")
     samplingPoints = vtk.vtkPoints()
     for i in range(nSeedPoints):
         p = patchCellCenters.GetPoint(i)
         for zi, zval in enumerate(zVals):
             samplingPoints.InsertNextPoint(p[0], p[1], zval)
 
+    if debug:
+        print("    Converting to polyData")
     inputData = vtk.vtkPolyData()
     inputData.SetPoints(samplingPoints)
 
+    print("    Sampling internal field")
     probeFilter.SetInputData(inputData)
     probeFilter.Update()
     probeData = dsa.WrapDataObject(probeFilter.GetOutput())
-    print(np.reshape(probeData.GetPoints(), (-1, nSamples, 3)))
 
     probedPointData = probeData.PointData
     for field in avrgFields:
