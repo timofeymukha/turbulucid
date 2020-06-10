@@ -14,6 +14,10 @@ finite-volume based solvers for Computational Fluid Dynamics.
 The package contains functions for both plotting the data and data
 introspection.
 
+For more details see this paper
+https://openresearchsoftware.metajnl.com/article/10.5334/jors.213/
+Please cite it if you use Turbulucid in your work!
+
 Why?
 ----
 
