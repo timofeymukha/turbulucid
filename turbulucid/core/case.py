@@ -59,6 +59,10 @@ class Case:
         self._xlim = plot_limits[0]
         self._ylim = plot_limits[1]
 
+        self._boundaryCellCoords, self._boundaryCellData = \
+            self._compute_boundary_cell_data()
+
+
     @property
     def blockData(self):
         """vtkMultiBlockDataSet : the multiblock data assembled by the
@@ -176,8 +180,12 @@ class Case:
 
         cellData.AddArray(valuesVtk)
 
-        # Add boundary data by copying from boundary cells
+        # Add boundary cell data
+        # Add boundary data by copying from boundary cells data
         for boundary in self.boundaries:
+            boundaryCellIds = self._vtkData.FieldData[boundary]
+            self._boundaryCellData[boundary][item] = self[item][boundaryCellIds, ...]
+
             block = self.extract_block_by_name(boundary)
             cellData = block.GetCellData()
             valuesVtk = vtk.vtkDoubleArray()
@@ -212,6 +220,7 @@ class Case:
         self.fields.remove(item)
 
         for boundary in self.boundaries:
+            del self._boundaryCellData[boundary][item]
             block = self.extract_block_by_name(boundary)
             block.GetCellData().RemoveArray(item)
 
@@ -266,6 +275,23 @@ class Case:
         self._xlim = plot_limits[0]
         self._ylim = plot_limits[1]
 
+    def _compute_boundary_cell_data(self):
+        from collections import OrderedDict
+
+        boundaryCellData = OrderedDict()
+        boundaryCellCoords = OrderedDict()
+
+        for b in self.boundaries:
+            boundaryCellData[b] = OrderedDict()
+
+            cellIds = self._vtkData.FieldData[b]
+            boundaryCellCoords[b] = self.cellCentres[cellIds, :]
+
+            for f in self.fields:
+                boundaryCellData[b][f] = self.__getitem__(f)[cellIds, ...]
+
+        return boundaryCellCoords, boundaryCellData
+
     def translate(self, dx, dy):
         """Translate the geometry of the case.
 
@@ -316,39 +342,6 @@ class Case:
         transform.Update()
         self._transform(transform)
 
-    def extract_boundary_cells(self, boundary):
-        """Extract cells adjacent to a certain boundary.
-
-        Parameters
-        ----------
-        boundary : str
-            The name of the boundary.
-
-        Returns
-        -------
-            vtkExtractSelection
-
-        """
-        if boundary not in self.vtkData.FieldData.keys():
-            raise(NameError("No boundary named "+boundary))
-
-        cellIds = self.vtkData.FieldData[boundary]
-        selectionNode = vtk.vtkSelectionNode()
-        selectionNode.SetFieldType(vtk.vtkSelectionNode.CELL)
-        selectionNode.SetContentType(vtk.vtkSelectionNode.INDICES)
-        selectionNode.SetSelectionList(numpy_to_vtk(cellIds))
-
-        selection = vtk.vtkSelection()
-        selection.AddNode(selectionNode)
-
-        extractSelection = vtk.vtkExtractSelection()
-
-        extractSelection.SetInputData(0, self.vtkData.VTKObject)
-        extractSelection.SetInputData(1, selection)
-        extractSelection.Update()
-
-        return extractSelection
-
     def boundary_cell_data(self, boundary, sort=None):
         """Return cell-centre coordinates and data from cells adjacent
         to a specific boundary.
@@ -367,20 +360,11 @@ class Case:
             Two ndarrays
 
         """
-        selection = self.extract_boundary_cells(boundary)
-        cCenters = vtk.vtkCellCenters()
-        cCenters.SetInputData(selection.GetOutput())
-        cCenters.Update()
-
-        points = np.array(dsa.WrapDataObject(cCenters.GetOutput()).Points)
-        dataVTK = dsa.WrapDataObject(selection.GetOutput()).CellData
-
-        data = {}
-        for key in dataVTK.keys():
-            data[key] = np.array(dataVTK[key])
+        points = self._boundaryCellCoords[boundary]
+        data = self._boundaryCellData[boundary]
 
         if sort is None:
-            return points[:, [0, 1]], data
+            return points, data
         elif sort == "x":
             ind = np.argsort(points[:, 0])
         elif sort == "y":
@@ -389,9 +373,9 @@ class Case:
         points = points[ind]
 
         for key in data:
-            data[key] = data[key][ind]
+            data[key] = data[key][ind, ...]
 
-        return points[:, [0, 1]], data
+        return points, data
 
     def extract_block_by_name(self, name):
         """Extract a block from the case by a given name."""
@@ -467,7 +451,8 @@ class Case:
         fileExt = os.path.splitext(fileName)[1]
 
         if fileExt == ".vtm":
-            return NativeReader(fileName).data
+            reader = NativeReader(fileName)
+            return reader.data
         elif fileExt == ".vtk":
             return LegacyReader(fileName, clean=clean,
                                 pointData=pointData).data
