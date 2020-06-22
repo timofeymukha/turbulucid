@@ -360,8 +360,8 @@ class Case:
             Two ndarrays
 
         """
-        points = self._boundaryCellCoords[boundary]
-        data = self._boundaryCellData[boundary]
+        points = np.copy(self._boundaryCellCoords[boundary])
+        data = self._boundaryCellData[boundary].copy()
 
         if sort is None:
             return points, data
