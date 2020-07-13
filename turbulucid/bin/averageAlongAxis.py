@@ -207,11 +207,11 @@ def get_cell_points(polyData, cellId):
 
     return cellPointsIds
 
+
 def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
 
     blockCellData = block.GetCellData()
     bounds = block.GetBounds()
-    smallDz = (bounds[5] - bounds[2])/10000
 
     if debug:
         print("    Computing cell centers of the seed patch")
@@ -225,7 +225,6 @@ def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
     if debug:
         print("    The number of seed points is", nSeedPoints)
 
-    line = vtk.vtkLineSource()
     probeFilter = vtk.vtkProbeFilter()
     probeFilter.SetSourceData(block)
 
@@ -240,8 +239,8 @@ def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
             print("    Will average field", name, "with", nCols, "components")
         avrgFields[name] = np.zeros((nSeedPoints, nCols))
 
-    lZ = bounds[5] - bounds[2]
-    zVals = np.linspace(lZ/(2*nSamples), lZ - lZ/(2*nSamples), nSamples)
+    lZ = bounds[5] - bounds[4]
+    zVals = np.linspace(bounds[4] + lZ/(2*nSamples), bounds[5] - lZ/(2*nSamples), nSamples)
 
     print("    Generating sampling points")
     samplingPoints = vtk.vtkPoints()
@@ -261,8 +260,14 @@ def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
     probeData = dsa.WrapDataObject(probeFilter.GetOutput())
 
     probedPointData = probeData.PointData
+    validPoints = probedPointData['vtkValidPointMask']
+    idx = np.where(validPoints <= 0)[0]
+    if idx.size > 0:
+        print("WARNING:", idx.size, "sampling points marked invalid and will be ignored")
+
     for field in avrgFields:
         nCols = blockCellData.GetArray(field).GetNumberOfComponents()
+
         reshaped = np.reshape(probedPointData[field], (nSeedPoints, nSamples, nCols))
         avrgFields[field] = np.mean(reshaped, axis=1)
 
@@ -287,7 +292,7 @@ def average_internal_field_data(block, internalData, nSamples, debug, dry):
 
     blockCellData = block.GetCellData()
     bounds = block.GetBounds()
-    smallDz = (bounds[5] - bounds[2])/10000
+    smallDz = (bounds[5] - bounds[4])/10000
 
     if debug:
         print("    Computing cell centers of the seed patch")
@@ -799,6 +804,13 @@ def main():
         dry = False
         pass
 
+    try:
+        slow = bool(int(config["slow"]))
+    except KeyError:
+        slow = False
+        print("Will use slow averaging")
+        pass
+
     if debug:
         print("The debug switch is on")
         print("")
@@ -829,7 +841,10 @@ def main():
 
     print("Sampling and averaging internal field")
     zero_out_arrays(internalData)
-    new_average_internal_field_data(internalBlock, internalData, nSamples, debug, dry)
+    if slow:
+        average_internal_field_data(internalBlock, internalData, nSamples, debug, dry)
+    else:
+        new_average_internal_field_data(internalBlock, internalData, nSamples, debug, dry)
 
     print("Creating boundary polyData")
     boundaryData = create_boundary_polydata(patchBlocks, internalData, bounds, debug)
