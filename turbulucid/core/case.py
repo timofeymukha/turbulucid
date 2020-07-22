@@ -143,7 +143,7 @@ class Case:
         if item not in self._fields:
             raise ValueError("Field " + item + " not present in the case.")
 
-        return np.copy(vtk_to_numpy(self.vtkData.CellData[item]))
+        return np.copy(np.array((self.vtkData.CellData[item])))
 
     def __setitem__(self, item, values):
         """Add another internal field to the case.
