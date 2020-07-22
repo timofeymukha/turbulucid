@@ -88,7 +88,6 @@ def profile_along_line(case, p1, p2, correctDistance=False,
     if not excludeBoundaries:
         boundaryCC = vtk.vtkCellCenters()
         for boundary in case.boundaries:
-
             block = case.extract_block_by_name(boundary)
             planeCut.SetInputData(block)
             planeCut.Update()
@@ -99,7 +98,6 @@ def profile_along_line(case, p1, p2, correctDistance=False,
 
             if boundaryCCData.Points is not None:
                 coords = np.append(coords, boundaryCCData.Points, axis=0)
-
                 for field in data.keys():
                     data[field] = np.append(data[field],
                                             boundaryCCData.PointData[field],
@@ -148,7 +146,7 @@ def profile_along_line(case, p1, p2, correctDistance=False,
         # Find the point (not cell-center!) closest to p1, get correction
         planeCut.SetInputData(case.vtkData.VTKObject)
         planeCut.Update()
-    
+
         shiftPointId = cutData.VTKObject.FindPoint(p1)
         shiftPoint = cutData.Points[shiftPointId, :]
         correction = np.linalg.norm(shiftPoint - p1)
@@ -247,13 +245,19 @@ def dist(case, name, corrected=True, sort=None):
         The value of the distance for each adjacent cell.
 
     """
-    boundaryCoords = case.boundary_data(name, sort=sort)[0]
-    cellCoords = case.boundary_cell_data(name, sort=sort)[0]
+    boundaryCoords = case.boundary_data(name)[0]
+    cellCoords = case.boundary_cell_data(name)[0]
+
+    if sort is not None:
+        idx = sort_indices(case, name, sort)
+    else:
+        idx = np.arange(0, boundaryCoords.shape[0], 1, dtype=np.int32)
 
     d = cellCoords - boundaryCoords
+    import matplotlib.pyplot as plt
 
     if not corrected:
-        return np.linalg.norm(d, axis=1)
+        return np.linalg.norm(d, axis=1)[idx]
     else:
         n = normals(case, name)
         dNormal = np.zeros(d.shape[0])
@@ -261,7 +265,7 @@ def dist(case, name, corrected=True, sort=None):
         for i in range(dNormal.size):
             dNormal[i] = np.linalg.norm(np.dot(d[i, :], n[i, :])*n[i, :])
 
-        return dNormal
+        return dNormal[idx]
 
 
 def edge_lengths(case, name):

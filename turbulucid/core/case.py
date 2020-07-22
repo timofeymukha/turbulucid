@@ -275,6 +275,9 @@ class Case:
         self._xlim = plot_limits[0]
         self._ylim = plot_limits[1]
 
+        self._boundaryCellCoords, self._boundaryCellData = \
+            self._compute_boundary_cell_data()
+
     def _compute_boundary_cell_data(self):
         from collections import OrderedDict
 
