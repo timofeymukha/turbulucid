@@ -100,6 +100,8 @@ To run it on your machine, you need to install Jupyter, please refer to `<https:
 
 A compilation of all the docstrings is availble at the project's `Github pages <https://timofeymukha.github.io/turbulucid/>`_.
 
+A collection of video-tutorials are gathered in this `Youtube playlist <https://www.youtube.com/playlist?list=PLrwFJPCcTaPUQVFu8E3wJPTije12AQKBc>`_
+
 Legal information
 -----------------
 
