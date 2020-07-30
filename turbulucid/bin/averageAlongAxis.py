@@ -208,11 +208,91 @@ def get_cell_points(polyData, cellId):
     return cellPointsIds
 
 
+def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
+
+    blockCellData = block.GetCellData()
+    bounds = block.GetBounds()
+
+    if debug:
+        print("    Computing cell centers of the seed patch")
+    patchCellCenters = vtk.vtkCellCenters()
+    patchCellCenters.SetInputData(internalData)
+    patchCellCenters.Update()
+
+    patchCellCenters = patchCellCenters.GetOutput()
+    nSeedPoints = patchCellCenters.GetNumberOfPoints()
+
+    if debug:
+        print("    The number of seed points is", nSeedPoints)
+
+    probeFilter = vtk.vtkProbeFilter()
+    probeFilter.SetSourceData(block)
+
+    avrgFields = OrderedDict()
+
+    nFields = blockCellData.GetNumberOfArrays()
+
+    for field in range(nFields):
+        name = blockCellData.GetArrayName(field)
+        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
+        if debug:
+            print("    Will average field", name, "with", nCols, "components")
+        avrgFields[name] = np.zeros((nSeedPoints, nCols))
+
+    lZ = bounds[5] - bounds[4]
+    zVals = np.linspace(bounds[4] + lZ/(2*nSamples), bounds[5] - lZ/(2*nSamples), nSamples)
+
+    print("    Generating sampling points")
+    samplingPoints = vtk.vtkPoints()
+    for i in range(nSeedPoints):
+        p = patchCellCenters.GetPoint(i)
+        for zi, zval in enumerate(zVals):
+            samplingPoints.InsertNextPoint(p[0], p[1], zval)
+
+    if debug:
+        print("    Converting to polyData")
+    inputData = vtk.vtkPolyData()
+    inputData.SetPoints(samplingPoints)
+
+    print("    Sampling internal field")
+    probeFilter.SetInputData(inputData)
+    probeFilter.Update()
+    probeData = dsa.WrapDataObject(probeFilter.GetOutput())
+
+    probedPointData = probeData.PointData
+    validPoints = probedPointData['vtkValidPointMask']
+    idx = np.where(validPoints <= 0)[0]
+    if idx.size > 0:
+        print("WARNING:", idx.size, "sampling points marked invalid and will be ignored")
+
+    for field in avrgFields:
+        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
+
+        reshaped = np.reshape(probedPointData[field], (nSeedPoints, nSamples, nCols))
+        avrgFields[field] = np.mean(reshaped, axis=1)
+
+    if debug:
+        print("    Assigning sampled data to the internal field")
+    wrappedPatchData = dsa.WrapDataObject(internalData)
+    for field in avrgFields:
+        print("        Assigning field", field)
+        fieldI = avrgFields[field]
+        nComp = fieldI.shape[1]
+
+        if nComp == 1:  # scalar
+            wrappedPatchData.CellData[field][:] = fieldI[:, 0]
+        elif nComp == 9:  # tensor
+            wrappedPatchData.CellData[field][:] = fieldI.reshape(nSeedPoints,
+                                                                 3, 3)
+        else:
+            wrappedPatchData.CellData[field][:, :] = fieldI[:, :]
+
+
 def average_internal_field_data(block, internalData, nSamples, debug, dry):
 
     blockCellData = block.GetCellData()
     bounds = block.GetBounds()
-    smallDz = (bounds[5] - bounds[2])/10000
+    smallDz = (bounds[5] - bounds[4])/10000
 
     if debug:
         print("    Computing cell centers of the seed patch")
@@ -294,16 +374,19 @@ def average_internal_field_data(block, internalData, nSamples, debug, dry):
             wrappedPatchData.CellData[field][:, :] = fieldI[:, :]
 
 
-def average_patch_data(data, boundaryData, nSamples, bounds, debug):
+def average_patch_data(patchBlocks, boundaryData, nSamples, bounds, algorithm, debug):
 
     avergFields = OrderedDict()
 
-    line = vtk.vtkLineSource()
-    probeFilter = vtk.vtkProbeFilter()
+    if algorithm == "line":
+        line = vtk.vtkLineSource()
+        probeFilter = vtk.vtkProbeFilter()
+        smallDz = (bounds[5] - bounds[4]) / 1000.
+    elif algorithm == "cut":
+        planeCut = vtk.vtkCutter()
+        planeCut.GenerateTrianglesOff()
 
     cellCenters = vtk.vtkCellCenters()
-
-    smallDz = (bounds[5] - bounds[4])/1000.
 
     for boundary in boundaryData:
         print("Patch "+boundary)
@@ -314,8 +397,8 @@ def average_patch_data(data, boundaryData, nSamples, bounds, debug):
             print("    Zeroing out arrays")
         zero_out_arrays(polyI)
 
-        blockNumber = get_block_index(data.GetBlock(1), boundary)
-        patchBlock = data.GetBlock(1).GetBlock(blockNumber)
+        blockNumber = get_block_index(patchBlocks.GetBlock(1), boundary)
+        patchBlock = patchBlocks.GetBlock(1).GetBlock(blockNumber)
         patchBlockData = patchBlock.GetCellData()
         nSeedPoints = polyI.GetNumberOfCells()
         if debug:
@@ -332,29 +415,64 @@ def average_patch_data(data, boundaryData, nSamples, bounds, debug):
             nCols = patchBlockData.GetArray(field).GetNumberOfComponents()
             avergFields[name] = np.zeros((nSeedPoints, nCols))
 
-        probeFilter.SetSourceData(patchBlock)
+        if algorithm == "line":
+            probeFilter.SetSourceData(patchBlock)
+        elif algorithm == "cut":
+            planeCut.SetInputData(patchBlock)
 
         for seed in range(nSeedPoints):
             if debug:
                 print_progress(seed, nSeedPoints, tabLevel=1)
 
             seedPoint = cellCenters.GetOutput().GetPoint(seed)
-            line.SetResolution(nSamples - 1)
-            line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
-            line.SetPoint2(seedPoint[0], seedPoint[1], bounds[5]-smallDz)
-            line.Update()
 
-            probeFilter.SetInputConnection(line.GetOutputPort())
-            probeFilter.Update()
+            if algorithm == "cut":
+                cellI = polyI.GetCell(seed)
+                point0 = np.array(cellI.GetPoints().GetPoint(0))[:2]
+                point1 = np.array(cellI.GetPoints().GetPoint(1))[:2]
+                tangent = (point1 - point0) / np.linalg.norm(point1 - point0)
+                # Define the cutting plane
 
-            probeData = dsa.WrapDataObject(probeFilter.GetOutput()).PointData
+                plane = vtk.vtkPlane()
+                plane.SetNormal(tangent[0], tangent[1], 0)
+                plane.SetOrigin(seedPoint[0], seedPoint[1], seedPoint[2])
+
+                # Create the cutter and extract the sampled data
+                planeCut.SetCutFunction(plane)
+                planeCut.Update()
+
+                # Create the cell-centres on the cut -- that is where the data is
+                cCenters = vtk.vtkCellCenters()
+                cCenters.SetInputData(planeCut.GetOutput())
+                cCenters.Update()
+                data = dsa.WrapDataObject(cCenters.GetOutput())
+                uniqueX = np.unique(np.round(data.Points[:, 0], decimals=6))
+                uniqueY = np.unique(np.round(data.Points[:, 1], decimals=6))
+
+                if uniqueY.size > 1 or uniqueX.size > 1:
+                    print("WARNING: nonunqiue (x, y) values in the cut data", uniqueX, uniqueY)
+
+            elif algorithm == "line":
+                line.SetResolution(nSamples - 1)
+                line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
+                line.SetPoint2(seedPoint[0], seedPoint[1], bounds[5]-smallDz)
+                line.Update()
+
+                probeFilter.SetInputConnection(line.GetOutputPort())
+                probeFilter.Update()
+
+                data = dsa.WrapDataObject(probeFilter.GetOutput())
+                if np.count_nonzero(data.PointData['vtkValidPointMask']) != data.Points.shape[0]:
+                    print("WARNING: some of sampled line data is invalid!")
+
+            data = data.PointData
 
             for field in avergFields:
                 if avergFields[field].shape[1] == 9:
-                    reshaped = probeData[field].reshape((nSamples, 9))
+                    reshaped = data[field].reshape((nSamples, 9))
                     avergFields[field][seed] = np.mean(reshaped, axis=0)
                 else:
-                    avergFields[field][seed] = np.mean(probeData[field],
+                    avergFields[field][seed] = np.mean(data[field],
                                                        axis=0)
 
         if debug:
@@ -724,6 +842,20 @@ def main():
         dry = False
         pass
 
+    try:
+        slow = bool(int(config["slow"]))
+    except KeyError:
+        slow = False
+        print("Will use slow averaging")
+        pass
+
+    try:
+        patchAlgorithm = str(config["patchalg"])
+    except KeyError:
+        patchAlgorithm = "cut"
+        print("Will use plane cuts for averaging patch data")
+        pass
+
     if debug:
         print("The debug switch is on")
         print("")
@@ -754,13 +886,16 @@ def main():
 
     print("Sampling and averaging internal field")
     zero_out_arrays(internalData)
-    average_internal_field_data(internalBlock, internalData, nSamples, debug, dry)
+    if slow:
+        average_internal_field_data(internalBlock, internalData, nSamples, debug, dry)
+    else:
+        new_average_internal_field_data(internalBlock, internalData, nSamples, debug, dry)
 
     print("Creating boundary polyData")
     boundaryData = create_boundary_polydata(patchBlocks, internalData, bounds, debug)
 
     print("Averaging data for patches")
-    average_patch_data(caseData, boundaryData, nSamples, bounds, debug)
+    average_patch_data(caseData, boundaryData, nSamples, bounds, patchAlgorithm, debug)
     add_boundary_names_to_fielddata(internalData, boundaryData)
 
     print("Marking boundary cells.")

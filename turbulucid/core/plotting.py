@@ -64,7 +64,7 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     scaleY : float, optional
         A scaling factor for the ordinate.
     **kwargs
-        Additional options to pass to pyplot.tricontour.
+        Additional options to pass to LineCollection constructor.
 
     Raises
     ------
@@ -122,7 +122,8 @@ def plot_vectors(case, field, colorField=None,
         or an ndarray with the data.
     colorField : string or ndarray
         Data used to colour the vectors, either name of the field or
-        an array.
+        an array. Does not work with sampleByPlane unless you carefully
+        craft the array to fit the resampled data size.
     normalize : bool, optional
         Whether to normalize the the length of the vectors.
         Default is False.
@@ -179,11 +180,8 @@ def plot_vectors(case, field, colorField=None,
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
 
     if sampleByPlane:
-        plane = vtk.vtkPlaneSource()
-        if planeResolution is not None:
-            plane.SetResolution(planeResolution[0], planeResolution[1])
-        else:
-            plane.SetResolution(50, 50)
+        if planeResolution is None:
+            planeResolution = [50, 50]
 
         points, sampledData = sample_by_plane(case, planeResolution)
 

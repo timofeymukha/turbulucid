@@ -88,7 +88,6 @@ def profile_along_line(case, p1, p2, correctDistance=False,
     if not excludeBoundaries:
         boundaryCC = vtk.vtkCellCenters()
         for boundary in case.boundaries:
-
             block = case.extract_block_by_name(boundary)
             planeCut.SetInputData(block)
             planeCut.Update()
@@ -99,7 +98,6 @@ def profile_along_line(case, p1, p2, correctDistance=False,
 
             if boundaryCCData.Points is not None:
                 coords = np.append(coords, boundaryCCData.Points, axis=0)
-
                 for field in data.keys():
                     data[field] = np.append(data[field],
                                             boundaryCCData.PointData[field],
@@ -148,7 +146,7 @@ def profile_along_line(case, p1, p2, correctDistance=False,
         # Find the point (not cell-center!) closest to p1, get correction
         planeCut.SetInputData(case.vtkData.VTKObject)
         planeCut.Update()
-    
+
         shiftPointId = cutData.VTKObject.FindPoint(p1)
         shiftPoint = cutData.Points[shiftPointId, :]
         correction = np.linalg.norm(shiftPoint - p1)
@@ -223,7 +221,7 @@ def normals(case, name):
     return n
 
 
-def dist(case, name, corrected=True):
+def dist(case, name, corrected=True, sort=None):
     """Compute the distances between the boundary and the adjacent
     cell-centre.
 
@@ -236,6 +234,10 @@ def dist(case, name, corrected=True):
     corrected : bool
         If true, projects the distance between face center and cell
         center onto the wall-normal direction.
+    sort : {None, 'x', 'y'}, optional
+        Whether to sort the data along a coordinate. Use 'x' and
+        'y' to sort along x and y, respectively. Default is no
+        sorting.
 
     Returns
     -------
@@ -246,10 +248,16 @@ def dist(case, name, corrected=True):
     boundaryCoords = case.boundary_data(name)[0]
     cellCoords = case.boundary_cell_data(name)[0]
 
+    if sort is not None:
+        idx = sort_indices(case, name, sort)
+    else:
+        idx = np.arange(0, boundaryCoords.shape[0], 1, dtype=np.int32)
+
     d = cellCoords - boundaryCoords
+    import matplotlib.pyplot as plt
 
     if not corrected:
-        return np.linalg.norm(d, axis=1)
+        return np.linalg.norm(d, axis=1)[idx]
     else:
         n = normals(case, name)
         dNormal = np.zeros(d.shape[0])
@@ -257,7 +265,7 @@ def dist(case, name, corrected=True):
         for i in range(dNormal.size):
             dNormal[i] = np.linalg.norm(np.dot(d[i, :], n[i, :])*n[i, :])
 
-        return dNormal
+        return dNormal[idx]
 
 
 def edge_lengths(case, name):
@@ -344,7 +352,7 @@ def sample_by_plane(case, resolution):
 
     """
     plane = vtk.vtkPlaneSource()
-    plane.SetResolution(resolution[0], resolution[1])
+    plane.SetResolution(resolution[0]-1, resolution[1]-1)
 
     smallDy = (case.bounds[3] - case.bounds[2])/10000
     smallDx = (case.bounds[1] - case.bounds[0])/10000
@@ -352,6 +360,7 @@ def sample_by_plane(case, resolution):
     plane.SetOrigin(case.bounds[0] - smallDx, case.bounds[2] - smallDy, 0)
     plane.SetPoint1(case.bounds[0] - smallDx, case.bounds[3] + smallDy, 0)
     plane.SetPoint2(case.bounds[1] + smallDx, case.bounds[2] - smallDy, 0)
+
     plane.Update()
 
     probeFilter = vtk.vtkProbeFilter()
