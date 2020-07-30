@@ -143,7 +143,7 @@ class Case:
         if item not in self._fields:
             raise ValueError("Field " + item + " not present in the case.")
 
-        return np.copy(vtk_to_numpy(self.vtkData.CellData[item]))
+        return np.copy(np.array((self.vtkData.CellData[item])))
 
     def __setitem__(self, item, values):
         """Add another internal field to the case.
@@ -274,6 +274,9 @@ class Case:
         plot_limits = self._compute_plot_limits()
         self._xlim = plot_limits[0]
         self._ylim = plot_limits[1]
+
+        self._boundaryCellCoords, self._boundaryCellData = \
+            self._compute_boundary_cell_data()
 
     def _compute_boundary_cell_data(self):
         from collections import OrderedDict
