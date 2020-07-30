@@ -64,7 +64,7 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     scaleY : float, optional
         A scaling factor for the ordinate.
     **kwargs
-        Additional options to pass to pyplot.tricontour.
+        Additional options to pass to LineCollection constructor.
 
     Raises
     ------
@@ -122,7 +122,8 @@ def plot_vectors(case, field, colorField=None,
         or an ndarray with the data.
     colorField : string or ndarray
         Data used to colour the vectors, either name of the field or
-        an array.
+        an array. Does not work with sampleByPlane unless you carefully
+        craft the array to fit the resampled data size.
     normalize : bool, optional
         Whether to normalize the the length of the vectors.
         Default is False.
