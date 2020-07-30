@@ -3,7 +3,11 @@
     # All supported python versions
     - TRAVIS_PYTHON_VERSION=3.6
   install:
-      MINICONDA_PYVERSION=3 ;
+    - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+        MINICONDA_PYVERSION=2 ;
+      else
+        MINICONDA_PYVERSION=3 ;
+      fi ;
       if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
         MINICONDA_OS=Linux ;
       else
