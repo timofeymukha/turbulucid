@@ -89,10 +89,10 @@ class Reader():
         cleaner.Update()
         return cleaner.GetOutput()
 
-    def _transform(self):
+    def _transform(self, inputData):
         transform = vtk.vtkTransform()
 
-        meanNormal = self._compute_normal()
+        meanNormal = self._compute_normal(inputData)
 
         axis = np.cross(meanNormal, [0, 0, 1])
         angle = np.rad2deg(np.arccos(np.dot(meanNormal, [0, 0, 1])))
@@ -106,7 +106,7 @@ class Reader():
         transform.Update()
 
         filter = vtk.vtkTransformPolyDataFilter()
-        filter.SetInputConnection(self.vtkReader.GetOutputPort())
+        filter.SetInputData(inputData)
         filter.SetTransform(transform)
         filter.Update()
 
@@ -122,10 +122,10 @@ class Reader():
         data.Update()
         return data.GetOutput()
 
-    def _compute_normal(self):
+    def _compute_normal(self, inputData):
         vtkNormals = vtk.vtkPolyDataNormals()
         vtkNormals.ComputeCellNormalsOn()
-        vtkNormals.SetInputConnection(self._vtkReader.GetOutputPort())
+        vtkNormals.SetInputData(inputData)
         vtkNormals.Update()
         normals = dsa.WrapDataObject(vtkNormals.GetOutput()).CellData["Normals"]
         meanNormal = np.mean(normals, axis=0)
@@ -220,13 +220,26 @@ class XMLReader(Reader):
     def __init__(self, filename, clean=False, pointData=False):
         Reader.__init__(self, filename)
 
-        self._vtkReader = vtk.vtkXMLPolyDataReader()
+        if ".vtu" in filename:
+            self._vtkReader = vtk.vtkXMLUnstructuredGridReader()
+        elif ".vtp" in filename:
+            self._vtkReader = vtk.vtkXMLPolyDataReader()
+        else:
+            raise NotImplementedError
         self._fileName = filename
 
         self._vtkReader.SetFileName(self._fileName)
         self._vtkReader.Update()
 
-        internalData = self._transform()
+        if ".vtu" in filename:
+            polydata = vtk.vtkDataSetSurfaceFilter()
+            polydata.SetInputData(self._vtkReader.GetOutput())
+            polydata.Update()
+            readData = polydata.GetOutput()
+        else:
+            readData = self._vtkReader.GetOutput()
+
+        internalData = self._transform(readData)
         if clean:
             internalData = self._clean(internalData)
 
