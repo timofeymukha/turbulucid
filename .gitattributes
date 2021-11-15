@@ -1,2 +1,2 @@
-docs linguist-detectable=false
-turbulucid/datasets/* linguist-detectable=false
+docs linguist-vendored
+turbulucid/datasets/* linguist-vendored
