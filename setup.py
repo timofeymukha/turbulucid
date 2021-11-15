@@ -16,7 +16,7 @@ def package_files(directory):
 extra_files = package_files(os.path.join('.', 'turbulucid', 'datasets'))
 
 setup(name='turbulucid',
-      version='0.2',
+      version='0.4',
       description='A package for post-processing of 2D flow fields.',
       url='https://github.com/timofeymukha/turbulucid',
 
