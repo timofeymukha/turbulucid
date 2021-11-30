@@ -7,7 +7,6 @@ from __future__ import print_function
 from __future__ import division
 import pytest
 from os import path
-import vtk
 import turbulucid
 from turbulucid.bin.averageAlongAxis import *
 from numpy.testing import assert_allclose
@@ -105,6 +104,8 @@ def test_config_to_dict():
 
 
 def test_create_boundary_polydata(read_test_case_block):
+    from vtkmodules.vtkCommonDataModel import vtkPolyData
+
     blocks = read_test_case_block.GetOutput()
     patchBlocks = blocks.GetBlock(1)
 
@@ -112,7 +113,7 @@ def test_create_boundary_polydata(read_test_case_block):
     seedPatchBlock = patchBlocks.GetBlock(get_block_index(patchBlocks,
                                                           seedPatchName))
 
-    internalData = vtk.vtkPolyData()
+    internalData = vtkPolyData()
     internalData.ShallowCopy(seedPatchBlock)
 
     bounds = [0, 1, 0, 1, 0, 1]

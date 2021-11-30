@@ -8,15 +8,15 @@ from __future__ import division
 from __future__ import print_function
 import matplotlib.pyplot as plt
 import numpy as np
-import vtk
-from vtk.numpy_interface import dataset_adapter as dsa
-from vtk.util.numpy_support import vtk_to_numpy
+import vtkmodules
+from vtkmodules.numpy_interface import dataset_adapter as dsa
+from vtkmodules.util.numpy_support import vtk_to_numpy
+from vtkmodules.vtkFiltersCore import vtkCellDataToPointData
 from mpl_toolkits import axes_grid1
 from matplotlib.collections import PatchCollection
 from matplotlib.collections import PolyCollection
 from matplotlib.collections import LineCollection
 from .data_extraction import sample_by_plane
-
 
 __all__ = ["plot_boundaries", "plot_vectors", "plot_streamlines", "plot_field",
            "add_colorbar", "plot_contour"]
@@ -162,13 +162,12 @@ def plot_vectors(case, field, colorField=None,
 
     if type(field) == str:
         data = case[field]
-    elif ((type(field) == vtk.numpy_interface.dataset_adapter.VTKArray) or
-          (type(field) == np.ndarray)):
+    elif type(field) in [vtkmodules.numpy_interface.dataset_adapter.VTKArray, np.ndarray]:
         case['temp'] = field
         data = case['temp']
     else:
         raise TypeError("field should be a name of an existing field or an"
-                        " array of values. Got "+str(type(field)))
+                        " array of values. Got " + str(type(field)))
 
     if np.ndim(data) < 2:
         raise ValueError("The selected field appears to be a scalar!")
@@ -279,20 +278,22 @@ def plot_streamlines(case, field, colorField=None,
         As returned by pyplot.streamplot.
 
     """
+    from vtkmodules.vtkFiltersSources import vtkPlaneSource
+
     if type(field) == str:
         data = case[field]
-    elif ((type(field) == vtk.numpy_interface.dataset_adapter.VTKArray) or
+    elif ((type(field) == vtkmodules.numpy_interface.dataset_adapter.VTKArray) or
           (type(field) == np.ndarray)):
         case['temp'] = field
         data = case['temp']
     else:
         raise TypeError("field should be a name of an existing field or an"
-                        " array of values. Got "+str(type(field)))
+                        " array of values. Got " + str(type(field)))
 
     if np.ndim(data) < 2:
         raise ValueError("The selected field appears to be a scalar!")
 
-    plane = vtk.vtkPlaneSource()
+    plane = vtkPlaneSource()
     if planeResolution is None:
         planeResolution = (50, 50)
 
@@ -306,11 +307,11 @@ def plot_streamlines(case, field, colorField=None,
         data = np.copy(sampledData['temp'])
         case.__delitem__('temp')
 
-    pointsX = pointsX.reshape(planeResolution[1]+1, planeResolution[0]+1)[:, 0]
-    pointsY = pointsY.reshape(planeResolution[1]+1, planeResolution[0]+1)[0, :]
-    dataX = data[:, 0].reshape((planeResolution[0]+1, planeResolution[1]+1),
+    pointsX = pointsX.reshape(planeResolution[1] + 1, planeResolution[0] + 1)[:, 0]
+    pointsY = pointsY.reshape(planeResolution[1] + 1, planeResolution[0] + 1)[0, :]
+    dataX = data[:, 0].reshape((planeResolution[0] + 1, planeResolution[1] + 1),
                                order='F')
-    dataY = data[:, 1].reshape((planeResolution[0]+1, planeResolution[1]+1),
+    dataY = data[:, 1].reshape((planeResolution[0] + 1, planeResolution[1] + 1),
                                order='F')
 
     if plotBoundaries:
@@ -331,7 +332,6 @@ def plot_streamlines(case, field, colorField=None,
 
 def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBoundaries=True,
                colorbar=True, **kwargs):
-
     """Plot a field.
 
     This function uses a matplotlib PatchCollection to compose the
@@ -378,25 +378,19 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
         The collection of polygons defining the cells.
 
     """
+    from vtkmodules.vtkFiltersCore import vtkClipPolyData
+    from vtkmodules.vtkCommonDataModel import vtkBox
 
-    if xlim is None:
-        xlim = case.xlim
-    else:
-        xlim = np.array(xlim)
-
-    if ylim is None:
-        ylim = case.ylim
-    else:
-        ylim = np.array(ylim)
+    xlim = case.xlim if xlim is None else np.array(xlim)
+    ylim = case.ylim if ylim is None else np.array(ylim)
 
     if type(field) == str:
         case['temp'] = case[field]
-    elif ((type(field) == vtk.numpy_interface.dataset_adapter.VTKArray) or
-          (type(field) == np.ndarray)):
+    elif type(field) in [vtkmodules.numpy_interface.dataset_adapter.VTKArray, np.ndarray]:
         case['temp'] = field
     else:
         raise TypeError("field should be a name of an existing field or an"
-                        " array of values. Got "+str(type(field)))
+                        " array of values. Got " + str(type(field)))
 
     if np.ndim(case['temp']) > 1:
         raise ValueError("The selected field appears to not be a scalar!")
@@ -404,12 +398,12 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
     if (scaleX <= 0) or (scaleY <= 0):
         raise ValueError("Scaling factors must be positive.")
 
-    #init to case.vtkData in case we do not need clipping
+    # init to case.vtkData in case we do not need clipping
     clippedData = case.vtkData
 
     if np.any(xlim - case.xlim) or np.any(ylim - case.ylim):
-        clipper = vtk.vtkClipPolyData()
-        box = vtk.vtkBox()
+        clipper = vtkClipPolyData()
+        box = vtkBox()
         box.SetBounds(xlim[0], xlim[1], ylim[0], ylim[1], -1, 1)
         clipper.SetClipFunction(box)
         clipper.SetInputData(case.vtkData.VTKObject)
@@ -486,24 +480,27 @@ def plot_contour(case, field, value, scaleX=1, scaleY=1, **kwargs):
         Collection of line segments defining the contour line.
 
     """
+    from vtkmodules.vtkFiltersCore import vtkContourFilter
+
     if (scaleX <= 0) or (scaleY <= 0):
         raise ValueError("Scaling factors must be positive.")
 
-    toPoint = vtk.vtkCellDataToPointData()
+    toPoint = vtkCellDataToPointData()
     toPoint.SetInputData(case.vtkData.VTKObject)
     toPoint.Update()
     pointData = toPoint.GetOutput()
     pointData.GetPointData().SetActiveScalars(field)
 
-    contour = vtk.vtkContourFilter()
+    contour = vtkContourFilter()
     contour.SetInputData(pointData)
     contour.SetValue(0, value)
     contour.Update()
     contour = dsa.WrapDataObject(contour.GetOutput())
-
     ax = plt.gca()
     segments = []
     for c in range(contour.GetNumberOfCells()):
+        if contour.GetCell(c).GetNumberOfPoints() != 2:
+            continue
         point0 = contour.GetCell(c).GetPoints().GetPoint(0)[:2]
         point1 = contour.GetCell(c).GetPoints().GetPoint(1)[:2]
 

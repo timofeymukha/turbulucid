@@ -9,11 +9,12 @@ from __future__ import print_function
 import numpy as np
 from collections import OrderedDict
 import os
-import vtk
-from vtk.numpy_interface import dataset_adapter as dsa
+from vtkmodules.numpy_interface import dataset_adapter as dsa
+from vtkmodules.vtkCommonDataModel import vtkDataObject
+from vtkmodules.vtkFiltersCore import vtkPointDataToCellData
 import abc
-from vtk.util.numpy_support import numpy_to_vtk
-from vtk.util.numpy_support import vtk_to_numpy
+from vtkmodules.util.numpy_support import numpy_to_vtk
+from vtkmodules.util.numpy_support import vtk_to_numpy
 
 __all__ = ["Reader", "LegacyReader", "mark_boundary_cells", "NativeReader",
            "XMLReader"]
@@ -29,14 +30,14 @@ def mark_boundary_cells(internalData, boundaryDataDict):
     internal field polydata.
 
     """
+
     boundaryCellsConn = OrderedDict()
 
     for boundary in boundaryDataDict:
-
         boundaryDataI = boundaryDataDict[boundary]
 
         boundaryCellsConn[boundary] = \
-            vtk_to_numpy(boundaryDataI.GetAttributes(vtk.vtkDataObject.CELL).
+            vtk_to_numpy(boundaryDataI.GetAttributes(vtkDataObject.CELL).
                          GetPedigreeIds())
 
     for key in boundaryCellsConn:
@@ -50,8 +51,7 @@ class Reader():
 
     def __init__(self, fileName):
         if not os.path.exists(fileName):
-            raise ValueError("ERROR: The file "+fileName+" does not exist")
-        pass
+            raise ValueError("ERROR: The file " + fileName + " does not exist")
 
     @abc.abstractproperty
     def vtkReader(self):
@@ -70,9 +70,12 @@ class Reader():
         data through vtkCleanPolyData().
 
         """
+        from vtkmodules.vtkFiltersVerdict import vtkMeshQuality
+        from vtkmodules.vtkFiltersCore import vtkCleanPolyData
+
         data.BuildLinks()
 
-        area = vtk.vtkMeshQuality()
+        area = vtkMeshQuality()
         area.SetTriangleQualityMeasureToArea()
         area.SetInputData(data)
         area.Update()
@@ -84,18 +87,22 @@ class Reader():
 
         data.RemoveDeletedCells()
 
-        cleaner = vtk.vtkCleanPolyData()
+        cleaner = vtkCleanPolyData()
         cleaner.SetInputData(data)
         cleaner.Update()
         return cleaner.GetOutput()
 
     def _transform(self, inputData):
-        transform = vtk.vtkTransform()
+        from vtkmodules.vtkCommonTransforms import vtkTransform
+        from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 
+        transform = vtkTransform()
         meanNormal = self._compute_normal(inputData)
 
         axis = np.cross(meanNormal, [0, 0, 1])
         angle = np.rad2deg(np.arccos(np.dot(meanNormal, [0, 0, 1])))
+
+        print(meanNormal, angle)
 
         # Do not rotate 180 degrees, no guarantee that it will be better
         # than no rotation at all
@@ -105,25 +112,36 @@ class Reader():
         transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
         transform.Update()
 
-        filter = vtk.vtkTransformPolyDataFilter()
+        filter = vtkTransformPolyDataFilter()
         filter.SetInputData(inputData)
         filter.SetTransform(transform)
         filter.Update()
 
-        zValue = filter.GetOutput().GetPoint(0)[-1]
+        data = filter.GetOutput()
 
-        transform = vtk.vtkTransform()
-        transform.Translate(0, 0, -zValue)
-        transform.Update()
+        for i in range(data.GetNumberOfPoints()):
+            p = data.GetPoints().GetPoint(i)
+            x = p[0]
+            y = p[1]
+            data.GetPoints().SetPoint(i, [x, y, 0])
 
-        data = vtk.vtkTransformPolyDataFilter()
-        data.SetInputConnection(filter.GetOutputPort())
-        data.SetTransform(transform)
-        data.Update()
-        return data.GetOutput()
+        #        zValue = filter.GetOutput().GetPoint(0)[-1]
+        #        print(zValue)
+
+        #        transform = vtkTransform()
+        #        transform.Translate(0, 0, -zValue)
+        #        transform.Update()
+
+        #        data = vtkTransformPolyDataFilter()
+        #        data.SetInputConnection(filter.GetOutputPort())
+        #        data.SetTransform(transform)
+        #        data.Update()
+        return data
 
     def _compute_normal(self, inputData):
-        vtkNormals = vtk.vtkPolyDataNormals()
+        from vtkmodules.vtkFiltersCore import vtkPolyDataNormals
+
+        vtkNormals = vtkPolyDataNormals()
         vtkNormals.ComputeCellNormalsOn()
         vtkNormals.SetInputData(inputData)
         vtkNormals.Update()
@@ -133,7 +151,9 @@ class Reader():
         return meanNormal
 
     def _extract_boundary_data(self, internalData):
-        patchFeatureEdgesFilter = vtk.vtkFeatureEdges()
+        from vtkmodules.vtkFiltersCore import vtkFeatureEdges
+
+        patchFeatureEdgesFilter = vtkFeatureEdges()
         patchFeatureEdgesFilter.FeatureEdgesOff()
         patchFeatureEdgesFilter.NonManifoldEdgesOff()
         patchFeatureEdgesFilter.ManifoldEdgesOff()
@@ -144,17 +164,19 @@ class Reader():
         return patchFeatureEdgesFilter.GetOutput()
 
     def _assemble_multiblock_data(self, internalData, boundaryData):
+        from vtkmodules.vtkCommonDataModel import vtkMultiBlockDataSet, vtkCompositeDataSet
+        from vtkmodules.vtkCommonCore import vtkStringArray
 
-        multiBlock = vtk.vtkMultiBlockDataSet()
+        multiBlock = vtkMultiBlockDataSet()
         multiBlock.SetNumberOfBlocks(2)
         multiBlock.SetBlock(0, internalData)
-        multiBlock.GetMetaData(0).Set(vtk.vtkCompositeDataSet.NAME(),
+        multiBlock.GetMetaData(0).Set(vtkCompositeDataSet.NAME(),
                                       "internalField")
         multiBlock.SetBlock(1, boundaryData)
-        multiBlock.GetMetaData(1).Set(vtk.vtkCompositeDataSet.NAME(),
+        multiBlock.GetMetaData(1).Set(vtkCompositeDataSet.NAME(),
                                       "boundary")
 
-        boundaryNames = vtk.vtkStringArray()
+        boundaryNames = vtkStringArray()
         boundaryNames.SetName("boundaries")
         boundaryNames.InsertNextValue("boundary")
 
@@ -166,20 +188,22 @@ class LegacyReader(Reader):
     """Reader for data in legacy VTK format, i.e. .vtk."""
 
     def __init__(self, filename, clean=False, pointData=False):
+        from vtkmodules.vtkIOLegacy import vtkPolyDataReader
+
         Reader.__init__(self, filename)
 
-        self._vtkReader = vtk.vtkPolyDataReader()
+        self._vtkReader = vtkPolyDataReader()
         self._fileName = filename
 
         self._vtkReader.SetFileName(self._fileName)
         self._vtkReader.Update()
 
-        internalData = self._transform()
+        internalData = self._transform(self._vtkReader.GetOutput())
         if clean:
             internalData = self._clean(internalData)
 
         if pointData:
-            interp = vtk.vtkPointDataToCellData()
+            interp = vtkPointDataToCellData()
             interp.SetInputData(internalData)
             interp.PassPointDataOff()
             interp.Update()
@@ -190,7 +214,7 @@ class LegacyReader(Reader):
         n = internalData.GetNumberOfCells()
         pids = np.arange(n)
 
-        internalData.GetAttributes(vtk.vtkDataObject.CELL).SetPedigreeIds(
+        internalData.GetAttributes(vtkDataObject.CELL).SetPedigreeIds(
             numpy_to_vtk(pids))
 
         boundaryData = self._extract_boundary_data(internalData)
@@ -220,10 +244,15 @@ class XMLReader(Reader):
     def __init__(self, filename, clean=False, pointData=False):
         Reader.__init__(self, filename)
 
+        from vtkmodules.vtkIOXML import vtkXMLPolyDataReader, vtkXMLUnstructuredGridReader, vtkXMLStructuredGridReader
+        from vtkmodules.vtkFiltersGeometry import vtkDataSetSurfaceFilter
+
         if ".vtu" in filename:
-            self._vtkReader = vtk.vtkXMLUnstructuredGridReader()
+            self._vtkReader = vtkXMLUnstructuredGridReader()
         elif ".vtp" in filename:
-            self._vtkReader = vtk.vtkXMLPolyDataReader()
+            self._vtkReader = vtkXMLPolyDataReader()
+        elif ".vts" in filename:
+            self._vtkReader = vtkXMLStructuredGridReader()
         else:
             raise NotImplementedError
         self._fileName = filename
@@ -231,8 +260,8 @@ class XMLReader(Reader):
         self._vtkReader.SetFileName(self._fileName)
         self._vtkReader.Update()
 
-        if ".vtu" in filename:
-            polydata = vtk.vtkDataSetSurfaceFilter()
+        if (".vtu" in filename) or (".vts" in filename):
+            polydata = vtkDataSetSurfaceFilter()
             polydata.SetInputData(self._vtkReader.GetOutput())
             polydata.Update()
             readData = polydata.GetOutput()
@@ -244,7 +273,7 @@ class XMLReader(Reader):
             internalData = self._clean(internalData)
 
         if pointData:
-            interp = vtk.vtkPointDataToCellData()
+            interp = vtkPointDataToCellData()
             interp.SetInputData(internalData)
             interp.PassPointDataOff()
             interp.Update()
@@ -255,7 +284,7 @@ class XMLReader(Reader):
         n = internalData.GetNumberOfCells()
         pids = np.arange(n)
 
-        internalData.GetAttributes(vtk.vtkDataObject.CELL).SetPedigreeIds(
+        internalData.GetAttributes(vtkDataObject.CELL).SetPedigreeIds(
             numpy_to_vtk(pids))
 
         boundaryData = self._extract_boundary_data(internalData)
@@ -283,9 +312,11 @@ class NativeReader(Reader):
     """Reader for native turbulucid format."""
 
     def __init__(self, fileName):
+        from vtkmodules.vtkIOXML import vtkXMLMultiBlockDataReader
+
         Reader.__init__(self, fileName)
 
-        self._vtkReader = vtk.vtkXMLMultiBlockDataReader()
+        self._vtkReader = vtkXMLMultiBlockDataReader()
         self._fileName = fileName
 
         self._vtkReader.SetFileName(self._fileName)
@@ -312,7 +343,9 @@ class NativeReader(Reader):
         return self._data
 
     def _compute_normal(self):
-        vtkNormals = vtk.vtkPolyDataNormals()
+        from vtkmodules.vtkFiltersCore import vtkPolyDataNormals
+
+        vtkNormals = vtkPolyDataNormals()
         vtkNormals.ComputeCellNormalsOn()
         vtkNormals.SetInputData(self._vtkReader.GetOutput().GetBlock(0))
         vtkNormals.Update()

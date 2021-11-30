@@ -5,46 +5,48 @@
 
 from __future__ import print_function
 from __future__ import division
-import vtk
-from vtk.numpy_interface import dataset_adapter as dsa
-import turbulucid
+from vtkmodules.numpy_interface import dataset_adapter as dsa
 from turbulucid.core.readers import *
 import numpy as np
 from numpy.testing import assert_allclose
 import pytest
+from vtkmodules.vtkCommonCore import vtkPoints, vtkDoubleArray
+from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray, vtkCompositeDataSet
+from vtkmodules.vtkCommonTransforms import vtkTransform
 
 
 def create_single_cell(z, axis, angle):
+    from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 
-    points = vtk.vtkPoints()
+    points = vtkPoints()
     points.InsertPoint(0, 0.0, 0.0, z)
     points.InsertPoint(1, 1.0, 0.0, z)
     points.InsertPoint(2, 1.0, 1.0, z)
     points.InsertPoint(3, 0.0, 1.0, z)
 
-    strips = vtk.vtkCellArray()
+    strips = vtkCellArray()
     strips.InsertNextCell(4)
     strips.InsertCellPoint(0)
     strips.InsertCellPoint(1)
     strips.InsertCellPoint(2)
     strips.InsertCellPoint(3)
 
-    data = vtk.vtkPolyData()
+    data = vtkPolyData()
     data.SetPoints(points)
     data.SetPolys(strips)
 
-    v = vtk.vtkDoubleArray()
+    v = vtkDoubleArray()
     v.SetName("Pressure")
     v.InsertNextValue(2.7)
 
     data.GetCellData().SetScalars(v)
 
-    transform = vtk.vtkTransform()
+    transform = vtkTransform()
 
     transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
     transform.Update()
 
-    filter = vtk.vtkTransformPolyDataFilter()
+    filter = vtkTransformPolyDataFilter()
     filter.SetInputData(data)
     filter.SetTransform(transform)
     filter.Update()
@@ -56,11 +58,14 @@ def write_data(data, writerType, path):
     """Write data to a temporary directory and return the path to the file.
 
     """
+    from vtkmodules.vtkIOXML import vtkXMLPolyDataWriter
+    from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
+
     if writerType == "legacy":
-        writer = vtk.vtkPolyDataWriter()
+        writer = vtkPolyDataWriter()
         format = "vtk"
     else:
-        writer = vtk.vtkXMLPolyDataWriter()
+        writer = vtkXMLPolyDataWriter()
         format = "vtu"
 
     filename = path.join("test." + format).strpath
@@ -90,6 +95,7 @@ def different_axis(request):
 
 # Test for the direction of the normal being [0, 0, 1]
 def normal_direction(fixture, writer, tmpdir):
+    from vtkmodules.vtkFiltersCore import vtkPolyDataNormals
     data = fixture
 
     filename = write_data(data, writer, tmpdir)
@@ -100,7 +106,7 @@ def normal_direction(fixture, writer, tmpdir):
         reader = XMLReader(filename)
     readerData = reader.data
 
-    vtkNormals = vtk.vtkPolyDataNormals()
+    vtkNormals = vtkPolyDataNormals()
     vtkNormals.ComputeCellNormalsOn()
     vtkNormals.SetInputData(readerData.GetBlock(0))
     vtkNormals.Update()
@@ -188,9 +194,9 @@ def test_legacy_block_structure(tmpdir):
     readerData = reader.data
 
     assert(readerData.GetNumberOfBlocks() == 2)
-    assert(readerData.GetMetaData(0).Get(vtk.vtkCompositeDataSet.NAME()) ==
+    assert(readerData.GetMetaData(0).Get(vtkCompositeDataSet.NAME()) ==
            "internalField")
-    assert(readerData.GetMetaData(1).Get(vtk.vtkCompositeDataSet.NAME()) ==
+    assert(readerData.GetMetaData(1).Get(vtkCompositeDataSet.NAME()) ==
            "boundary")
 
 
@@ -201,9 +207,9 @@ def test_xml_block_structure(tmpdir):
     readerData = reader.data
 
     assert(readerData.GetNumberOfBlocks() == 2)
-    assert(readerData.GetMetaData(0).Get(vtk.vtkCompositeDataSet.NAME()) ==
+    assert(readerData.GetMetaData(0).Get(vtkCompositeDataSet.NAME()) ==
            "internalField")
-    assert(readerData.GetMetaData(1).Get(vtk.vtkCompositeDataSet.NAME()) ==
+    assert(readerData.GetMetaData(1).Get(vtkCompositeDataSet.NAME()) ==
            "boundary")
 
 

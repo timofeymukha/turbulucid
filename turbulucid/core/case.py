@@ -8,8 +8,14 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 import os
-import vtk
-from vtk.numpy_interface import dataset_adapter as dsa
+from vtkmodules.vtkCommonCore import vtkDoubleArray, vtkFloatArray
+from vtkmodules.vtkCommonTransforms import vtkTransform
+
+try:
+    from vtkmodules.vtkFiltersGeneral import vtkCellCenters
+except ImportError:
+    from vtkmodules.vtkFiltersCore import vtkCellCenters
+from vtkmodules.numpy_interface import dataset_adapter as dsa
 from .readers import NativeReader, LegacyReader, XMLReader
 
 __all__ = ["Case"]
@@ -19,6 +25,7 @@ class Case:
     """A class representing a simulation case.
 
     """
+
     def __init__(self, fileName, clean=False, pointData=False):
         """
         Create Case from file.
@@ -38,10 +45,10 @@ class Case:
         self._blockData = self.read(clean, pointData)
 
         # Compute the cell-centres
-        self._cellCentres = vtk.vtkCellCenters()
+        self._cellCentres = vtkCellCenters()
         self._cellCentres.SetInputData(self._blockData.GetBlock(0))
         self._cellCentres.Update()
-        self._cellCentres =\
+        self._cellCentres = \
             dsa.WrapDataObject(self._cellCentres.GetOutput()).GetPoints()
         self._cellCentres = np.array(self._cellCentres[:, :2])
 
@@ -59,7 +66,6 @@ class Case:
 
         self._boundaryCellCoords, self._boundaryCellData = \
             self._compute_boundary_cell_data()
-
 
     @property
     def blockData(self):
@@ -161,7 +167,7 @@ class Case:
         self.fields.append(item)
 
         cellData = self._vtkData.VTKObject.GetCellData()
-        valuesVtk = vtk.vtkDoubleArray()
+        valuesVtk = vtkDoubleArray()
 
         if np.ndim(values) > 1:
             valuesVtk.SetNumberOfComponents(values.shape[1])
@@ -186,7 +192,7 @@ class Case:
 
             block = self.extract_block_by_name(boundary)
             cellData = block.GetCellData()
-            valuesVtk = vtk.vtkDoubleArray()
+            valuesVtk = vtkDoubleArray()
 
             nVals = self.boundary_cell_data(boundary)[0][:, 0].size
             bCellData = self.boundary_cell_data(boundary)[1][item]
@@ -239,8 +245,10 @@ class Case:
     def _transform(self, transform):
         """Transform the geometry according to a vtkTransform filter."""
 
+        from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
+
         # Transform the internal field
-        filter = vtk.vtkTransformPolyDataFilter()
+        filter = vtkTransformPolyDataFilter()
         filter.SetInputData(self.blockData.GetBlock(0))
         filter.SetTransform(transform)
         filter.Update()
@@ -250,7 +258,7 @@ class Case:
         # Transform boundary data
         i = 1
         for boundary in self.boundaries:
-            filter = vtk.vtkTransformPolyDataFilter()
+            filter = vtkTransformPolyDataFilter()
             filter.SetTransform(transform)
             filter.SetInputData(self.blockData.GetBlock(i))
             filter.Update()
@@ -258,7 +266,7 @@ class Case:
             i += 1
 
         # Update attuributes
-        self._cellCentres = vtk.vtkCellCenters()
+        self._cellCentres = vtkCellCenters()
         self._cellCentres.SetInputData(self.blockData.GetBlock(0))
         self._cellCentres.Update()
         self._cellCentres = \
@@ -304,7 +312,7 @@ class Case:
             The translation along the y axis.
 
         """
-        transform = vtk.vtkTransform()
+        transform = vtkTransform()
         transform.Translate(dx, dy, 0)
         transform.Update()
 
@@ -323,7 +331,7 @@ class Case:
             The scaling factor along y.
 
         """
-        transform = vtk.vtkTransform()
+        transform = vtkTransform()
         transform.Scale(1/scaleX, 1/scaleY, 0)
         transform.Update()
         self._transform(transform)
@@ -338,7 +346,7 @@ class Case:
 
         """
         axis = [0, 0, 1]
-        transform = vtk.vtkTransform()
+        transform = vtkTransform()
         transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
         transform.Update()
         self._transform(transform)
@@ -404,7 +412,7 @@ class Case:
 
         blockData = self.extract_block_by_name(boundary)
 
-        cCenters = vtk.vtkCellCenters()
+        cCenters = vtkCellCenters()
         cCenters.SetInputData(blockData)
         cCenters.Update()
 
@@ -457,7 +465,7 @@ class Case:
         elif fileExt == ".vtk":
             return LegacyReader(fileName, clean=clean,
                                 pointData=pointData).data
-        elif (fileExt == ".vtu") or (fileExt == ".vtp"):
+        elif fileExt in [".vtu", ".vtp", ".vts"]:
             return XMLReader(fileName, clean=clean, pointData=pointData).data
         else:
             raise ValueError("Unsupported file format.", fileName, fileExt)
@@ -471,8 +479,9 @@ class Case:
             The name of the file.
 
         """
-        writer = vtk.vtkXMLMultiBlockDataWriter()
+        from vtkmodules.vtkIOXML import vtkXMLMultiBlockDataWriter
+
+        writer = vtkXMLMultiBlockDataWriter()
         writer.SetFileName(writePath)
         writer.SetInputData(self._blockData)
         writer.Write()
-

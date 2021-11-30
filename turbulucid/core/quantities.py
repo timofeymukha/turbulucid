@@ -13,7 +13,7 @@ import numpy as np
 __all__ = ["momentum_thickness", "delta_star", "delta_99"]
 
 
-def momentum_thickness(y, v, u0="last", interpolate=False):
+def momentum_thickness(y, v, u0="last", cutoff=None, interpolate=False):
     """Compute the momentum thickness.
 
     Parameters
@@ -22,7 +22,7 @@ def momentum_thickness(y, v, u0="last", interpolate=False):
         The values of the wall-normal coordinate.
     v : ndarray
         The values of the streamwise velocity.
-    u0 : {'last', 'max'}
+    u0 : {'last', 'max', value}
         How to compute the free stream velocity. Last will lead to
         using the last value in the v array, max will lead to using
         the maximum value.
@@ -36,14 +36,18 @@ def momentum_thickness(y, v, u0="last", interpolate=False):
         The value of the momentum thickness.
 
     """
-    if u0 is "last":
+    if u0 == "last":
         u0Val = v[-1]
         cutOff = -1
-    elif u0 is "max":
+    elif u0 == "max":
         u0Val = np.max(v)
         cutOff = np.argmax(v)
     else:
-        raise ValueError("u0 should be either 'last' or 'max'.")
+        u0Val = u0
+        cutOff = -1
+
+    if cutoff is not None:
+        cutOff = cutoff
 
     if interpolate:
         interp = interp1d(y, v, kind='linear')
@@ -53,7 +57,7 @@ def momentum_thickness(y, v, u0="last", interpolate=False):
         y = y[:cutOff]
         v = v[:cutOff]
 
-    return simps(v/u0Val*(1-v/u0Val), x=y)
+    return simps(v/u0Val*(1 - v/u0Val), x=y)
 
 
 def delta_star(y, v, u0="last", interpolate=False):
@@ -65,7 +69,7 @@ def delta_star(y, v, u0="last", interpolate=False):
         The values of the wall-normal coordinate.
     v : ndarray
         The values of the streamwise velocity.
-    u0 : {'last', 'max'}
+    u0 : {'last', 'max', value}
         How to compute the free stream velocity. Last will lead to
         using the last value in the v array, max will lead to using
         the maximum value.
@@ -79,19 +83,19 @@ def delta_star(y, v, u0="last", interpolate=False):
         The value of the displacement thickness.
 
     """
-    if u0 is "last":
+    if u0 == "last":
         u0Val = v[-1]
-    elif u0 is "max":
+    elif u0 == "max":
         u0Val = np.max(v)
     else:
-        raise ValueError("u0 should be either 'last' or 'max'.")
+        u0Val = u0
 
     if interpolate:
         interp = interp1d(y, v, kind='linear')
         y = np.linspace(y[0], y[-1], 10000)
         v = interp(y)
 
-    return simps(1-v/u0Val, x=y)
+    return simps(1 - v/u0Val, x=y)
 
 
 def delta_99(y, v, u0="last", interpolate=False):
@@ -103,7 +107,7 @@ def delta_99(y, v, u0="last", interpolate=False):
         The values of the wall-normal coordinate.
     v : ndarray
         The values of the streamwise velocity.
-    u0 : {'last', 'max'}
+    u0 : {'last', 'max', value}
         How to compute the free stream velocity. Last will lead to
         using the last value in the v array, max will lead to using
         the maximum value.
@@ -122,12 +126,13 @@ def delta_99(y, v, u0="last", interpolate=False):
         If the computed value is not positive.
 
     """
-    if u0 is "last":
+
+    if u0 == "last":
         u0Val = v[-1]
-    elif u0 is "max":
+    elif u0 == "max":
         u0Val = np.max(v)
     else:
-        raise ValueError("u0 should be either 'last' or 'max'.")
+        u0Val = u0
 
     if interpolate:
         interp = interp1d(y, v, kind='linear')
@@ -144,4 +149,3 @@ def delta_99(y, v, u0="last", interpolate=False):
         raise ValueError("delta_99 is not positive!")
 
     return delta99
-

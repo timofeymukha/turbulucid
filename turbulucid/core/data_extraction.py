@@ -7,11 +7,14 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-import vtk
-from vtk.numpy_interface import dataset_adapter as dsa
-from vtk.util.numpy_support import numpy_to_vtk
-from vtk.util.numpy_support import vtk_to_numpy
-from scipy.interpolate import interp1d
+from vtkmodules.numpy_interface import dataset_adapter as dsa
+from vtkmodules.util.numpy_support import numpy_to_vtk
+from vtkmodules.util.numpy_support import vtk_to_numpy
+
+try:
+    from vtkmodules.vtkFiltersGeneral import vtkCellCenters
+except ImportError:
+    from vtkmodules.vtkFiltersCore import vtkCellCenters
 from collections import OrderedDict
 
 __all__ = ["profile_along_line", "tangents", "normals",
@@ -50,6 +53,9 @@ def profile_along_line(case, p1, p2, correctDistance=False,
         of these fields as values.
 
     """
+    from vtkmodules.vtkCommonDataModel import vtkPlane
+    from vtkmodules.vtkFiltersCore import vtkCutter
+
     p1 = np.append(np.array(p1), case.vtkData.GetPoints()[0, 2])
     p2 = np.append(np.array(p2), 0)
 
@@ -59,12 +65,12 @@ def profile_along_line(case, p1, p2, correctDistance=False,
     planeNormal = np.cross(unit, geomNormal)
 
     # Define the cutting plane
-    plane = vtk.vtkPlane()
+    plane = vtkPlane()
     plane.SetNormal(planeNormal[0], planeNormal[1], planeNormal[2])
     plane.SetOrigin(p1[0], p1[1], p1[2])
 
     # Create the cutter and extract the sampled data
-    planeCut = vtk.vtkCutter()
+    planeCut = vtkCutter()
     planeCut.SetInputData(case.vtkData.VTKObject)
     planeCut.GenerateTrianglesOff()
     planeCut.SetCutFunction(plane)
@@ -72,7 +78,7 @@ def profile_along_line(case, p1, p2, correctDistance=False,
     cutData = dsa.WrapDataObject(planeCut.GetOutput())
 
     # Create the cell-centres on the cut -- that is where the data is
-    cCenters = vtk.vtkCellCenters()
+    cCenters = vtkCellCenters()
     cCenters.SetInputData(planeCut.GetOutput())
     cCenters.Update()
     cCentersData = dsa.WrapDataObject(cCenters.GetOutput())
@@ -86,7 +92,7 @@ def profile_along_line(case, p1, p2, correctDistance=False,
 
     # Extract data from the boundaries
     if not excludeBoundaries:
-        boundaryCC = vtk.vtkCellCenters()
+        boundaryCC = vtkCellCenters()
         for boundary in case.boundaries:
             block = case.extract_block_by_name(boundary)
             planeCut.SetInputData(block)
@@ -138,8 +144,6 @@ def profile_along_line(case, p1, p2, correctDistance=False,
             dataNumpy[key] = np.array(data[key])[order, :]
         else:
             dataNumpy[key] = np.array(data[key])[order]
-
-
 
     # Correct the distance values
     if correctDistance:
@@ -318,7 +322,7 @@ def sort_indices(case, name, axis):
 
     blockData = case.extract_block_by_name(name)
 
-    cCenters = vtk.vtkCellCenters()
+    cCenters = vtkCellCenters()
     cCenters.SetInputData(blockData)
     cCenters.Update()
 
@@ -351,8 +355,11 @@ def sample_by_plane(case, resolution):
         values.
 
     """
-    plane = vtk.vtkPlaneSource()
-    plane.SetResolution(resolution[0]-1, resolution[1]-1)
+    from vtkmodules.vtkFiltersSources import vtkPlaneSource
+    from vtkmodules.vtkFiltersCore import vtkProbeFilter
+
+    plane = vtkPlaneSource()
+    plane.SetResolution(resolution[0] - 1, resolution[1] - 1)
 
     smallDy = (case.bounds[3] - case.bounds[2])/10000
     smallDx = (case.bounds[1] - case.bounds[0])/10000
@@ -363,7 +370,7 @@ def sample_by_plane(case, resolution):
 
     plane.Update()
 
-    probeFilter = vtk.vtkProbeFilter()
+    probeFilter = vtkProbeFilter()
     probeFilter.SetSourceData(case.vtkData.VTKObject)
     probeFilter.SetInputConnection(plane.GetOutputPort())
     probeFilter.Update()
@@ -371,17 +378,17 @@ def sample_by_plane(case, resolution):
     probeData = dsa.WrapDataObject(probeFilter.GetOutput())
     points = probeData.Points[:, [0, 1]]
 
-    #validPointsIdx = probeData.PointData['vtkValidPointMask']
-    #validPointsIdx = np.nonzero(validPointsIdx)
-    #points = points[validPointsIdx, :]
+    # validPointsIdx = probeData.PointData['vtkValidPointMask']
+    # validPointsIdx = np.nonzero(validPointsIdx)
+    # points = points[validPointsIdx, :]
 
     data = {}
     for key in probeData.PointData.keys():
         if probeData.PointData[key].ndim == 1:
-            #data[key] = np.array(probeData.PointData[key][validPointsIdx])
+            # data[key] = np.array(probeData.PointData[key][validPointsIdx])
             data[key] = np.array(probeData.PointData[key])
         else:
-            #data[key] = np.array(probeData.PointData[key][validPointsIdx, :])
+            # data[key] = np.array(probeData.PointData[key][validPointsIdx, :])
             data[key] = np.array(probeData.PointData[key])
 
     return points, data
@@ -408,17 +415,18 @@ def isoline(case, field, value):
         Points defining the isoline.
 
     """
+    from vtkmodules.vtkFiltersCore import vtkCellDataToPointData, vtkContourFilter
 
-    toPoint = vtk.vtkCellDataToPointData()
+    toPoint = vtkCellDataToPointData()
     toPoint.SetInputData(case.vtkData.VTKObject)
     toPoint.Update()
     pointData = toPoint.GetOutput()
     pointData.GetPointData().SetActiveScalars(field)
 
-    contour = vtk.vtkContourFilter()
+    contour = vtkContourFilter()
     contour.SetInputData(pointData)
     contour.SetValue(0, value)
     contour.Update()
     contour = dsa.WrapDataObject(contour.GetOutput())
 
-    return  np.array(contour.GetPoints()[:, :2])
+    return np.array(contour.GetPoints()[:, :2])

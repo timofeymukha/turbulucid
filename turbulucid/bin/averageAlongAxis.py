@@ -14,10 +14,19 @@ from __future__ import division
 import os
 import argparse
 import numpy as np
-from vtk.numpy_interface import dataset_adapter as dsa
-from vtk.util.numpy_support import *
+from vtkmodules.numpy_interface import dataset_adapter as dsa
+from vtkmodules.util.numpy_support import *
 from collections import OrderedDict
-import vtk
+from vtkmodules.vtkCommonDataModel import vtkCompositeDataSet, vtkPolyData, vtkPlane, vtkCellLocator, vtkGenericCell
+from vtkmodules.vtkCommonDataModel import vtkMultiBlockDataSet
+from vtkmodules.vtkCommonCore import vtkIdList, vtkPoints, vtkStringArray, vtkIntArray
+from vtkmodules.vtkFiltersSources import vtkLineSource
+from vtkmodules.vtkFiltersCore import vtkProbeFilter
+
+try:
+    from vtkmodules.vtkFiltersGeneral import vtkCellCenters
+except ImportError:
+    from vtkmodules.vtkFiltersCore import vtkCellCenters
 from sys import exit
 
 
@@ -37,7 +46,7 @@ def get_block_names(blocks):
     """
     names = []
     for i in range(blocks.GetNumberOfBlocks()):
-        blockName = blocks.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME())
+        blockName = blocks.GetMetaData(i).Get(vtkCompositeDataSet.NAME())
         names.append(blockName)
 
     return names
@@ -61,14 +70,14 @@ def get_block_index(blocks, name):
     """
     number = -1
     for i in range(blocks.GetNumberOfBlocks()):
-        if (blocks.GetMetaData(i).Get(vtk.vtkCompositeDataSet.NAME()) ==
-           name):
+        if (blocks.GetMetaData(i).Get(vtkCompositeDataSet.NAME()) ==
+                name):
             number = i
             break
 
     if number == -1:
-        raise NameError("No block named "+name+" found")
-    
+        raise NameError("No block named " + name + " found")
+
     return number
 
 
@@ -83,7 +92,7 @@ def print_progress(current, total, freq=10., tabLevel=0):
         tabs += "    "
 
     if np.mod(current, int(total/freq)) == 0:
-        print(tabs+"Done about "+str(int(current/total*100.))+"%")
+        print(tabs + "Done about " + str(int(current/total*100.)) + "%")
 
 
 def read(casePath, time, debug=False):
@@ -110,13 +119,15 @@ def read(casePath, time, debug=False):
 
     """
     # Check that paths are valid
+    from vtkmodules.vtkIOGeometry import vtkOpenFOAMReader
+    from vtkmodules.vtkCommonExecutionModel import vtkStreamingDemandDrivenPipeline
     if not os.path.exists(casePath):
         raise ValueError("Provided path to .foam file invalid!")
 
     if debug:
         print("    Opening the case")
     # Case reader
-    reader = vtk.vtkOpenFOAMReader()
+    reader = vtkOpenFOAMReader()
     reader.SetFileName(casePath)
     reader.Update()
 
@@ -136,11 +147,11 @@ def read(casePath, time, debug=False):
 
     if time is None:
         print("Selecting the latest available time step")
-        info.Set(vtk.vtkStreamingDemandDrivenPipeline.UPDATE_TIME_STEP(),
+        info.Set(vtkStreamingDemandDrivenPipeline.UPDATE_TIME_STEP(),
                  vtk_to_numpy(reader.GetTimeValues())[-1])
     else:
         print("Selecting the time step", time)
-        info.Set(vtk.vtkStreamingDemandDrivenPipeline.UPDATE_TIME_STEP(), time)
+        info.Set(vtkStreamingDemandDrivenPipeline.UPDATE_TIME_STEP(), time)
 
     reader.Update()
     reader.UpdateInformation()
@@ -169,8 +180,10 @@ def minimal_length(patchData):
     """ Compute minimal length as sqrt of smallest area on a patch.
 
     """
-    areaFilter = vtk.vtkMeshQuality()
-    areaFilter.SetInputData(patchData) 
+    from vtkmodules.vtkFiltersVerdict import vtkMeshQuality
+
+    areaFilter = vtkMeshQuality()
+    areaFilter.SetInputData(patchData)
     areaFilter.SetTriangleQualityMeasureToArea()
     areaFilter.SetQuadQualityMeasureToArea()
     areaFilter.Update()
@@ -198,7 +211,7 @@ def get_cell_points(polyData, cellId):
         List of point ids.
 
     """
-    cellPointsIdsVtk = vtk.vtkIdList()
+    cellPointsIdsVtk = vtkIdList()
     polyData.GetCellPoints(cellId, cellPointsIdsVtk)
     cellPointsIds = np.zeros(cellPointsIdsVtk.GetNumberOfIds(),
                              dtype=np.int64)
@@ -209,13 +222,13 @@ def get_cell_points(polyData, cellId):
 
 
 def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
-
+    from vtkmodules.vtkFiltersCore import vtkProbeFilter
     blockCellData = block.GetCellData()
     bounds = block.GetBounds()
 
     if debug:
         print("    Computing cell centers of the seed patch")
-    patchCellCenters = vtk.vtkCellCenters()
+    patchCellCenters = vtkCellCenters()
     patchCellCenters.SetInputData(internalData)
     patchCellCenters.Update()
 
@@ -225,7 +238,7 @@ def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
     if debug:
         print("    The number of seed points is", nSeedPoints)
 
-    probeFilter = vtk.vtkProbeFilter()
+    probeFilter = vtkProbeFilter()
     probeFilter.SetSourceData(block)
 
     avrgFields = OrderedDict()
@@ -243,7 +256,7 @@ def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
     zVals = np.linspace(bounds[4] + lZ/(2*nSamples), bounds[5] - lZ/(2*nSamples), nSamples)
 
     print("    Generating sampling points")
-    samplingPoints = vtk.vtkPoints()
+    samplingPoints = vtkPoints()
     for i in range(nSeedPoints):
         p = patchCellCenters.GetPoint(i)
         for zi, zval in enumerate(zVals):
@@ -251,7 +264,7 @@ def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
 
     if debug:
         print("    Converting to polyData")
-    inputData = vtk.vtkPolyData()
+    inputData = vtkPolyData()
     inputData.SetPoints(samplingPoints)
 
     print("    Sampling internal field")
@@ -289,14 +302,13 @@ def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
 
 
 def average_internal_field_data(block, internalData, nSamples, debug, dry):
-
     blockCellData = block.GetCellData()
     bounds = block.GetBounds()
     smallDz = (bounds[5] - bounds[4])/10000
 
     if debug:
         print("    Computing cell centers of the seed patch")
-    patchCellCenters = vtk.vtkCellCenters()
+    patchCellCenters = vtkCellCenters()
     patchCellCenters.SetInputData(internalData)
     patchCellCenters.Update()
 
@@ -306,8 +318,8 @@ def average_internal_field_data(block, internalData, nSamples, debug, dry):
     if debug:
         print("    The number of seed points is", nSeedPoints)
 
-    line = vtk.vtkLineSource()
-    probeFilter = vtk.vtkProbeFilter()
+    line = vtkLineSource()
+    probeFilter = vtkProbeFilter()
     probeFilter.SetSourceData(block)
 
     avrgFields = OrderedDict()
@@ -326,9 +338,9 @@ def average_internal_field_data(block, internalData, nSamples, debug, dry):
             print_progress(seed, nSeedPoints, tabLevel=1)
 
             seedPoint = patchCellCenters.GetPoint(seed)
-            line.SetResolution(nSamples-1)
-            line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
-            line.SetPoint2(seedPoint[0], seedPoint[1], bounds[5]-smallDz)
+            line.SetResolution(nSamples - 1)
+            line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4] + smallDz)
+            line.SetPoint2(seedPoint[0], seedPoint[1], bounds[5] - smallDz)
             line.Update()
 
             probeFilter.SetInputConnection(line.GetOutputPort())
@@ -375,21 +387,22 @@ def average_internal_field_data(block, internalData, nSamples, debug, dry):
 
 
 def average_patch_data(patchBlocks, boundaryData, nSamples, bounds, algorithm, debug):
+    from vtkmodules.vtkFiltersCore import vtkCutter
 
     avergFields = OrderedDict()
 
     if algorithm == "line":
-        line = vtk.vtkLineSource()
-        probeFilter = vtk.vtkProbeFilter()
-        smallDz = (bounds[5] - bounds[4]) / 1000.
+        line = vtkLineSource()
+        probeFilter = vtkProbeFilter()
+        smallDz = (bounds[5] - bounds[4])/1000.
     elif algorithm == "cut":
-        planeCut = vtk.vtkCutter()
+        planeCut = vtkCutter()
         planeCut.GenerateTrianglesOff()
 
-    cellCenters = vtk.vtkCellCenters()
+    cellCenters = vtkCellCenters()
 
     for boundary in boundaryData:
-        print("Patch "+boundary)
+        print("Patch " + boundary)
 
         polyI = boundaryData[boundary]
 
@@ -430,10 +443,10 @@ def average_patch_data(patchBlocks, boundaryData, nSamples, bounds, algorithm, d
                 cellI = polyI.GetCell(seed)
                 point0 = np.array(cellI.GetPoints().GetPoint(0))[:2]
                 point1 = np.array(cellI.GetPoints().GetPoint(1))[:2]
-                tangent = (point1 - point0) / np.linalg.norm(point1 - point0)
+                tangent = (point1 - point0)/np.linalg.norm(point1 - point0)
                 # Define the cutting plane
 
-                plane = vtk.vtkPlane()
+                plane = vtkPlane()
                 plane.SetNormal(tangent[0], tangent[1], 0)
                 plane.SetOrigin(seedPoint[0], seedPoint[1], seedPoint[2])
 
@@ -442,7 +455,7 @@ def average_patch_data(patchBlocks, boundaryData, nSamples, bounds, algorithm, d
                 planeCut.Update()
 
                 # Create the cell-centres on the cut -- that is where the data is
-                cCenters = vtk.vtkCellCenters()
+                cCenters = vtkCellCenters()
                 cCenters.SetInputData(planeCut.GetOutput())
                 cCenters.Update()
                 data = dsa.WrapDataObject(cCenters.GetOutput())
@@ -454,8 +467,8 @@ def average_patch_data(patchBlocks, boundaryData, nSamples, bounds, algorithm, d
 
             elif algorithm == "line":
                 line.SetResolution(nSamples - 1)
-                line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
-                line.SetPoint2(seedPoint[0], seedPoint[1], bounds[5]-smallDz)
+                line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4] + smallDz)
+                line.SetPoint2(seedPoint[0], seedPoint[1], bounds[5] - smallDz)
                 line.Update()
 
                 probeFilter.SetInputConnection(line.GetOutputPort())
@@ -533,11 +546,13 @@ def get_closest_cell(point, internalData, debug):
 
 
     """
+    from vtkmodules.vtkCommonCore import reference as mutable
+
     distance = np.zeros(internalData.GetNumberOfCells())
 
     closestPoint = [0, 0, 0]
-    subId = vtk.mutable(0)
-    dist2 = vtk.mutable(0.0)
+    subId = mutable(0)
+    dist2 = mutable(0.0)
     pcoords = [0, 0, 0]
     weights = [0, 0, 0, 0]
 
@@ -566,12 +581,12 @@ def mark_boundary_cells(patchData, patchPolys, debug):
 
     """
     boundaryCellsConn = OrderedDict()
-    cellCenters = vtk.vtkCellCenters()
+    cellCenters = vtkCellCenters()
 
     for boundary in patchPolys:
         boundaryCellsConn[boundary] = -1*np.ones(patchPolys[boundary].GetNumberOfCells(), dtype=np.int32)
 
-    locator = vtk.vtkCellLocator()
+    locator = vtkCellLocator()
     locator.SetDataSet(patchData)
     locator.Update()
 
@@ -600,7 +615,7 @@ def mark_boundary_cells(patchData, patchPolys, debug):
 
         if debug:
             print("    The mean normal is ", np.mean(normals, axis=0))
-        cell = vtk.vtkGenericCell()
+        cell = vtkGenericCell()
         tol2 = 0.0
         pcoords = [0, 0, 0]
         weights = [0, 0, 0]
@@ -635,7 +650,7 @@ def mark_boundary_cells(patchData, patchPolys, debug):
         print("    Assigning the connectivity lists as FieldData")
     for key in boundaryCellsConn:
         if np.any(boundaryCellsConn[key] == -1):
-            print("ERROR: some connectivity not established for boundary "+key)
+            print("ERROR: some connectivity not established for boundary " + key)
 
         wrappedData = dsa.WrapDataObject(patchData)
         wrappedData.FieldData.append(boundaryCellsConn[key], key)
@@ -652,7 +667,7 @@ def add_boundary_names_to_fielddata(polyData, boundaryData):
         Dictionary with the keys being the names of the boundaries.
 
     """
-    boundaryNames = vtk.vtkStringArray()
+    boundaryNames = vtkStringArray()
     boundaryNames.SetName("boundaries")
 
     for boundary in boundaryData:
@@ -662,8 +677,10 @@ def add_boundary_names_to_fielddata(polyData, boundaryData):
 
 
 def create_boundary_polydata(patchBlocks, patchData, bounds, debug):
+    from vtkmodules.vtkFiltersCore import vtkFeatureEdges
+    from vtkmodules.vtkFiltersCore import vtkCleanPolyData
 
-    patchFeatureEdgesFilter = vtk.vtkFeatureEdges()
+    patchFeatureEdgesFilter = vtkFeatureEdges()
 
     patchPolys = OrderedDict()
 
@@ -690,7 +707,7 @@ def create_boundary_polydata(patchBlocks, patchData, bounds, debug):
         # The patch is an x-y plane
 
         if (np.allclose(boundaryIPoints[:, 2], b4Points, atol=1e-6, rtol=1e-4) or
-           np.allclose(boundaryIPoints[:, 2], b5Points, atol=1e-6, rtol=1e-4)):
+                np.allclose(boundaryIPoints[:, 2], b5Points, atol=1e-6, rtol=1e-4)):
             if debug:
                 print("    The patch appears to lie in the x-y plane, ignoring it")
             continue
@@ -703,11 +720,11 @@ def create_boundary_polydata(patchBlocks, patchData, bounds, debug):
                 print("    Found", np.sum(idx), "edge points with the same z-values as the seed patch")
 
             # Find ids of the cells in the x-y plane
-            cellIds = vtk.vtkIntArray()
+            cellIds = vtkIntArray()
             for i in range(patchFeatureEdgesData.GetNumberOfCells()):
 
                 # Get ids of the points of cell i
-                pointIds = vtk.vtkIdList()
+                pointIds = vtkIdList()
                 patchFeatureEdgesData.GetCellPoints(i, pointIds)
 
                 flag = 0
@@ -720,7 +737,7 @@ def create_boundary_polydata(patchBlocks, patchData, bounds, debug):
                     cellIds.InsertNextValue(i)
 
             # Create the polydata and remove all cells but the ones in cellIds
-            newPoly = vtk.vtkPolyData()
+            newPoly = vtkPolyData()
             newPoly.ShallowCopy(patchFeatureEdgesFilter.GetOutput())
             cellIds2 = vtk_to_numpy(cellIds)
             for i in range(newPoly.GetNumberOfCells()):
@@ -730,7 +747,7 @@ def create_boundary_polydata(patchBlocks, patchData, bounds, debug):
             newPoly.RemoveDeletedCells()
 
             # Clean up redundant points
-            cleaner = vtk.vtkCleanPolyData()
+            cleaner = vtkCleanPolyData()
             cleaner.SetInputData(newPoly)
             cleaner.Update()
 
@@ -761,16 +778,16 @@ def assemble_multiblock(internalData, edgeDataDict):
         The assembled dataset.
 
     """
-    multiBlock = vtk.vtkMultiBlockDataSet()
+    multiBlock = vtkMultiBlockDataSet()
     multiBlock.SetNumberOfBlocks(len(edgeDataDict) + 1)
     multiBlock.SetBlock(0, internalData)
-    multiBlock.GetMetaData(0).Set(vtk.vtkCompositeDataSet.NAME(),
+    multiBlock.GetMetaData(0).Set(vtkCompositeDataSet.NAME(),
                                   "internalField")
 
     i = 1
     for boundary in edgeDataDict:
         multiBlock.SetBlock(i, edgeDataDict[boundary])
-        multiBlock.GetMetaData(i).Set(vtk.vtkCompositeDataSet.NAME(), boundary)
+        multiBlock.GetMetaData(i).Set(vtkCompositeDataSet.NAME(), boundary)
         i += 1
 
     return multiBlock
@@ -810,6 +827,7 @@ def zero_out_arrays(polyData):
 
 
 def main():
+    from vtkmodules.vtkIOXML import vtkXMLMultiBlockDataWriter
 
     parser = create_parser()
     args = parser.parse_args()
@@ -828,47 +846,37 @@ def main():
         debug = bool(int(config["debug"]))
     except KeyError:
         debug = False
-        pass
-
     try:
         time = float(config["time"])
     except KeyError:
         time = None
-        pass
-
     try:
         dry = bool(int(config["dry"]))
     except KeyError:
         dry = False
-        pass
-
     try:
         slow = bool(int(config["slow"]))
     except KeyError:
         slow = False
         print("Will use slow averaging")
-        pass
-
     try:
         patchAlgorithm = str(config["patchalg"])
     except KeyError:
         patchAlgorithm = "cut"
         print("Will use plane cuts for averaging patch data")
-        pass
-
     if debug:
         print("The debug switch is on")
         print("")
-        print("The case path is "+casePath)
-        print("The name of the seed patch is "+seedPatchName)
-        print("The number of samples to be taken along z is "+str(nSamples))
-        print("The produced filename will be "+writePath)
+        print("The case path is " + casePath)
+        print("The name of the seed patch is " + seedPatchName)
+        print("The number of samples to be taken along z is " + str(nSamples))
+        print("The produced filename will be " + writePath)
 
     # Case reader
     print("Reading")
     reader = read(casePath, time, debug)
     # Writer
-    writer = vtk.vtkXMLMultiBlockDataWriter()
+    writer = vtkXMLMultiBlockDataWriter()
     writer.SetFileName(writePath)
 
     caseData = reader.GetOutput()
@@ -880,7 +888,7 @@ def main():
                                                           seedPatchName))
 
     # The polyData for the 2d fields, copied from the seed patch
-    internalData = vtk.vtkPolyData()
+    internalData = vtkPolyData()
     internalData.ShallowCopy(seedPatchBlock)
     internalData.BuildLinks()
 

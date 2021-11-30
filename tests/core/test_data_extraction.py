@@ -7,7 +7,6 @@ from __future__ import print_function
 from __future__ import division
 import pytest
 from os import path
-import vtk
 import turbulucid
 from turbulucid.core.data_extraction import *
 from numpy.testing import assert_allclose
