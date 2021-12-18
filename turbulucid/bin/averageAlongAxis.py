@@ -858,7 +858,7 @@ def main():
         slow = bool(int(config["slow"]))
     except KeyError:
         slow = False
-        print("Will use slow averaging")
+        print("Will use fast averaging")
     try:
         patchAlgorithm = str(config["patchalg"])
     except KeyError:
