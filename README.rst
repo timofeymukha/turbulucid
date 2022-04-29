@@ -52,10 +52,9 @@ to make the plots look exactly as desired.
 
 Installing
 ----------
-Turbulucid is tested using both Python 3 and 2, but using Python 3 is recommended.
+Turbulucid requires Python 3.
 It should work on any platform, where the packages described below also work.
 It has been used extensively on both Windows and Linux.
-Travis CI is used to test for possible installation errors after each commit.
 
 For turbulucid to work, several other packages have to installed.
 Four packages are :code:`numpy`, :code:`scipy`, :code:`matplotlib`, and :code:`pytest`.
@@ -66,7 +65,8 @@ Turbulucid also depends on python bindings for VTK, i.e the :code:`vtk` package.
 The version of VTK should be at least 7.0.0.
 With Anaconda, VTK can be obtained by running
 :code:`conda install vtk` in the terminal.
-Currently, this installs version 8.1.1 of the software.
+However, recently there have been some issues with VTK and conda, which seem to be resolved by using the conda-forge package channel: :code:`conda install vtk -c conda-forge`.
+The best practice is to then use a separate conda environment and install all the necessary pacakges from conda-forge there.
 
 Installing the package is easy.
 Simply clone the git repository or download it as an archive and then unpack.
@@ -77,9 +77,9 @@ Alternatively, the :code:`--prefix` flag can be used to directly specify the ins
 
 Using :code:`conda`, it is possible to test the package in a separate environment::
 
-   conda create -n test-environment python=2.7 numpy scipy matplotlib pytest
-   source activate test-environment
-   conda install vtk
+   conda create -n tbl python=3.8
+   source activate tbl
+   conda install -c conda-forge vtk numpy scipy matplotlib pytest
    python setup.py install
    
 For more info regarding Anaconda environments refer to `<https://conda.io/docs/user-guide/tasks/manage-environments.html>`_
