@@ -1,9 +1,6 @@
 turbulucid
 ==========
 
-.. image:: https://travis-ci.org/timofeymukha/turbulucid.svg?branch=master
-    :target: https://travis-ci.org/timofeymukha/turbulucid
-
 What?
 -----
 
