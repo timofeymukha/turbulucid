@@ -1,9 +1,6 @@
 turbulucid
 ==========
 
-.. image:: https://travis-ci.org/timofeymukha/turbulucid.svg?branch=master
-    :target: https://travis-ci.org/timofeymukha/turbulucid
-
 What?
 -----
 
@@ -13,6 +10,10 @@ The main use case is envisioned to be analysis of cut-plane data coming from
 finite-volume based solvers for Computational Fluid Dynamics.
 The package contains functions for both plotting the data and data
 introspection.
+
+For more details see this paper
+https://openresearchsoftware.metajnl.com/article/10.5334/jors.213/
+Please cite it if you use Turbulucid in your work!
 
 Why?
 ----
@@ -48,21 +49,20 @@ to make the plots look exactly as desired.
 
 Installing
 ----------
-Turbulucid is tested using both Python 3 and 2, but using Python 3 is recommended.
+Turbulucid requires Python 3.
 It should work on any platform, where the packages described below also work.
 It has been used extensively on both Windows and Linux.
-Travis CI is used to test for possible installation errors after each commit.
 
 For turbulucid to work, several other packages have to installed.
 Four packages are :code:`numpy`, :code:`scipy`, :code:`matplotlib`, and :code:`pytest`.
-These are easy to obtain and are part of many python distributions, in
-particular, Anaconda.
+These are easy to obtain and are part of many python package managers, e.g. conda, mamba, or pip.
 
 Turbulucid also depends on python bindings for VTK, i.e the :code:`vtk` package.
 The version of VTK should be at least 7.0.0.
-With Anaconda, VTK can be obtained by running
+With conda, VTK can be obtained by running
 :code:`conda install vtk` in the terminal.
-Currently, this installs version 8.1.1 of the software.
+We generally recommend using the conda-forge package channel: :code:`conda install vtk -c conda-forge`.
+The best practice is to then use a separate conda environment and install all the necessary pacakges from conda-forge there.
 
 Installing the package is easy.
 Simply clone the git repository or download it as an archive and then unpack.
@@ -73,12 +73,12 @@ Alternatively, the :code:`--prefix` flag can be used to directly specify the ins
 
 Using :code:`conda`, it is possible to test the package in a separate environment::
 
-   conda create -n test-environment python=2.7 numpy scipy matplotlib pytest
-   source activate test-environment
-   conda install vtk
-   python setup.py install
+   conda create -n tbl python=3.10
+   source activate tbl
+   conda install -c conda-forge vtk numpy scipy matplotlib pytest
+   pip install .
    
-For more info regarding Anaconda environments refer to `<https://conda.io/docs/user-guide/tasks/manage-environments.html>`_
+For more info regarding conda environments refer to `<https://conda.io/docs/user-guide/tasks/manage-environments.html>`_
 
 Validation
 ----------

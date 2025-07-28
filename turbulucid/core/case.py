@@ -3,20 +3,11 @@
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import numpy as np
 import os
-from vtkmodules.vtkCommonCore import vtkDoubleArray, vtkFloatArray
-from vtkmodules.vtkCommonTransforms import vtkTransform
-
-try:
-    from vtkmodules.vtkFiltersGeneral import vtkCellCenters
-except ImportError:
-    from vtkmodules.vtkFiltersCore import vtkCellCenters
-from vtkmodules.numpy_interface import dataset_adapter as dsa
+import vtk
+from vtk.numpy_interface import dataset_adapter as dsa
 from .readers import NativeReader, LegacyReader, XMLReader
+import numpy as np
 
 __all__ = ["Case"]
 
@@ -45,10 +36,10 @@ class Case:
         self._blockData = self.read(clean, pointData)
 
         # Compute the cell-centres
-        self._cellCentres = vtkCellCenters()
+        self._cellCentres = vtk.vtkCellCenters()
         self._cellCentres.SetInputData(self._blockData.GetBlock(0))
         self._cellCentres.Update()
-        self._cellCentres = \
+        self._cellCentres =\
             dsa.WrapDataObject(self._cellCentres.GetOutput()).GetPoints()
         self._cellCentres = np.array(self._cellCentres[:, :2])
 
@@ -167,7 +158,7 @@ class Case:
         self.fields.append(item)
 
         cellData = self._vtkData.VTKObject.GetCellData()
-        valuesVtk = vtkDoubleArray()
+        valuesVtk = vtk.vtkDoubleArray()
 
         if np.ndim(values) > 1:
             valuesVtk.SetNumberOfComponents(values.shape[1])
@@ -248,7 +239,7 @@ class Case:
         from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 
         # Transform the internal field
-        filter = vtkTransformPolyDataFilter()
+        filter = vtk.vtkTransformPolyDataFilter()
         filter.SetInputData(self.blockData.GetBlock(0))
         filter.SetTransform(transform)
         filter.Update()
@@ -258,7 +249,7 @@ class Case:
         # Transform boundary data
         i = 1
         for boundary in self.boundaries:
-            filter = vtkTransformPolyDataFilter()
+            filter = vtk.vtkTransformPolyDataFilter()
             filter.SetTransform(transform)
             filter.SetInputData(self.blockData.GetBlock(i))
             filter.Update()
@@ -266,7 +257,7 @@ class Case:
             i += 1
 
         # Update attuributes
-        self._cellCentres = vtkCellCenters()
+        self._cellCentres = vtk.vtkCellCenters()
         self._cellCentres.SetInputData(self.blockData.GetBlock(0))
         self._cellCentres.Update()
         self._cellCentres = \
@@ -312,7 +303,7 @@ class Case:
             The translation along the y axis.
 
         """
-        transform = vtkTransform()
+        transform = vtk.vtkTransform()
         transform.Translate(dx, dy, 0)
         transform.Update()
 
@@ -331,7 +322,7 @@ class Case:
             The scaling factor along y.
 
         """
-        transform = vtkTransform()
+        transform = vtk.vtkTransform()
         transform.Scale(1/scaleX, 1/scaleY, 0)
         transform.Update()
         self._transform(transform)
@@ -346,7 +337,7 @@ class Case:
 
         """
         axis = [0, 0, 1]
-        transform = vtkTransform()
+        transform = vtk.vtkTransform()
         transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
         transform.Update()
         self._transform(transform)
@@ -412,7 +403,7 @@ class Case:
 
         blockData = self.extract_block_by_name(boundary)
 
-        cCenters = vtkCellCenters()
+        cCenters = vtk.vtkCellCenters()
         cCenters.SetInputData(blockData)
         cCenters.Update()
 
@@ -485,3 +476,4 @@ class Case:
         writer.SetFileName(writePath)
         writer.SetInputData(self._blockData)
         writer.Write()
+
