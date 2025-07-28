@@ -3,9 +3,6 @@
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import numpy as np
 from collections import OrderedDict
 import os
@@ -16,7 +13,7 @@ from vtk.util.numpy_support import numpy_to_vtk
 from vtk.util.numpy_support import vtk_to_numpy
 
 __all__ = ["Reader", "LegacyReader", "mark_boundary_cells", "NativeReader",
-           "XMLReader"]
+           "XMLReader", "VTUReader"]
 
 
 def mark_boundary_cells(internalData, boundaryDataDict):
@@ -215,7 +212,7 @@ class LegacyReader(Reader):
 
 
 class XMLReader(Reader):
-    """Reader for data in XML VTK format, i.e. .vtu."""
+    """Reader for data in XML polydata format, i.e. .vtp."""
 
     def __init__(self, filename, clean=False, pointData=False):
         Reader.__init__(self, filename)
@@ -249,7 +246,6 @@ class XMLReader(Reader):
         bDict = {'boundary': boundaryData}
         mark_boundary_cells(internalData, bDict)
         self._data = self._assemble_multiblock_data(internalData, boundaryData)
-
     @property
     def vtkReader(self):
         """The VTK reader for the data."""
@@ -264,6 +260,60 @@ class XMLReader(Reader):
     def data(self):
         """The read in data."""
         return self._data
+
+class VTUReader(Reader):
+    """Reader for data in XML unstructured grid format, i.e. .vtu."""
+
+    def __init__(self, filename, clean=False, pointData=False):
+        Reader.__init__(self, filename)
+
+        self._vtkReader = vtk.vtkXMLUnstructuredGridReader()
+        self._fileName = filename
+
+        self._vtkReader.SetFileName(self._fileName)
+        self._vtkReader.Update()
+
+        internalData = self._vtkReader.GetOutput()
+        self._data = self._vtkReader.GetOutput()
+
+    #        internalData = self._transform()
+#        if clean:
+#            internalData = self._clean(internalData)
+
+        if pointData:
+            interp = vtk.vtkPointDataToCellData()
+            interp.SetInputData(internalData)
+            interp.PassPointDataOff()
+            interp.Update()
+            internalData = interp.GetOutput()
+
+        internalData.BuildLinks()
+
+        n = internalData.GetNumberOfCells()
+        pids = np.arange(n)
+
+        internalData.GetAttributes(vtk.vtkDataObject.CELL).SetPedigreeIds(
+            numpy_to_vtk(pids))
+
+        boundaryData = self._extract_boundary_data(internalData)
+        bDict = {'boundary': boundaryData}
+        mark_boundary_cells(internalData, bDict)
+        self._data = self._assemble_multiblock_data(internalData, boundaryData)
+    @property
+    def vtkReader(self):
+        """The VTK reader for the data."""
+        return self._vtkReader
+
+    @property
+    def fileName(self):
+        """The path to the file with the data."""
+        return self._fileName
+
+    @property
+    def data(self):
+        """The read in data."""
+        return self._data
+
 
 
 class NativeReader(Reader):

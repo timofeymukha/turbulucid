@@ -3,16 +3,11 @@
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-import numpy as np
-from vtk.util.numpy_support import numpy_to_vtk
-from vtk.util.numpy_support import vtk_to_numpy
 import os
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
 from .readers import NativeReader, LegacyReader, XMLReader
+import numpy as np
 
 __all__ = ["Case"]
 
@@ -459,7 +454,7 @@ class Case:
         elif fileExt == ".vtk":
             return LegacyReader(fileName, clean=clean,
                                 pointData=pointData).data
-        elif (fileExt == ".vtu") or (fileExt == ".vtp"):
+        elif (fileExt == ".vtp"):
             return XMLReader(fileName, clean=clean, pointData=pointData).data
         else:
             raise ValueError("Unsupported file format.", fileName, fileExt)
