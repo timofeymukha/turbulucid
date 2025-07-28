@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "turbulucid"
+version = "0.5"
+description = "A package for post-processing of 2D flow fields."
+authors = [
+    { name = "Timofey Mukha", email = "timofey.mukha@it.uu.se" }
+]
+license = { text = "GNU GPL 3" }
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
+]
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+    "pytest",
+    "vtk"
+]
+
+[project.urls]
+Homepage = "https://github.com/timofeymukha/turbulucid"
+
+[project.scripts]
+averageAlongAxis = "turbulucid.bin.averageAlongAxis:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
