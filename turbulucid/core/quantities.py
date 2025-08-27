@@ -36,10 +36,10 @@ def momentum_thickness(y, v, u0="last", interpolate=False):
         The value of the momentum thickness.
 
     """
-    if u0 is "last":
+    if u0 == "last":
         u0Val = v[-1]
         cutOff = -1
-    elif u0 is "max":
+    elif u0 == "max":
         u0Val = np.max(v)
         cutOff = np.argmax(v)
     else:
@@ -79,9 +79,9 @@ def delta_star(y, v, u0="last", interpolate=False):
         The value of the displacement thickness.
 
     """
-    if u0 is "last":
+    if u0 == "last":
         u0Val = v[-1]
-    elif u0 is "max":
+    elif u0 == "max":
         u0Val = np.max(v)
     else:
         raise ValueError("u0 should be either 'last' or 'max'.")
@@ -122,9 +122,9 @@ def delta_99(y, v, u0="last", interpolate=False):
         If the computed value is not positive.
 
     """
-    if u0 is "last":
+    if u0 == "last":
         u0Val = v[-1]
-    elif u0 is "max":
+    elif u0 == "max":
         u0Val = np.max(v)
     else:
         raise ValueError("u0 should be either 'last' or 'max'.")
