@@ -126,7 +126,6 @@ def delta_99(y, v, u0="last", interpolate=False):
         If the computed value is not positive.
 
     """
-
     if u0 == "last":
         u0Val = v[-1]
     elif u0 == "max":
