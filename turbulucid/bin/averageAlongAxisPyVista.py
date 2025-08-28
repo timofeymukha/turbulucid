@@ -181,249 +181,103 @@ def get_cell_points(polyData, cellId):
 
     return cellPointsIds
 
-def pyvista_average_internal_field_data(block, internalData, nSamples, debug, dry):
-
-    blockCellData = block.GetCellData()
-    bounds = block.GetBounds()
-
-    if debug:
-        print("    Computing cell centers of the seed patch")
-    patchCellCenters = vtk.vtkCellCenters()
-    patchCellCenters.SetInputData(internalData)
-    patchCellCenters.Update()
-
-    patchCellCenters = patchCellCenters.GetOutput()
-    nSeedPoints = patchCellCenters.GetNumberOfPoints()
-
-    if debug:
-        print("    The number of seed points is", nSeedPoints)
-
-    probeFilter = vtk.vtkProbeFilter()
-    probeFilter.SetSourceData(block)
-
-    avrgFields = OrderedDict()
-
-    nFields = blockCellData.GetNumberOfArrays()
-
-    for field in range(nFields):
-        name = blockCellData.GetArrayName(field)
-        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
-        if debug:
-            print("    Will average field", name, "with", nCols, "components")
-        avrgFields[name] = np.zeros((nSeedPoints, nCols))
-
-    lZ = bounds[5] - bounds[4]
-    zVals = np.linspace(bounds[4] + lZ/(2*nSamples), bounds[5] - lZ/(2*nSamples), nSamples)
-
-    print("    Generating sampling points")
-    samplingPoints = vtk.vtkPoints()
-    for i in range(nSeedPoints):
-        p = patchCellCenters.GetPoint(i)
-        for zi, zval in enumerate(zVals):
-            samplingPoints.InsertNextPoint(p[0], p[1], zval)
-
-    if debug:
-        print("    Converting to polyData")
-    inputData = vtk.vtkPolyData()
-    inputData.SetPoints(samplingPoints)
-
-    print("    Sampling internal field")
-    probeFilter.SetInputData(inputData)
-    probeFilter.Update()
-    probeData = dsa.WrapDataObject(probeFilter.GetOutput())
-
-    probedPointData = probeData.PointData
-    validPoints = probedPointData['vtkValidPointMask']
-    idx = np.where(validPoints <= 0)[0]
-    if idx.size > 0:
-        print("WARNING:", idx.size, "sampling points marked invalid and will be ignored")
-
-    for field in avrgFields:
-        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
-
-        reshaped = np.reshape(probedPointData[field], (nSeedPoints, nSamples, nCols))
-        avrgFields[field] = np.mean(reshaped, axis=1)
-
-    if debug:
-        print("    Assigning sampled data to the internal field")
-    wrappedPatchData = dsa.WrapDataObject(internalData)
-    for field in avrgFields:
-        print("        Assigning field", field)
-        fieldI = avrgFields[field]
-        nComp = fieldI.shape[1]
-
-        if nComp == 1:  # scalar
-            wrappedPatchData.CellData[field][:] = fieldI[:, 0]
-        elif nComp == 9:  # tensor
-            wrappedPatchData.CellData[field][:] = fieldI.reshape(nSeedPoints,
-                                                                 3, 3)
-        else:
-            wrappedPatchData.CellData[field][:, :] = fieldI[:, :]
-
-def new_average_internal_field_data(block, internalData, nSamples, debug, dry):
-
-    blockCellData = block.GetCellData()
-    bounds = block.GetBounds()
-
-    if debug:
-        print("    Computing cell centers of the seed patch")
-    patchCellCenters = vtk.vtkCellCenters()
-    patchCellCenters.SetInputData(internalData)
-    patchCellCenters.Update()
-
-    patchCellCenters = patchCellCenters.GetOutput()
-    nSeedPoints = patchCellCenters.GetNumberOfPoints()
-
-    if debug:
-        print("    The number of seed points is", nSeedPoints)
-
-    probeFilter = vtk.vtkProbeFilter()
-    probeFilter.SetSourceData(block)
-
-    avrgFields = OrderedDict()
-
-    nFields = blockCellData.GetNumberOfArrays()
-
-    for field in range(nFields):
-        name = blockCellData.GetArrayName(field)
-        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
-        if debug:
-            print("    Will average field", name, "with", nCols, "components")
-        avrgFields[name] = np.zeros((nSeedPoints, nCols))
-
-    lZ = bounds[5] - bounds[4]
-    zVals = np.linspace(bounds[4] + lZ/(2*nSamples), bounds[5] - lZ/(2*nSamples), nSamples)
-
-    print("    Generating sampling points")
-    samplingPoints = vtk.vtkPoints()
-    for i in range(nSeedPoints):
-        p = patchCellCenters.GetPoint(i)
-        for zi, zval in enumerate(zVals):
-            samplingPoints.InsertNextPoint(p[0], p[1], zval)
-
-    if debug:
-        print("    Converting to polyData")
-    inputData = vtk.vtkPolyData()
-    inputData.SetPoints(samplingPoints)
-
-    print("    Sampling internal field")
-    probeFilter.SetInputData(inputData)
-    probeFilter.Update()
-    probeData = dsa.WrapDataObject(probeFilter.GetOutput())
-
-    probedPointData = probeData.PointData
-    validPoints = probedPointData['vtkValidPointMask']
-    idx = np.where(validPoints <= 0)[0]
-    if idx.size > 0:
-        print("WARNING:", idx.size, "sampling points marked invalid and will be ignored")
-
-    for field in avrgFields:
-        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
-
-        reshaped = np.reshape(probedPointData[field], (nSeedPoints, nSamples, nCols))
-        avrgFields[field] = np.mean(reshaped, axis=1)
-
-    if debug:
-        print("    Assigning sampled data to the internal field")
-    wrappedPatchData = dsa.WrapDataObject(internalData)
-    for field in avrgFields:
-        print("        Assigning field", field)
-        fieldI = avrgFields[field]
-        nComp = fieldI.shape[1]
-
-        if nComp == 1:  # scalar
-            wrappedPatchData.CellData[field][:] = fieldI[:, 0]
-        elif nComp == 9:  # tensor
-            wrappedPatchData.CellData[field][:] = fieldI.reshape(nSeedPoints,
-                                                                 3, 3)
-        else:
-            wrappedPatchData.CellData[field][:, :] = fieldI[:, :]
-
 
 def average_internal_field_data(block, internalData, nSamples, debug, dry):
 
-    blockCellData = block.GetCellData()
-    bounds = block.GetBounds()
-    smallDz = (bounds[5] - bounds[4])/10000
+    blockCellData = block.cell_data
+    bounds = internalData.bounds
 
     if debug:
         print("    Computing cell centers of the seed patch")
-    patchCellCenters = vtk.vtkCellCenters()
-    patchCellCenters.SetInputData(internalData)
-    patchCellCenters.Update()
-
-    patchCellCenters = patchCellCenters.GetOutput()
-    nSeedPoints = patchCellCenters.GetNumberOfPoints()
+    patchCellCenters = block.cell_centers()
+    seedPoints = patchCellCenters.points
+    nSeedPoints = seedPoints.shape[0]
 
     if debug:
         print("    The number of seed points is", nSeedPoints)
 
-    line = vtk.vtkLineSource()
-    probeFilter = vtk.vtkProbeFilter()
-    probeFilter.SetSourceData(block)
-
     avrgFields = OrderedDict()
+    fieldNames = blockCellData.keys()
 
-    nFields = blockCellData.GetNumberOfArrays()
+    nFields = len(fieldNames)
 
-    for field in range(nFields):
-        name = blockCellData.GetArrayName(field)
-        nCols = blockCellData.GetArray(field).GetNumberOfComponents()
+    for name in fieldNames:
+        arr = np.asanyarray(block.cell_data[name])
+        # arr shape is (nCells, nComp) or (nCells,) for scalars
+        if arr.ndim == 1:
+            nCols = 1
+        else:
+            nCols = arr.shape[1]
         if debug:
             print("    Will average field", name, "with", nCols, "components")
-        avrgFields[name] = np.zeros((nSeedPoints, nCols))
+        avrgFields[name] = np.zeros((nSeedPoints, nCols), dtype=float)
 
-    if not dry:
-        for seed in range(int(nSeedPoints)):
-            print_progress(seed, nSeedPoints, tabLevel=1)
+    lZ = bounds[5] - bounds[4]
+    zVals = np.linspace(bounds[4] + lZ/(2*nSamples), bounds[5] - lZ/(2*nSamples), nSamples)
 
-            seedPoint = patchCellCenters.GetPoint(seed)
-            line.SetResolution(nSamples-1)
-            line.SetPoint1(seedPoint[0], seedPoint[1], bounds[4]+smallDz)
-            line.SetPoint2(seedPoint[0], seedPoint[1], bounds[5]-smallDz)
-            line.Update()
+    print("    Generating sampling points")
+    xy = seedPoints[:, :2]  # (nSeedPoints, 2)
+    # Repeat xy for each z sample
+    xy_rep = np.repeat(xy, nSamples, axis=0)  # (nSeedPoints*nSamples, 2)
+    # Tile zVals for each seed point
+    z_rep = np.tile(zVals, nSeedPoints)       # (nSeedPoints*nSamples,)
+    samplingPoints = np.empty((nSeedPoints * nSamples, 3), dtype=float)
+    samplingPoints[:, 0:2] = xy_rep
+    samplingPoints[:, 2] = z_rep
 
-            probeFilter.SetInputConnection(line.GetOutputPort())
-            probeFilter.Update()
+    samplingCloud = pv.PolyData(samplingPoints)
 
-            probeData = dsa.WrapDataObject(probeFilter.GetOutput()).PointData
+    samplingCloud = samplingCloud.sample(internalData, progress_bar=True)
 
-            validPoints = probeData['vtkValidPointMask']
-            idx = np.where(validPoints > 0)[0]
+    print(samplingCloud)
 
-            if idx.size != nSamples and debug:
-                print("Warning:", nSamples - idx.size, "sampled points for seed point", seedPoint[0], seedPoint[1],
-                      "are invalid and will be filtered out.")
+#    if debug:
+#        print("    Converting to polyData")
+#    inputData = vtk.vtkPolyData()
+#    inputData.SetPoints(samplingPoints)
 
-            # NB: We count on the fill value for the data at invalid points to be zero
-            oneByN = 0
-            if np.sum(validPoints) > 0:
-                oneByN = 1/np.sum(validPoints)
-
-            for field in avrgFields:
-                if avrgFields[field].shape[1] == 9:  # a tensor
-                    reshaped = probeData[field].reshape((nSamples, 9))
-                    avrgFields[field][seed] = oneByN*np.sum(reshaped, axis=0)
-                else:
-                    avrgFields[field][seed] = oneByN*np.sum(probeData[field], axis=0)
-    else:
-        print("    This is a dry run, will not actually average")
+#    print("    Sampling internal field")
+#    probeFilter.SetInputData(inputData)
+#    probeFilter.Update()
+#    probeData = dsa.WrapDataObject(probeFilter.GetOutput())
+#
+#    probedPointData = probeData.PointData
+#    validPoints = probedPointData['vtkValidPointMask']
+#    idx = np.where(validPoints <= 0)[0]
+#    if idx.size > 0:
+#        print("WARNING:", idx.size, "sampling points marked invalid and will be ignored")
 
     if debug:
-        print("    Assigning sampled data to the internal field")
-    wrappedPatchData = dsa.WrapDataObject(internalData)
-    for field in avrgFields:
-        print("        Assigning field", field)
-        fieldI = avrgFields[field]
-        nComp = fieldI.shape[1]
+        print("    Averaging across lines")
+    for name in avrgFields:
+        # Pull probed array
+        data = np.asanyarray(samplingCloud.point_data[name])
 
-        if nComp == 1:  # scalar
-            wrappedPatchData.CellData[field][:] = fieldI[:, 0]
-        elif nComp == 9:  # tensor
-            wrappedPatchData.CellData[field][:] = fieldI.reshape(nSeedPoints,
-                                                                 3, 3)
+        if data.ndim == 1:
+            data = data[:, None]
+
+        nComp = data.shape[1]
+
+        # Reshape to (nSeedPoints, nSamples, nComp)
+        reshaped = data.reshape(nSeedPoints, nSamples, nComp)
+        avrgFields[name] = np.mean(reshaped, axis=1)
+
+    if debug:
+        print("    Assigning sampled data to the seed patch")
+
+    for name, fieldI in avrgFields.items():
+        print("        Assigning field", name)
+        nComp = fieldI.shape[1] if fieldI.ndim == 2 else 1
+
+        if nComp == 1:
+            # scalar -> 1D vector length nSeedPoints
+            block.cell_data[name] = fieldI[:, 0]
+        elif nComp == 9:
+            # tensor (flatten to 9 cols for robust PyVista assignment)
+            block.cell_data[name] = fieldI.reshape(nSeedPoints, 9)
         else:
-            wrappedPatchData.CellData[field][:, :] = fieldI[:, :]
+            # vectors or general multi-component
+            block.cell_data[name] = fieldI
 
 
 def average_patch_data(patchBlocks, boundaryData, nSamples, bounds, algorithm, debug):
@@ -449,8 +303,8 @@ def average_patch_data(patchBlocks, boundaryData, nSamples, bounds, algorithm, d
             print("    Zeroing out arrays")
         zero_out_arrays(polyI)
 
-        blockNumber = get_block_index(patchBlocks.GetBlock(1), boundary)
-        patchBlock = patchBlocks.GetBlock(1).GetBlock(blockNumber)
+        blockNumber = get_block_index(patchBlocks, boundary)
+        patchBlock = patchBlocks.GetBlock(blockNumber)
         patchBlockData = patchBlock.GetCellData()
         nSeedPoints = polyI.GetNumberOfCells()
         if debug:
@@ -918,43 +772,37 @@ def main():
 
     # Case reader
     print("Reading")
-    reader = read(casePath, time, debug)
+    internalBlock = read(casePath, time, debug)
+
+    bounds = internalBlock.bounds
+    if debug:
+        print("The z bounds are " + str(bounds[4]), " ", str(bounds[5]))
+
+    patchBlocks = pv.read(config["patchData"])[0]
+    print(f"Read boundary data with {patchBlocks.n_blocks} blocks: {patchBlocks.keys()}")
+    seedPatch = patchBlocks[config["patch"]]
+
     # Writer
     writer = vtk.vtkXMLMultiBlockDataWriter()
     writer.SetFileName(writePath)
 
-    caseData = reader.GetOutput()
-    internalBlock = caseData.GetBlock(0)
-    bounds = internalBlock.GetBounds()
-
-    patchBlocks = caseData.GetBlock(1)
-    seedPatchBlock = patchBlocks.GetBlock(get_block_index(patchBlocks,
-                                                          seedPatchName))
-
-    # The polyData for the 2d fields, copied from the seed patch
-    internalData = vtk.vtkPolyData()
-    internalData.ShallowCopy(seedPatchBlock)
-    internalData.BuildLinks()
-
     print("Sampling and averaging internal field")
-    zero_out_arrays(internalData)
-    if slow:
-        average_internal_field_data(internalBlock, internalData, nSamples, debug, dry)
-    else:
-        new_average_internal_field_data(internalBlock, internalData, nSamples, debug, dry)
+#    average_internal_field_data(seedPatch, internalBlock, nSamples, debug, dry)
+
+#    seedPatch.save("test.vtp")
 
     print("Creating boundary polyData")
-    boundaryData = create_boundary_polydata(patchBlocks, internalData, bounds, debug)
+    boundaryData = create_boundary_polydata(patchBlocks, seedPatch, bounds, debug)
 
     print("Averaging data for patches")
-    average_patch_data(caseData, boundaryData, nSamples, bounds, patchAlgorithm, debug)
-    add_boundary_names_to_fielddata(internalData, boundaryData)
+    average_patch_data(patchBlocks, boundaryData, nSamples, bounds, patchAlgorithm, debug)
+    add_boundary_names_to_fielddata(internalBlock, boundaryData)
 
     print("Marking boundary cells.")
-    mark_boundary_cells(internalData, boundaryData, debug)
+    mark_boundary_cells(internalBlock, boundaryData, debug)
 
     print("Assembling multi-block structure")
-    multiBlock = assemble_multiblock(internalData, boundaryData)
+    multiBlock = assemble_multiblock(seedPatch, boundaryData)
 
     print("Writing")
     writer.SetInputData(multiBlock)
