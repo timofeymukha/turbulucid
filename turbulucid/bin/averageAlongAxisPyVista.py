@@ -787,9 +787,7 @@ def main():
     writer.SetFileName(writePath)
 
     print("Sampling and averaging internal field")
-#    average_internal_field_data(seedPatch, internalBlock, nSamples, debug, dry)
-
-#    seedPatch.save("test.vtp")
+    average_internal_field_data(seedPatch, internalBlock, nSamples, debug, dry)
 
     print("Creating boundary polyData")
     boundaryData = create_boundary_polydata(patchBlocks, seedPatch, bounds, debug)
