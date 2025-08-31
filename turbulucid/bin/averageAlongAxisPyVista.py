@@ -229,8 +229,6 @@ def average_internal_field_data(block, internalData, nSamples, debug, dry):
 
     samplingCloud = samplingCloud.sample(internalData, progress_bar=True)
 
-    print(samplingCloud)
-
 #    if debug:
 #        print("    Converting to polyData")
 #    inputData = vtk.vtkPolyData()
@@ -352,8 +350,8 @@ def average_patch_data(patchBlocks, boundaryData, nSamples, bounds, algorithm, d
                 cCenters.SetInputData(planeCut.GetOutput())
                 cCenters.Update()
                 data = dsa.WrapDataObject(cCenters.GetOutput())
-                uniqueX = np.unique(np.round(data.Points[:, 0], decimals=6))
-                uniqueY = np.unique(np.round(data.Points[:, 1], decimals=6))
+                uniqueX = np.unique(np.round(data.Points[:, 0], decimals=4))
+                uniqueY = np.unique(np.round(data.Points[:, 1], decimals=4))
 
                 if uniqueY.size > 1 or uniqueX.size > 1:
                     print("WARNING: nonunqiue (x, y) values in the cut data", uniqueX, uniqueY)
@@ -375,6 +373,8 @@ def average_patch_data(patchBlocks, boundaryData, nSamples, bounds, algorithm, d
 
             for field in avergFields:
                 if avergFields[field].shape[1] == 9:
+                    # TODO
+                    continue
                     reshaped = data[field].reshape((nSamples, 9))
                     avergFields[field][seed] = np.mean(reshaped, axis=0)
                 else:
@@ -794,10 +794,10 @@ def main():
 
     print("Averaging data for patches")
     average_patch_data(patchBlocks, boundaryData, nSamples, bounds, patchAlgorithm, debug)
-    add_boundary_names_to_fielddata(internalBlock, boundaryData)
+    add_boundary_names_to_fielddata(seedPatch, boundaryData)
 
     print("Marking boundary cells.")
-    mark_boundary_cells(internalBlock, boundaryData, debug)
+    mark_boundary_cells(seedPatch, boundaryData, debug)
 
     print("Assembling multi-block structure")
     multiBlock = assemble_multiblock(seedPatch, boundaryData)
