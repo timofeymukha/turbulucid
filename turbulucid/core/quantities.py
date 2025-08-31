@@ -6,7 +6,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from scipy.integrate import simps
 from scipy.interpolate import interp1d
 import numpy as np
 
