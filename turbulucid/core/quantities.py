@@ -7,6 +7,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from scipy.interpolate import interp1d
+from scipy.integrate import simpson as simps
 import numpy as np
 
 __all__ = ["momentum_thickness", "delta_star", "delta_99"]
