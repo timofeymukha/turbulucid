@@ -183,7 +183,7 @@ class Case:
 
             block = self.extract_block_by_name(boundary)
             cellData = block.GetCellData()
-            valuesVtk = vtkDoubleArray()
+            valuesVtk = vtk.vtkDoubleArray()
 
             nVals = self.boundary_cell_data(boundary)[0][:, 0].size
             bCellData = self.boundary_cell_data(boundary)[1][item]
