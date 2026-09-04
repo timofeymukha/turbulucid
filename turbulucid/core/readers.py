@@ -99,15 +99,15 @@ class Reader(abc.ABC):
         transform = vtkTransform()
         meanNormal = self._compute_normal(inputData)
 
-        axis = np.cross(meanNormal, [0, 0, 1])
-        angle = np.rad2deg(np.arccos(np.dot(meanNormal, [0, 0, 1])))
+        targetNormal = np.array([0.0, 0.0, 1.0])
+        axis = np.cross(meanNormal, targetNormal)
+        sinAngle = np.linalg.norm(axis)
+        cosAngle = np.clip(np.dot(meanNormal, targetNormal), -1.0, 1.0)
 
-        # Do not rotate 180 degrees, no guarantee that it will be better
-        # than no rotation at all
-        if np.allclose([angle], [180]):
-            angle = 0
-
-        transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
+        if sinAngle > 1e-12:
+            axis /= sinAngle
+            angle = np.rad2deg(np.arctan2(sinAngle, cosAngle))
+            transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
         transform.Update()
 
         filter = vtkTransformPolyDataFilter()
@@ -117,36 +117,50 @@ class Reader(abc.ABC):
 
         data = filter.GetOutput()
 
-        for i in range(data.GetNumberOfPoints()):
-            p = data.GetPoints().GetPoint(i)
-            x = p[0]
-            y = p[1]
-            data.GetPoints().SetPoint(i, [x, y, 0])
-
-        #        zValue = filter.GetOutput().GetPoint(0)[-1]
-        #        print(zValue)
-
-        #        transform = vtkTransform()
-        #        transform.Translate(0, 0, -zValue)
-        #        transform.Update()
-
-        #        data = vtkTransformPolyDataFilter()
-        #        data.SetInputConnection(filter.GetOutputPort())
-        #        data.SetTransform(transform)
-        #        data.Update()
+        points = dsa.WrapDataObject(data).Points
+        points[:, 2] = 0
         return data
 
     def _compute_normal(self, inputData):
-        from vtkmodules.vtkFiltersCore import vtkPolyDataNormals
+        """Return the normal of a validated best-fit plane.
 
-        vtkNormals = vtkPolyDataNormals()
-        vtkNormals.ComputeCellNormalsOn()
-        vtkNormals.SetInputData(inputData)
-        vtkNormals.Update()
-        normals = dsa.WrapDataObject(vtkNormals.GetOutput()).CellData["Normals"]
-        meanNormal = np.mean(normals, axis=0)
-        meanNormal /= np.linalg.norm(meanNormal)
-        return meanNormal
+        Point-based plane fitting is independent of polygon winding, unlike
+        averaging cell normals.  The validation prevents silently flattening
+        genuinely three-dimensional or degenerate input.
+        """
+        vtkPoints = inputData.GetPoints()
+        if vtkPoints is None or vtkPoints.GetNumberOfPoints() < 3:
+            raise ValueError("The input must contain at least three points.")
+
+        points = np.asarray(
+            vtk_to_numpy(vtkPoints.GetData()), dtype=float
+        )
+        if not np.all(np.isfinite(points)):
+            raise ValueError("The input geometry contains non-finite points.")
+
+        centredPoints = points - np.mean(points, axis=0)
+        _, singularValues, directions = np.linalg.svd(
+            centredPoints, full_matrices=False
+        )
+        scale = singularValues[0]
+        if scale == 0 or singularValues[1] <= scale * 1e-6:
+            raise ValueError("The input geometry is degenerate or collinear.")
+
+        normal = directions[-1]
+        maxDistance = np.max(np.abs(centredPoints @ normal))
+        if maxDistance > max(1e-10, scale * 1e-6):
+            raise ValueError("The input geometry is not planar.")
+
+        # SVD leaves the sign undetermined. Prefer the orientation requiring
+        # at most a 90-degree rotation towards the positive z axis.
+        if normal[2] < 0:
+            normal = -normal
+        elif np.isclose(normal[2], 0):
+            dominant = np.argmax(np.abs(normal[:2]))
+            if normal[dominant] < 0:
+                normal = -normal
+
+        return normal
 
     def _extract_boundary_data(self, internalData):
         from vtkmodules.vtkFiltersCore import vtkFeatureEdges
@@ -242,7 +256,11 @@ class XMLReader(Reader):
     def __init__(self, filename, clean=False, pointData=False):
         super().__init__(filename)
 
-        from vtkmodules.vtkIOXML import vtkXMLPolyDataReader, vtkXMLUnstructuredGridReader, vtkXMLStructuredGridReader
+        from vtkmodules.vtkIOXML import (
+            vtkXMLPolyDataReader,
+            vtkXMLStructuredGridReader,
+            vtkXMLUnstructuredGridReader,
+        )
         from vtkmodules.vtkFiltersGeometry import vtkDataSetSurfaceFilter
 
         extension = os.path.splitext(filename)[1].lower()
@@ -355,15 +373,3 @@ class NativeReader(Reader):
     def data(self):
         """The read in data."""
         return self._data
-
-    def _compute_normal(self):
-        from vtkmodules.vtkFiltersCore import vtkPolyDataNormals
-
-        vtkNormals = vtkPolyDataNormals()
-        vtkNormals.ComputeCellNormalsOn()
-        vtkNormals.SetInputData(self._vtkReader.GetOutput().GetBlock(0))
-        vtkNormals.Update()
-        normals = dsa.WrapDataObject(vtkNormals.GetOutput()).CellData["Normals"]
-        meanNormal = np.mean(normals, axis=0)
-        meanNormal /= np.linalg.norm(meanNormal)
-        return meanNormal
