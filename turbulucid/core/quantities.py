@@ -38,24 +38,30 @@ def momentum_thickness(y, v, u0="last", cutoff=None, interpolate=False):
     """
     if u0 == "last":
         u0Val = v[-1]
-        cutOff = -1
+        cutOff = v.size - 1
     elif u0 == "max":
         u0Val = np.max(v)
         cutOff = np.argmax(v)
     else:
         u0Val = u0
-        cutOff = -1
+        cutOff = v.size - 1
 
     if cutoff is not None:
-        cutOff = cutoff
+        cutOff = int(cutoff)
+
+    if cutOff < 0 or cutOff >= v.size:
+        raise ValueError("cutoff must index an element of the profile.")
 
     if interpolate:
         interp = interp1d(y, v, kind='linear')
         y = np.linspace(y[0], y[cutOff], 10000)
         v = interp(y)
     else:
-        y = y[:cutOff]
-        v = v[:cutOff]
+        # ``cutOff`` identifies the final sample included in the integral.
+        # The old slice omitted that endpoint, including the free-stream value
+        # in the default mode.
+        y = y[:cutOff + 1]
+        v = v[:cutOff + 1]
 
     return simps(v/u0Val*(1 - v/u0Val), x=y)
 

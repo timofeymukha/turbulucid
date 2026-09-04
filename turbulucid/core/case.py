@@ -4,6 +4,8 @@
 # See LICENCE.txt and the Legal section in the README for more information
 
 import os
+from collections import OrderedDict
+
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
 from .readers import NativeReader, LegacyReader, XMLReader
@@ -151,11 +153,13 @@ class Case:
             The values of the field.
 
         """
-        if values.shape[0] != self[self.fields[0]].shape[0]:
+        values = np.asarray(values)
+        if values.ndim == 0 or values.shape[0] != self.vtkData.GetNumberOfCells():
             raise ValueError("The dimensionality of the provided field "
                              "does not match that of the case.")
 
-        self.fields.append(item)
+        if item not in self.fields:
+            self.fields.append(item)
 
         cellData = self._vtkData.VTKObject.GetCellData()
         valuesVtk = vtk.vtkDoubleArray()
@@ -276,8 +280,6 @@ class Case:
             self._compute_boundary_cell_data()
 
     def _compute_boundary_cell_data(self):
-        from collections import OrderedDict
-
         boundaryCellData = OrderedDict()
         boundaryCellCoords = OrderedDict()
 
@@ -361,7 +363,10 @@ class Case:
 
         """
         points = np.copy(self._boundaryCellCoords[boundary])
-        data = self._boundaryCellData[boundary].copy()
+        data = OrderedDict(
+            (field, np.copy(values))
+            for field, values in self._boundaryCellData[boundary].items()
+        )
 
         if sort is None:
             return points, data
@@ -369,6 +374,8 @@ class Case:
             ind = np.argsort(points[:, 0])
         elif sort == "y":
             ind = np.argsort(points[:, 1])
+        else:
+            raise ValueError("sort should be 'x', 'y', or None.")
 
         points = points[ind]
 
@@ -420,6 +427,8 @@ class Case:
             ind = np.argsort(points[:, 0])
         elif sort == "y":
             ind = np.argsort(points[:, 1])
+        else:
+            raise ValueError("sort should be 'x', 'y', or None.")
 
         points = points[ind]
 
@@ -476,4 +485,3 @@ class Case:
         writer.SetFileName(writePath)
         writer.SetInputData(self._blockData)
         writer.Write()
-

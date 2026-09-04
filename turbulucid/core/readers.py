@@ -99,8 +99,6 @@ class Reader():
         axis = np.cross(meanNormal, [0, 0, 1])
         angle = np.rad2deg(np.arccos(np.dot(meanNormal, [0, 0, 1])))
 
-        print(meanNormal, angle)
-
         # Do not rotate 180 degrees, no guarantee that it will be better
         # than no rotation at all
         if np.allclose([angle], [180]):

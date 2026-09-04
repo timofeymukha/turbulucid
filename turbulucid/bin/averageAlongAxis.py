@@ -136,7 +136,11 @@ def read(casePath, time, debug=False):
     reader.CreateCellToPointOff()
     reader.DisableAllPointArrays()
     reader.EnableAllPatchArrays()
-    reader.DecomposePolyhedraOn()
+    # This option was removed from newer VTK releases.  Older readers need it
+    # to expose polyhedral cells in a form suitable for probing, while newer
+    # readers already provide the required behaviour.
+    if hasattr(reader, "DecomposePolyhedraOn"):
+        reader.DecomposePolyhedraOn()
     reader.Update()
     reader.UpdateInformation()
 
