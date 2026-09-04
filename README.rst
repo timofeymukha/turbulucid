@@ -53,8 +53,8 @@ Turbulucid requires Python 3.
 It should work on any platform, where the packages described below also work.
 It has been used extensively on both Windows and Linux.
 
-For turbulucid to work, several other packages have to installed.
-Four packages are :code:`numpy`, :code:`scipy`, :code:`matplotlib`, and :code:`pytest`.
+For turbulucid to work, several other packages have to be installed.
+Three packages are :code:`numpy`, :code:`scipy`, and :code:`matplotlib`.
 These are easy to obtain and are part of many python package managers, e.g. conda, mamba, or pip.
 
 Turbulucid also depends on python bindings for VTK, i.e the :code:`vtk` package.
@@ -66,17 +66,15 @@ The best practice is to then use a separate conda environment and install all th
 
 Installing the package is easy.
 Simply clone the git repository or download it as an archive and then unpack.
-Then navigate to the root catalog of the code in a terminal and execute
-:code:`python setup.py install`.
-This may require root priviliges, if you lack them, the :code:`--user` flag can be used.
-Alternatively, the :code:`--prefix` flag can be used to directly specify the installation path.
+Then navigate to the root directory of the code in a terminal and execute
+:code:`python -m pip install .`.
 
 Using :code:`conda`, it is possible to test the package in a separate environment::
 
    conda create -n tbl python=3.10
    source activate tbl
-   conda install -c conda-forge vtk numpy scipy matplotlib pytest
-   pip install .
+   conda install -c conda-forge vtk numpy scipy matplotlib
+   python -m pip install ".[test]"
    
 For more info regarding conda environments refer to `<https://conda.io/docs/user-guide/tasks/manage-environments.html>`_
 
@@ -85,7 +83,7 @@ Validation
 
 Turbulucid comes with a number of unit tests, covering part of its functionality.
 Expanding the test suite is a work in progress.
-The tests are ran on Travis after each commit.
+The tests are run with GitHub Actions for pushes and pull requests.
 To run the tests on your machine, go to the top-level directory of turbulucid and run :code:`pytest tests`.
 
 The best way to validate the functionality is to apply turbulucid to post-processing some simple dataset, which can also be opened in another software in order to compare results.
@@ -138,4 +136,3 @@ DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY YOU OR THIRD
 PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER PROGRAMS),
 EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE POSSIBILITY OF
 SUCH DAMAGES.
-

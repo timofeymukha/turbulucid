@@ -10,7 +10,7 @@ authors = [
     { name = "Timofey Mukha", email = "timofey.mukha@protonmail.com" }
 ]
 license = { text = "GNU GPL 3" }
-readme = "README.md"
+readme = "README.rst"
 requires-python = ">=3.10"
 classifiers = [
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
@@ -19,9 +19,11 @@ dependencies = [
     "numpy",
     "scipy",
     "matplotlib",
-    "pytest",
     "vtk"
 ]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
 
 [project.urls]
 Homepage = "https://github.com/timofeymukha/turbulucid"
@@ -31,3 +33,11 @@ averageAlongAxis = "turbulucid.bin.averageAlongAxis:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "--strict-config --strict-markers -ra"
+filterwarnings = [
+    "ignore:Setting the shape on a NumPy array has been deprecated:DeprecationWarning",
+]
