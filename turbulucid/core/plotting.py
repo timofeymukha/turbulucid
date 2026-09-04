@@ -22,6 +22,14 @@ __all__ = ["plot_boundaries", "plot_vectors", "plot_streamlines", "plot_field",
            "add_colorbar", "plot_contour"]
 
 
+def _temporary_field_name(case):
+    """Return a field name that cannot collide with user data."""
+    name = "__turbulucid_plot_data__"
+    while name in case.fields:
+        name += "_"
+    return name
+
+
 def add_colorbar(data, aspect=20, padFraction=0.5, **kwargs):
     """Add a vertical colorbar to an image plot.
 
@@ -160,11 +168,12 @@ def plot_vectors(case, field, colorField=None,
     pointsX = np.copy(case.cellCentres[:, 0])
     pointsY = np.copy(case.cellCentres[:, 1])
 
-    if type(field) == str:
+    temporaryField = None
+    if isinstance(field, str):
         data = case[field]
-    elif type(field) in [vtkmodules.numpy_interface.dataset_adapter.VTKArray, np.ndarray]:
-        case['temp'] = field
-        data = case['temp']
+    elif isinstance(field, (vtkmodules.numpy_interface.dataset_adapter.VTKArray,
+                            np.ndarray)):
+        data = np.asarray(field)
     else:
         raise TypeError("field should be a name of an existing field or an"
                         " array of values. Got " + str(type(field)))
@@ -182,16 +191,23 @@ def plot_vectors(case, field, colorField=None,
         if planeResolution is None:
             planeResolution = [50, 50]
 
-        points, sampledData = sample_by_plane(case, planeResolution)
+        if not isinstance(field, str):
+            temporaryField = _temporary_field_name(case)
+            case[temporaryField] = field
+
+        try:
+            points, sampledData = sample_by_plane(case, planeResolution)
+        finally:
+            if temporaryField is not None:
+                case.__delitem__(temporaryField)
 
         pointsX = points[:, 0]
         pointsY = points[:, 1]
 
-        if type(field) == str:
+        if isinstance(field, str):
             data = sampledData[field]
         else:
-            data = np.copy(sampledData['temp'])
-            case.__delitem__('temp')
+            data = np.copy(sampledData[temporaryField])
 
         validPointsIdx = sampledData['vtkValidPointMask']
         data = np.ma.array(data)
@@ -209,9 +225,8 @@ def plot_vectors(case, field, colorField=None,
                           data[:, 1], **kwargs)
 
     if sampleByPlane:
-        if type(colorField) == str:
-            colorData = sampledData[colorField].reshape(planeResolution[1] + 1,
-                                                        planeResolution[0] + 1)
+        if isinstance(colorField, str):
+            colorData = sampledData[colorField]
             return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
                               data[:, 1], colorData, **kwargs)
         else:
@@ -219,7 +234,7 @@ def plot_vectors(case, field, colorField=None,
             return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
                               data[:, 1], colorData, **kwargs)
     else:
-        if type(colorField) == str:
+        if isinstance(colorField, str):
             return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
                               data[:, 1], case[colorField], **kwargs)
         else:
@@ -278,14 +293,12 @@ def plot_streamlines(case, field, colorField=None,
         As returned by pyplot.streamplot.
 
     """
-    from vtkmodules.vtkFiltersSources import vtkPlaneSource
-
-    if type(field) == str:
+    temporaryField = None
+    if isinstance(field, str):
         data = case[field]
-    elif ((type(field) == vtkmodules.numpy_interface.dataset_adapter.VTKArray) or
-          (type(field) == np.ndarray)):
-        case['temp'] = field
-        data = case['temp']
+    elif isinstance(field, (vtkmodules.numpy_interface.dataset_adapter.VTKArray,
+                            np.ndarray)):
+        data = np.asarray(field)
     else:
         raise TypeError("field should be a name of an existing field or an"
                         " array of values. Got " + str(type(field)))
@@ -293,26 +306,40 @@ def plot_streamlines(case, field, colorField=None,
     if np.ndim(data) < 2:
         raise ValueError("The selected field appears to be a scalar!")
 
-    plane = vtkPlaneSource()
     if planeResolution is None:
         planeResolution = (50, 50)
 
-    points, sampledData = sample_by_plane(case, planeResolution)
+    if (scaleX <= 0) or (scaleY <= 0):
+        raise ValueError("Scaling factors must be positive.")
+
+    if not isinstance(field, str):
+        temporaryField = _temporary_field_name(case)
+        case[temporaryField] = field
+
+    try:
+        points, sampledData = sample_by_plane(case, planeResolution)
+    finally:
+        if temporaryField is not None:
+            case.__delitem__(temporaryField)
+
     pointsX = points[:, 0]
     pointsY = points[:, 1]
 
-    if type(field) == str:
+    if isinstance(field, str):
         data = sampledData[field]
     else:
-        data = np.copy(sampledData['temp'])
-        case.__delitem__('temp')
+        data = np.copy(sampledData[temporaryField])
 
-    pointsX = pointsX.reshape(planeResolution[1] + 1, planeResolution[0] + 1)[:, 0]
-    pointsY = pointsY.reshape(planeResolution[1] + 1, planeResolution[0] + 1)[0, :]
-    dataX = data[:, 0].reshape((planeResolution[0] + 1, planeResolution[1] + 1),
-                               order='F')
-    dataY = data[:, 1].reshape((planeResolution[0] + 1, planeResolution[1] + 1),
-                               order='F')
+    nRows, nCols = planeResolution
+    pointsX = pointsX.reshape(nCols, nRows)[:, 0]
+    pointsY = pointsY.reshape(nCols, nRows)[0, :]
+    dataX = data[:, 0].reshape((nRows, nCols), order='F')
+    dataY = data[:, 1].reshape((nRows, nCols), order='F')
+
+    validPoints = sampledData['vtkValidPointMask'].reshape(
+        (nRows, nCols), order='F').astype(bool)
+    dataX = np.ma.masked_where(~validPoints, dataX)
+    dataY = np.ma.masked_where(~validPoints, dataY)
 
     if plotBoundaries:
         plot_boundaries(case, scaleX=scaleX, scaleY=scaleY, colors="Black")
@@ -321,13 +348,14 @@ def plot_streamlines(case, field, colorField=None,
         return plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
                               **kwargs)
     else:
-        if type(colorField) == str:
-            colorData = sampledData[colorField].reshape(planeResolution[1] + 1,
-                                                        planeResolution[0] + 1)
+        if isinstance(colorField, str):
+            colorData = sampledData[colorField].reshape(
+                (nRows, nCols), order='F')
         else:
-            colorData = colorField
-        plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
-                       color=colorData, **kwargs)
+            colorData = np.asarray(colorField).reshape((nRows, nCols))
+        colorData = np.ma.masked_where(~validPoints, colorData)
+        return plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
+                              color=colorData, **kwargs)
 
 
 def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBoundaries=True,
@@ -384,29 +412,39 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
     xlim = case.xlim if xlim is None else np.array(xlim)
     ylim = case.ylim if ylim is None else np.array(ylim)
 
-    if type(field) == str:
-        case['temp'] = case[field]
-    elif type(field) in [vtkmodules.numpy_interface.dataset_adapter.VTKArray, np.ndarray]:
-        case['temp'] = field
+    if isinstance(field, str):
+        fieldName = field
+        data = case[field]
+        plotData = case.vtkData.VTKObject
+    elif isinstance(field, (vtkmodules.numpy_interface.dataset_adapter.VTKArray,
+                            np.ndarray)):
+        fieldName = "__turbulucid_plot_data__"
+        data = np.asarray(field)
+        if data.ndim == 0 or data.shape[0] != case.vtkData.GetNumberOfCells():
+            raise ValueError("The dimensionality of the provided field "
+                             "does not match that of the case.")
+        plotData = case.vtkData.VTKObject.NewInstance()
+        plotData.ShallowCopy(case.vtkData.VTKObject)
+        dsa.WrapDataObject(plotData).CellData.append(data, fieldName)
     else:
         raise TypeError("field should be a name of an existing field or an"
                         " array of values. Got " + str(type(field)))
 
-    if np.ndim(case['temp']) > 1:
+    if np.ndim(data) > 1:
         raise ValueError("The selected field appears to not be a scalar!")
 
     if (scaleX <= 0) or (scaleY <= 0):
         raise ValueError("Scaling factors must be positive.")
 
     # init to case.vtkData in case we do not need clipping
-    clippedData = case.vtkData
+    clippedData = dsa.WrapDataObject(plotData)
 
     if np.any(xlim - case.xlim) or np.any(ylim - case.ylim):
         clipper = vtkClipPolyData()
         box = vtkBox()
         box.SetBounds(xlim[0], xlim[1], ylim[0], ylim[1], -1, 1)
         clipper.SetClipFunction(box)
-        clipper.SetInputData(case.vtkData.VTKObject)
+        clipper.SetInputData(plotData)
         clipper.SetInsideOut(1)
         clipper.Update()
         clippedData = dsa.WrapDataObject(clipper.GetOutput())
@@ -426,7 +464,7 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
 
     if "edgecolor" not in kwargs:
         polyCollection.set_edgecolor("face")
-    data = np.copy(vtk_to_numpy(clippedData.GetCellData()['temp']))
+    data = np.copy(vtk_to_numpy(clippedData.GetCellData()[fieldName]))
     polyCollection.set_array(data)
 
     ax = plt.gca()
@@ -442,7 +480,6 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
     ax.set_ylim(ylim/scaleY)
     ax.set_aspect('equal')
 
-    case.__delitem__('temp')
     return polyCollection
 
 
