@@ -4,10 +4,10 @@
 # See LICENCE.txt and the Legal section in the README for more information
 
 import os
-from collections import OrderedDict
 
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
+from vtkmodules.util.numpy_support import numpy_to_vtk
 from .readers import NativeReader, LegacyReader, XMLReader
 import numpy as np
 
@@ -32,33 +32,11 @@ class Case:
             Whether to attempt to clean the data of redundant cells.
 
         """
-        self.fileName = fileName
+        self.fileName = os.fspath(fileName)
 
         # Read in the data
         self._blockData = self.read(clean, pointData)
-
-        # Compute the cell-centres
-        self._cellCentres = vtk.vtkCellCenters()
-        self._cellCentres.SetInputData(self._blockData.GetBlock(0))
-        self._cellCentres.Update()
-        self._cellCentres =\
-            dsa.WrapDataObject(self._cellCentres.GetOutput()).GetPoints()
-        self._cellCentres = np.array(self._cellCentres[:, :2])
-
-        self._vtkData = dsa.WrapDataObject(self._blockData.GetBlock(0))
-
-        self._boundaries = self._fill_boundary_list()
-
-        self._bounds = self._vtkData.VTKObject.GetBounds()[:4]
-
-        self._fields = self._vtkData.CellData.keys()
-
-        plot_limits = self._compute_plot_limits()
-        self._xlim = plot_limits[0]
-        self._ylim = plot_limits[1]
-
-        self._boundaryCellCoords, self._boundaryCellData = \
-            self._compute_boundary_cell_data()
+        self._validate_structure()
 
     @property
     def blockData(self):
@@ -72,31 +50,35 @@ class Case:
     def vtkData(self):
         """wrapped PolyData : The actual data read by the reader."""
 
-        return self._vtkData
+        return dsa.WrapDataObject(self._blockData.GetBlock(0))
 
     @property
     def cellCentres(self):
         """wrapped VTKArray : the cell centres of the read data """
 
-        return self._cellCentres
+        cellCentres = vtk.vtkCellCenters()
+        cellCentres.SetInputData(self._blockData.GetBlock(0))
+        cellCentres.Update()
+        points = dsa.WrapDataObject(cellCentres.GetOutput()).GetPoints()
+        return np.array(points[:, :2])
 
     @property
     def boundaries(self):
         """list : A list of names of the boundaries present the case."""
 
-        return self._boundaries
+        return self._fill_boundary_list()
 
     @property
     def bounds(self):
         """tuple : (min(x), max(x), min(y), max(y))."""
 
-        return self._bounds
+        return self.vtkData.VTKObject.GetBounds()[:4]
 
     @property
     def fields(self):
         """list of str: The names of the fields present in the case."""
 
-        return self._fields
+        return list(self.vtkData.CellData.keys())
 
     @property
     def xlim(self):
@@ -104,7 +86,7 @@ class Case:
         geometry of the case, plus small a margin.
 
         """
-        return self._xlim
+        return self._compute_plot_limits()[0]
 
     @property
     def ylim(self):
@@ -112,7 +94,24 @@ class Case:
         geometry of the case, plus a small margin.
 
         """
-        return self._ylim
+        return self._compute_plot_limits()[1]
+
+    def _validate_structure(self):
+        """Validate the multiblock structure required by the public API."""
+        if self._blockData is None or self._blockData.GetNumberOfBlocks() == 0:
+            raise ValueError("The case does not contain an internal data block.")
+        if self._blockData.GetBlock(0) is None:
+            raise ValueError("The case's internal data block is empty.")
+        if "boundaries" not in self.vtkData.FieldData.keys():
+            raise ValueError(
+                "The internal data block has no 'boundaries' field metadata."
+            )
+
+        expectedBlocks = len(self._fill_boundary_list()) + 1
+        if self._blockData.GetNumberOfBlocks() != expectedBlocks:
+            raise ValueError(
+                "The number of boundary blocks does not match the boundary metadata."
+            )
 
     def _fill_boundary_list(self):
         fieldData = self.vtkData.FieldData['boundaries']
@@ -137,8 +136,9 @@ class Case:
             Array of values of the requested field.
 
         """
-        if item not in self._fields:
-            raise ValueError("Field " + item + " not present in the case.")
+        self._validate_field_name(item)
+        if item not in self.fields:
+            raise ValueError(f"Field {item} not present in the case.")
 
         return np.copy(np.array((self.vtkData.CellData[item])))
 
@@ -153,58 +153,34 @@ class Case:
             The values of the field.
 
         """
+        self._validate_field_name(item)
         values = np.asarray(values)
         if values.ndim == 0 or values.shape[0] != self.vtkData.GetNumberOfCells():
             raise ValueError("The dimensionality of the provided field "
                              "does not match that of the case.")
+        if (not np.issubdtype(values.dtype, np.number) or
+                np.issubdtype(values.dtype, np.complexfloating)):
+            raise TypeError("Field values must be real numbers.")
+        if not np.all(np.isfinite(values)):
+            raise ValueError("Field values must be finite.")
+        if values.ndim > 3 or (
+                values.ndim == 3 and values.shape[1:] != (3, 3)):
+            raise ValueError(
+                "Fields must be scalar, component arrays, or 3-by-3 tensors."
+            )
+        if any(size == 0 for size in values.shape[1:]):
+            raise ValueError("Field component dimensions must not be empty.")
 
-        if item not in self.fields:
-            self.fields.append(item)
+        self._add_cell_array(self.vtkData.VTKObject, item, values)
 
-        cellData = self._vtkData.VTKObject.GetCellData()
-        valuesVtk = vtk.vtkDoubleArray()
-
-        if np.ndim(values) > 1:
-            valuesVtk.SetNumberOfComponents(values.shape[1])
-            valuesVtk.SetNumberOfTuples(values.shape[0])
-            for i in range(values.shape[0]):
-                valuesVtk.SetTuple(i, values[i, :])
-        else:
-            valuesVtk.SetNumberOfComponents(1)
-            valuesVtk.SetNumberOfValues(values.shape[0])
-            for i in range(values.shape[0]):
-                valuesVtk.SetValue(i, values[i])
-
-        valuesVtk.SetName(item)
-
-        cellData.AddArray(valuesVtk)
-
-        # Add boundary cell data
-        # Add boundary data by copying from boundary cells data
+        # Boundary values for derived fields are copied from adjacent cells.
         for boundary in self.boundaries:
-            boundaryCellIds = self._vtkData.FieldData[boundary]
-            self._boundaryCellData[boundary][item] = self[item][boundaryCellIds, ...]
-
+            boundaryCellIds = np.asarray(
+                self.vtkData.FieldData[boundary], dtype=np.intp
+            )
+            boundaryValues = values[boundaryCellIds, ...]
             block = self.extract_block_by_name(boundary)
-            cellData = block.GetCellData()
-            valuesVtk = vtk.vtkDoubleArray()
-
-            nVals = self.boundary_cell_data(boundary)[0][:, 0].size
-            bCellData = self.boundary_cell_data(boundary)[1][item]
-
-            if np.ndim(values) > 1:
-                valuesVtk.SetNumberOfComponents(values.shape[1])
-                valuesVtk.SetNumberOfTuples(nVals)
-                for i in range(nVals):
-                    valuesVtk.SetTuple(i, bCellData[i, :])
-            else:
-                valuesVtk.SetNumberOfComponents(1)
-                valuesVtk.SetNumberOfValues(nVals)
-                for i in range(nVals):
-                    valuesVtk.SetValue(i, bCellData[i])
-
-            valuesVtk.SetName(item)
-            cellData.AddArray(valuesVtk)
+            self._add_cell_array(block, item, boundaryValues)
 
     def __delitem__(self, item):
         """Delete an internal field form the case.
@@ -215,13 +191,35 @@ class Case:
             Name of the field to delete.
 
         """
+        self._validate_field_name(item)
+        if item not in self.fields:
+            raise ValueError(f"Field {item} not present in the case.")
+
         self.vtkData.VTKObject.GetCellData().RemoveArray(item)
-        self.fields.remove(item)
 
         for boundary in self.boundaries:
-            del self._boundaryCellData[boundary][item]
             block = self.extract_block_by_name(boundary)
             block.GetCellData().RemoveArray(item)
+
+    @staticmethod
+    def _validate_field_name(name):
+        if not isinstance(name, str):
+            raise TypeError("Field name must be a string.")
+        if not name:
+            raise ValueError("Field name must not be empty.")
+
+    @staticmethod
+    def _add_cell_array(data, name, values):
+        """Add a copied NumPy array to a VTK dataset's cell data."""
+        if values.ndim == 3:
+            # VTK stores tensor components in column-major matrix order.
+            values = values.transpose(0, 2, 1).reshape(values.shape[0], 9)
+        elif values.ndim == 2:
+            values = values.reshape(values.shape[0], -1)
+        values = np.ascontiguousarray(values)
+        vtkValues = numpy_to_vtk(values, deep=True)
+        vtkValues.SetName(name)
+        data.GetCellData().AddArray(vtkValues)
 
     def _compute_plot_limits(self):
         """ Compute xlim and ylim."""
@@ -243,7 +241,7 @@ class Case:
         from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
 
         # Transform the internal field
-        filter = vtk.vtkTransformPolyDataFilter()
+        filter = vtkTransformPolyDataFilter()
         filter.SetInputData(self.blockData.GetBlock(0))
         filter.SetTransform(transform)
         filter.Update()
@@ -253,46 +251,12 @@ class Case:
         # Transform boundary data
         i = 1
         for boundary in self.boundaries:
-            filter = vtk.vtkTransformPolyDataFilter()
+            filter = vtkTransformPolyDataFilter()
             filter.SetTransform(transform)
             filter.SetInputData(self.blockData.GetBlock(i))
             filter.Update()
             self.blockData.SetBlock(i, filter.GetOutput())
             i += 1
-
-        # Update attuributes
-        self._cellCentres = vtk.vtkCellCenters()
-        self._cellCentres.SetInputData(self.blockData.GetBlock(0))
-        self._cellCentres.Update()
-        self._cellCentres = \
-            dsa.WrapDataObject(self._cellCentres.GetOutput()).GetPoints()
-        self._cellCentres = np.array(self._cellCentres[:, :2])
-
-        self._vtkData = dsa.WrapDataObject(self._blockData.GetBlock(0))
-
-        self._bounds = self._vtkData.VTKObject.GetBounds()[:4]
-
-        plot_limits = self._compute_plot_limits()
-        self._xlim = plot_limits[0]
-        self._ylim = plot_limits[1]
-
-        self._boundaryCellCoords, self._boundaryCellData = \
-            self._compute_boundary_cell_data()
-
-    def _compute_boundary_cell_data(self):
-        boundaryCellData = OrderedDict()
-        boundaryCellCoords = OrderedDict()
-
-        for b in self.boundaries:
-            boundaryCellData[b] = OrderedDict()
-
-            cellIds = self._vtkData.FieldData[b]
-            boundaryCellCoords[b] = self.cellCentres[cellIds, :]
-
-            for f in self.fields:
-                boundaryCellData[b][f] = self.__getitem__(f)[cellIds, ...]
-
-        return boundaryCellCoords, boundaryCellData
 
     def translate(self, dx, dy):
         """Translate the geometry of the case.
@@ -305,6 +269,8 @@ class Case:
             The translation along the y axis.
 
         """
+        dx = self._finite_scalar(dx, "dx")
+        dy = self._finite_scalar(dy, "dy")
         transform = vtk.vtkTransform()
         transform.Translate(dx, dy, 0)
         transform.Update()
@@ -324,8 +290,10 @@ class Case:
             The scaling factor along y.
 
         """
+        scaleX = self._finite_scalar(scaleX, "scaleX", nonzero=True)
+        scaleY = self._finite_scalar(scaleY, "scaleY", nonzero=True)
         transform = vtk.vtkTransform()
-        transform.Scale(1/scaleX, 1/scaleY, 0)
+        transform.Scale(1/scaleX, 1/scaleY, 1)
         transform.Update()
         self._transform(transform)
 
@@ -338,11 +306,26 @@ class Case:
             Rotation angle in degrees.
 
         """
+        angle = self._finite_scalar(angle, "angle")
         axis = [0, 0, 1]
         transform = vtk.vtkTransform()
         transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
         transform.Update()
         self._transform(transform)
+
+    @staticmethod
+    def _finite_scalar(value, name, nonzero=False):
+        if not np.isscalar(value):
+            raise TypeError(f"{name} must be a scalar.")
+        try:
+            value = float(value)
+        except (TypeError, ValueError) as error:
+            raise TypeError(f"{name} must be a real number.") from error
+        if not np.isfinite(value):
+            raise ValueError(f"{name} must be finite.")
+        if nonzero and value == 0:
+            raise ValueError(f"{name} must be nonzero.")
+        return value
 
     def boundary_cell_data(self, boundary, sort=None):
         """Return cell-centre coordinates and data from cells adjacent
@@ -362,20 +345,21 @@ class Case:
             Two ndarrays
 
         """
-        points = np.copy(self._boundaryCellCoords[boundary])
-        data = OrderedDict(
-            (field, np.copy(values))
-            for field, values in self._boundaryCellData[boundary].items()
-        )
+        self._validate_boundary(boundary)
+        self._validate_sort(sort)
+        cellIds = np.asarray(self.vtkData.FieldData[boundary], dtype=np.intp)
+        points = self.cellCentres[cellIds, :]
+        data = {
+            field: self[field][cellIds, ...]
+            for field in self.fields
+        }
 
         if sort is None:
             return points, data
-        elif sort == "x":
+        if sort == "x":
             ind = np.argsort(points[:, 0])
-        elif sort == "y":
-            ind = np.argsort(points[:, 1])
         else:
-            raise ValueError("sort should be 'x', 'y', or None.")
+            ind = np.argsort(points[:, 1])
 
         points = points[ind]
 
@@ -386,8 +370,19 @@ class Case:
 
     def extract_block_by_name(self, name):
         """Extract a block from the case by a given name."""
-
+        self._validate_boundary(name)
         return self._blockData.GetBlock(self.boundaries.index(name) + 1)
+
+    def _validate_boundary(self, boundary):
+        if not isinstance(boundary, str):
+            raise TypeError("Boundary name must be a string.")
+        if boundary not in self.boundaries:
+            raise ValueError(f"Boundary {boundary} not present in the case.")
+
+    @staticmethod
+    def _validate_sort(sort):
+        if sort not in {None, "x", "y"}:
+            raise ValueError("sort should be 'x', 'y', or None.")
 
     def boundary_data(self, boundary, sort=None):
         """Return cell-center coordinates and data from a boundary.
@@ -408,6 +403,7 @@ class Case:
             The corresponding data.
         """
 
+        self._validate_sort(sort)
         blockData = self.extract_block_by_name(boundary)
 
         cCenters = vtk.vtkCellCenters()
@@ -423,12 +419,10 @@ class Case:
 
         if sort is None:
             return points[:, [0, 1]], data
-        elif sort == "x":
+        if sort == "x":
             ind = np.argsort(points[:, 0])
-        elif sort == "y":
-            ind = np.argsort(points[:, 1])
         else:
-            raise ValueError("sort should be 'x', 'y', or None.")
+            ind = np.argsort(points[:, 1])
 
         points = points[ind]
 
