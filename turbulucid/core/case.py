@@ -4,12 +4,16 @@
 # See LICENCE.txt and the Legal section in the README for more information
 
 import os
+import warnings
 
-import vtk
-from vtk.numpy_interface import dataset_adapter as dsa
-from vtkmodules.util.numpy_support import numpy_to_vtk
-from .readers import NativeReader, LegacyReader, XMLReader
 import numpy as np
+from vtkmodules.numpy_interface import dataset_adapter as dsa
+from vtkmodules.util.numpy_support import numpy_to_vtk
+from vtkmodules.vtkCommonTransforms import vtkTransform
+from vtkmodules.vtkFiltersCore import vtkCellCenters
+from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
+
+from .readers import LegacyReader, NativeReader, XMLReader
 
 __all__ = ["Case"]
 
@@ -25,17 +29,29 @@ class Case:
 
         Parameters
         ----------
-        fileName : str
-            The file to be read in. Should be data in VTK format.
-
-        clean : bool
+        fileName : str or path-like
+            The file to be read in. Should be data in VTK format. The
+            supported extensions are .vtm, .vtk, .vtu, .vtp, and .vts.
+        clean : bool, optional
             Whether to attempt to clean the data of redundant cells.
+            Ignored for the native .vtm format.
+        pointData : bool, optional
+            Whether the file stores point data instead of cell data. If
+            True, the cell data is computed by interpolation. Ignored for
+            the native .vtm format.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the file does not exist.
+        ValueError
+            If the file format is unsupported or the data does not have
+            the structure the class expects.
 
         """
         self.fileName = os.fspath(fileName)
-
         # Read in the data
-        self._blockData = self.read(clean, pointData)
+        self._blockData = self._read(clean, pointData)
         self._validate_structure()
 
     @property
@@ -54,9 +70,16 @@ class Case:
 
     @property
     def cellCentres(self):
-        """wrapped VTKArray : the cell centres of the read data """
+        """ndarray : the (x, y) cell centres of the read data.
 
-        cellCentres = vtk.vtkCellCenters()
+        The centres are recomputed on every access, because writing
+        through the arrays exposed by :attr:`vtkData` does not mark the
+        dataset as modified and so cannot be detected. Each access runs a
+        filter over the whole mesh, so bind the result to a name rather
+        than indexing this property inside a loop.
+
+        """
+        cellCentres = vtkCellCenters()
         cellCentres.SetInputData(self._blockData.GetBlock(0))
         cellCentres.Update()
         points = dsa.WrapDataObject(cellCentres.GetOutput()).GetPoints()
@@ -140,7 +163,7 @@ class Case:
         if item not in self.fields:
             raise ValueError(f"Field {item} not present in the case.")
 
-        return np.copy(np.array((self.vtkData.CellData[item])))
+        return np.copy(np.array(self.vtkData.CellData[item]))
 
     def __setitem__(self, item, values):
         """Add another internal field to the case.
@@ -238,25 +261,13 @@ class Case:
     def _transform(self, transform):
         """Transform the geometry according to a vtkTransform filter."""
 
-        from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
-
-        # Transform the internal field
-        filter = vtkTransformPolyDataFilter()
-        filter.SetInputData(self.blockData.GetBlock(0))
-        filter.SetTransform(transform)
-        filter.Update()
-
-        self._blockData.SetBlock(0, filter.GetOutput())
-
-        # Transform boundary data
-        i = 1
-        for boundary in self.boundaries:
-            filter = vtkTransformPolyDataFilter()
-            filter.SetTransform(transform)
-            filter.SetInputData(self.blockData.GetBlock(i))
-            filter.Update()
-            self.blockData.SetBlock(i, filter.GetOutput())
-            i += 1
+        # Block 0 is the internal field, the rest are the boundaries.
+        for i in range(self._blockData.GetNumberOfBlocks()):
+            transformFilter = vtkTransformPolyDataFilter()
+            transformFilter.SetTransform(transform)
+            transformFilter.SetInputData(self._blockData.GetBlock(i))
+            transformFilter.Update()
+            self._blockData.SetBlock(i, transformFilter.GetOutput())
 
     def translate(self, dx, dy):
         """Translate the geometry of the case.
@@ -271,7 +282,7 @@ class Case:
         """
         dx = self._finite_scalar(dx, "dx")
         dy = self._finite_scalar(dy, "dy")
-        transform = vtk.vtkTransform()
+        transform = vtkTransform()
         transform.Translate(dx, dy, 0)
         transform.Update()
 
@@ -292,7 +303,7 @@ class Case:
         """
         scaleX = self._finite_scalar(scaleX, "scaleX", nonzero=True)
         scaleY = self._finite_scalar(scaleY, "scaleY", nonzero=True)
-        transform = vtk.vtkTransform()
+        transform = vtkTransform()
         transform.Scale(1/scaleX, 1/scaleY, 1)
         transform.Update()
         self._transform(transform)
@@ -302,13 +313,13 @@ class Case:
 
         Parameters
         ----------
-        dx : angle
+        angle : float
             Rotation angle in degrees.
 
         """
         angle = self._finite_scalar(angle, "angle")
         axis = [0, 0, 1]
-        transform = vtk.vtkTransform()
+        transform = vtkTransform()
         transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
         transform.Update()
         self._transform(transform)
@@ -347,11 +358,17 @@ class Case:
         """
         self._validate_boundary(boundary)
         self._validate_sort(sort)
-        cellIds = np.asarray(self.vtkData.FieldData[boundary], dtype=np.intp)
+
+        vtkData = self.vtkData
+        cellIds = np.asarray(vtkData.FieldData[boundary], dtype=np.intp)
         points = self.cellCentres[cellIds, :]
+
+        # Index the VTK arrays directly: going through __getitem__ would
+        # copy every field in full before selecting the boundary cells.
+        cellData = vtkData.CellData
         data = {
-            field: self[field][cellIds, ...]
-            for field in self.fields
+            field: np.array(cellData[field])[cellIds, ...]
+            for field in cellData.keys()
         }
 
         if sort is None:
@@ -406,7 +423,7 @@ class Case:
         self._validate_sort(sort)
         blockData = self.extract_block_by_name(boundary)
 
-        cCenters = vtk.vtkCellCenters()
+        cCenters = vtkCellCenters()
         cCenters.SetInputData(blockData)
         cCenters.Update()
 
@@ -431,8 +448,21 @@ class Case:
 
         return points[:, [0, 1]], data
 
-    def read(self, clean, pointData):
-        """Read in the data from a file.
+    #: The file extensions the class knows how to read.
+    _READERS = {
+        ".vtm": lambda name, clean, pointData: NativeReader(name),
+        ".vtk": lambda name, clean, pointData: LegacyReader(
+            name, clean=clean, pointData=pointData),
+        ".vtp": lambda name, clean, pointData: XMLReader(
+            name, clean=clean, pointData=pointData),
+        ".vts": lambda name, clean, pointData: XMLReader(
+            name, clean=clean, pointData=pointData),
+        ".vtu": lambda name, clean, pointData: XMLReader(
+            name, clean=clean, pointData=pointData),
+    }
+
+    def _read(self, clean, pointData):
+        """Read in the data from the case's file.
 
         Parameters
         ----------
@@ -443,26 +473,45 @@ class Case:
             Whether the file contains point data instead of cell data.
             Cell data will be computed by interpolation.
 
+        Returns
+        -------
+        vtkMultiBlockDataSet
+            The assembled data.
+
         Raises
         ------
         ValueError
-            If the provided file does not exist.
+            If the file format is not supported.
 
         """
-        fileName = self.fileName
+        fileExt = os.path.splitext(self.fileName)[1].lower()
 
-        fileExt = os.path.splitext(fileName)[1].lower()
+        try:
+            makeReader = self._READERS[fileExt]
+        except KeyError:
+            supported = ", ".join(sorted(self._READERS))
+            raise ValueError(
+                f"Unsupported file format '{fileExt}' for {self.fileName}. "
+                f"Supported formats are {supported}."
+            ) from None
 
-        if fileExt == ".vtm":
-            reader = NativeReader(fileName)
-            return reader.data
-        elif fileExt == ".vtk":
-            return LegacyReader(fileName, clean=clean,
-                                pointData=pointData).data
-        elif fileExt in [".vtu", ".vtp", ".vts"]:
-            return XMLReader(fileName, clean=clean, pointData=pointData).data
-        else:
-            raise ValueError("Unsupported file format.", fileName, fileExt)
+        return makeReader(self.fileName, clean, pointData).data
+
+    def read(self, clean=False, pointData=False):
+        """Deprecated. Reading happens when the Case is constructed.
+
+        .. deprecated:: 0.6
+           This has always been an internal step of :meth:`__init__` and
+           never updated the case in place. It will be removed.
+
+        """
+        warnings.warn(
+            "Case.read is deprecated and will be removed; a Case reads its "
+            "file when it is constructed.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._read(clean, pointData)
 
     def write(self, writePath):
         """Save the case to a .vtm format.
@@ -478,8 +527,8 @@ class Case:
             If the data could not be written to the given path.
 
         """
-        from vtkmodules.vtkIOXML import vtkXMLMultiBlockDataWriter
         from vtkmodules.vtkCommonMisc import vtkErrorCode
+        from vtkmodules.vtkIOXML import vtkXMLMultiBlockDataWriter
 
         writePath = os.fspath(writePath)
 

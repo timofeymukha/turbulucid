@@ -3,16 +3,16 @@
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
-import numpy as np
-from collections import OrderedDict
+import abc
 import os
+import warnings
+from collections import OrderedDict
+
+import numpy as np
 from vtkmodules.numpy_interface import dataset_adapter as dsa
+from vtkmodules.util.numpy_support import numpy_to_vtk, vtk_to_numpy
 from vtkmodules.vtkCommonDataModel import vtkDataObject
 from vtkmodules.vtkFiltersCore import vtkPointDataToCellData
-import abc
-import warnings
-from vtkmodules.util.numpy_support import numpy_to_vtk
-from vtkmodules.util.numpy_support import vtk_to_numpy
 
 __all__ = ["Reader", "LegacyReader", "mark_boundary_cells", "NativeReader",
            "XMLReader", "VTUReader"]
@@ -38,8 +38,8 @@ def mark_boundary_cells(internalData, boundaryDataDict):
             vtk_to_numpy(boundaryDataI.GetAttributes(vtkDataObject.CELL).
                          GetPedigreeIds())
 
+    wrappedData = dsa.WrapDataObject(internalData)
     for key in boundaryCellsConn:
-        wrappedData = dsa.WrapDataObject(internalData)
         wrappedData.FieldData.append(boundaryCellsConn[key], key)
 
 
@@ -47,8 +47,9 @@ class Reader(abc.ABC):
     """Abstract base class for file readers."""
 
     def __init__(self, fileName):
-        if not os.path.exists(fileName):
-            raise ValueError("ERROR: The file " + fileName + " does not exist")
+        fileName = os.fspath(fileName)
+        if not os.path.isfile(fileName):
+            raise FileNotFoundError(f"No such file: {fileName}")
 
     @property
     @abc.abstractmethod
@@ -74,8 +75,8 @@ class Reader(abc.ABC):
         threshold, so such cells are always kept.
 
         """
-        from vtkmodules.vtkFiltersVerdict import vtkMeshQuality
         from vtkmodules.vtkFiltersCore import vtkCleanPolyData
+        from vtkmodules.vtkFiltersVerdict import vtkMeshQuality
 
         data.BuildLinks()
 
@@ -117,12 +118,12 @@ class Reader(abc.ABC):
             transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
         transform.Update()
 
-        filter = vtkTransformPolyDataFilter()
-        filter.SetInputData(inputData)
-        filter.SetTransform(transform)
-        filter.Update()
+        transformFilter = vtkTransformPolyDataFilter()
+        transformFilter.SetInputData(inputData)
+        transformFilter.SetTransform(transform)
+        transformFilter.Update()
 
-        data = filter.GetOutput()
+        data = transformFilter.GetOutput()
 
         points = dsa.WrapDataObject(data).Points
         points[:, 2] = 0
@@ -183,8 +184,11 @@ class Reader(abc.ABC):
         return patchFeatureEdgesFilter.GetOutput()
 
     def _assemble_multiblock_data(self, internalData, boundaryData):
-        from vtkmodules.vtkCommonDataModel import vtkMultiBlockDataSet, vtkCompositeDataSet
         from vtkmodules.vtkCommonCore import vtkStringArray
+        from vtkmodules.vtkCommonDataModel import (
+            vtkCompositeDataSet,
+            vtkMultiBlockDataSet,
+        )
 
         multiBlock = vtkMultiBlockDataSet()
         multiBlock.SetNumberOfBlocks(2)
@@ -202,6 +206,52 @@ class Reader(abc.ABC):
         internalData.GetFieldData().AddArray(boundaryNames)
         return multiBlock
 
+    def _build(self, readData, clean, pointData):
+        """Turn raw polydata from a VTK reader into the multiblock layout.
+
+        The steps are identical for every single-block input format, so
+        the concrete readers only have to produce the polydata.
+
+        Parameters
+        ----------
+        readData : vtkPolyData
+            The geometry as it came out of the format-specific reader.
+        clean : bool
+            Whether to remove degenerate cells.
+        pointData : bool
+            Whether the data is point data that must be interpolated to
+            the cells.
+
+        Returns
+        -------
+        vtkMultiBlockDataSet
+            The assembled dataset.
+
+        """
+        internalData = self._transform(readData)
+
+        if clean:
+            internalData = self._clean(internalData)
+
+        if pointData:
+            interpolator = vtkPointDataToCellData()
+            interpolator.SetInputData(internalData)
+            interpolator.PassPointDataOff()
+            interpolator.Update()
+            internalData = interpolator.GetOutput()
+
+        internalData.BuildLinks()
+
+        # The pedigree ids let the boundary blocks refer back to the
+        # internal cell each boundary face belongs to.
+        pedigreeIds = np.arange(internalData.GetNumberOfCells())
+        internalData.GetAttributes(vtkDataObject.CELL).SetPedigreeIds(
+            numpy_to_vtk(pedigreeIds, deep=True))
+
+        boundaryData = self._extract_boundary_data(internalData)
+        mark_boundary_cells(internalData, {"boundary": boundaryData})
+        return self._assemble_multiblock_data(internalData, boundaryData)
+
 
 class LegacyReader(Reader):
     """Reader for data in legacy VTK format, i.e. .vtk."""
@@ -217,29 +267,7 @@ class LegacyReader(Reader):
         self._vtkReader.SetFileName(self._fileName)
         self._vtkReader.Update()
 
-        internalData = self._transform(self._vtkReader.GetOutput())
-        if clean:
-            internalData = self._clean(internalData)
-
-        if pointData:
-            interp = vtkPointDataToCellData()
-            interp.SetInputData(internalData)
-            interp.PassPointDataOff()
-            interp.Update()
-            internalData = interp.GetOutput()
-
-        internalData.BuildLinks()
-
-        n = internalData.GetNumberOfCells()
-        pids = np.arange(n)
-
-        internalData.GetAttributes(vtkDataObject.CELL).SetPedigreeIds(
-            numpy_to_vtk(pids))
-
-        boundaryData = self._extract_boundary_data(internalData)
-        bDict = {'boundary': boundaryData}
-        mark_boundary_cells(internalData, bDict)
-        self._data = self._assemble_multiblock_data(internalData, boundaryData)
+        self._data = self._build(self._vtkReader.GetOutput(), clean, pointData)
 
     @property
     def vtkReader(self):
@@ -263,12 +291,12 @@ class XMLReader(Reader):
     def __init__(self, filename, clean=False, pointData=False):
         super().__init__(filename)
 
+        from vtkmodules.vtkFiltersGeometry import vtkDataSetSurfaceFilter
         from vtkmodules.vtkIOXML import (
             vtkXMLPolyDataReader,
             vtkXMLStructuredGridReader,
             vtkXMLUnstructuredGridReader,
         )
-        from vtkmodules.vtkFiltersGeometry import vtkDataSetSurfaceFilter
 
         extension = os.path.splitext(filename)[1].lower()
         readerTypes = {
@@ -295,29 +323,7 @@ class XMLReader(Reader):
         else:
             readData = self._vtkReader.GetOutput()
 
-        internalData = self._transform(readData)
-        if clean:
-            internalData = self._clean(internalData)
-
-        if pointData:
-            interp = vtkPointDataToCellData()
-            interp.SetInputData(internalData)
-            interp.PassPointDataOff()
-            interp.Update()
-            internalData = interp.GetOutput()
-
-        internalData.BuildLinks()
-
-        n = internalData.GetNumberOfCells()
-        pids = np.arange(n)
-
-        internalData.GetAttributes(vtkDataObject.CELL).SetPedigreeIds(
-            numpy_to_vtk(pids))
-
-        boundaryData = self._extract_boundary_data(internalData)
-        bDict = {'boundary': boundaryData}
-        mark_boundary_cells(internalData, bDict)
-        self._data = self._assemble_multiblock_data(internalData, boundaryData)
+        self._data = self._build(readData, clean, pointData)
 
     @property
     def vtkReader(self):
@@ -334,6 +340,7 @@ class XMLReader(Reader):
         """The read in data."""
         return self._data
 
+
 class VTUReader(XMLReader):
     """Deprecated compatibility wrapper for :class:`XMLReader`."""
 
@@ -344,7 +351,6 @@ class VTUReader(XMLReader):
             stacklevel=2,
         )
         super().__init__(filename, clean=clean, pointData=pointData)
-
 
 
 class NativeReader(Reader):
@@ -362,9 +368,20 @@ class NativeReader(Reader):
         self._vtkReader.Update()
         self._data = self._vtkReader.GetOutput()
 
+        if self._data is None or self._data.GetNumberOfBlocks() == 0:
+            raise ValueError(
+                f"{self._fileName} does not contain any data blocks.")
+
         for i in range(self._data.GetNumberOfBlocks()):
-            points = dsa.WrapDataObject(self._data.GetBlock(i)).Points
-            points[:, 2] = 0
+            block = self._data.GetBlock(i)
+            if block is None:
+                raise ValueError(f"Block {i} of {self._fileName} is empty.")
+
+            # The geometry is planar by construction, so flatten away any
+            # round-off left in the stored z coordinates.
+            points = dsa.WrapDataObject(block).Points
+            if points is not None and len(points) > 0:
+                points[:, 2] = 0
 
     @property
     def vtkReader(self):

@@ -4,7 +4,6 @@
 # See LICENCE.txt and the Legal section in the README for more information
 
 from . import core
-from .core import *
+from .core import *  # noqa: F403  (re-exported, see core.__all__)
 
-__all__ = ["core"]
-__all__.extend(core.__all__)
+__all__ = ["core", *core.__all__]

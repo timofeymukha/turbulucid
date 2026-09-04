@@ -6,14 +6,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import vtkmodules
+from matplotlib.collections import LineCollection, PolyCollection
+from mpl_toolkits import axes_grid1
 from vtkmodules.numpy_interface import dataset_adapter as dsa
 from vtkmodules.util.numpy_support import vtk_to_numpy
 from vtkmodules.vtkFiltersCore import vtkCellDataToPointData
-from mpl_toolkits import axes_grid1
-from matplotlib.collections import PatchCollection
-from matplotlib.collections import PolyCollection
-from matplotlib.collections import LineCollection
-from .data_extraction import sample_by_plane, _validate_contour_request
+
+from .data_extraction import _validate_contour_request, sample_by_plane
 
 __all__ = ["plot_boundaries", "plot_vectors", "plot_streamlines", "plot_field",
            "add_colorbar", "plot_contour"]
@@ -27,6 +26,46 @@ def _colour_requested(kwargs):
 
     """
     return any(key in kwargs for key in ("color", "colors"))
+
+
+def _axis_limits(limits, name):
+    """Validate a user-supplied pair of axis limits."""
+    limits = np.asarray(limits, dtype=float)
+    if limits.shape != (2,):
+        raise ValueError(f"{name} must contain exactly two values.")
+    if not np.all(np.isfinite(limits)):
+        raise ValueError(f"{name} values must be finite.")
+    if limits[0] >= limits[1]:
+        raise ValueError(f"{name} must be increasing.")
+    return limits
+
+
+def _line_segments(data, scaleX, scaleY):
+    """Collect the two-point cells of a polydata as scaled xy segments."""
+    segments = []
+    for c in range(data.GetNumberOfCells()):
+        cell = data.GetCell(c)
+        if cell.GetNumberOfPoints() != 2:
+            continue
+        point0 = np.array(cell.GetPoints().GetPoint(0)[:2])/[scaleX, scaleY]
+        point1 = np.array(cell.GetPoints().GetPoint(1)[:2])/[scaleX, scaleY]
+        segments.append((point0, point1))
+    return segments
+
+
+def _add_line_collection(segments, case, scaleX, scaleY, kwargs):
+    """Add line segments to the current axes, framed on the geometry."""
+    collection = LineCollection(segments, **kwargs)
+    if not _colour_requested(kwargs):
+        collection.set_color("Black")
+
+    ax = plt.gca()
+    ax.add_collection(collection)
+    ax.set_xlim(case.xlim/scaleX)
+    ax.set_ylim(case.ylim/scaleY)
+    ax.set_aspect('equal')
+
+    return collection
 
 
 def _temporary_field_name(case):
@@ -95,27 +134,12 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     if (scaleX <= 0) or (scaleY <= 0):
         raise ValueError("Scaling factors must be positive.")
 
-    ax = plt.gca()
     segments = []
     for boundary in case.boundaries:
         block = case.extract_block_by_name(boundary)
-        for c in range(block.GetNumberOfCells()):
-            point0 = block.GetCell(c).GetPoints().GetPoint(0)[:2]
-            point1 = block.GetCell(c).GetPoints().GetPoint(1)[:2]
+        segments.extend(_line_segments(block, scaleX, scaleY))
 
-            point0 = np.array(point0)/[scaleX, scaleY]
-            point1 = np.array(point1)/[scaleX, scaleY]
-            segments.append((point0, point1))
-    collection = LineCollection(segments, **kwargs)
-    if not _colour_requested(kwargs):
-        collection.set_color("Black")
-
-    ax.add_collection(collection)
-    ax.set_xlim(case.xlim/scaleX)
-    ax.set_ylim(case.ylim/scaleY)
-    ax.set_aspect('equal')
-
-    return collection
+    return _add_line_collection(segments, case, scaleX, scaleY, kwargs)
 
 
 def plot_vectors(case, field, colorField=None,
@@ -206,7 +230,7 @@ def plot_vectors(case, field, colorField=None,
             points, sampledData = sample_by_plane(case, planeResolution)
         finally:
             if temporaryField is not None:
-                case.__delitem__(temporaryField)
+                del case[temporaryField]
 
         pointsX = points[:, 0]
         pointsY = points[:, 1]
@@ -326,7 +350,7 @@ def plot_streamlines(case, field, colorField=None,
         points, sampledData = sample_by_plane(case, planeResolution)
     finally:
         if temporaryField is not None:
-            case.__delitem__(temporaryField)
+            del case[temporaryField]
 
     pointsX = points[:, 0]
     pointsY = points[:, 1]
@@ -373,9 +397,9 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
                colorbar=True, **kwargs):
     """Plot a field.
 
-    This function uses a matplotlib PatchCollection to compose the
+    This function uses a matplotlib PolyCollection to compose the
     plot. Additional customization parameters can be passed to the
-    constructor of the PatchCollection via kwargs. In particular,
+    constructor of the PolyCollection via kwargs. In particular,
     cmap can be used to set the colormap and edgecolor to color the
     edges of the cells.
 
@@ -401,7 +425,7 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
     colorbar : bool, optional
         Whether to add a vertical colorbar to the right of the plot.
     **kwargs
-        Additional arguments to be passed to PatchCollection constructor.
+        Additional arguments to be passed to PolyCollection constructor.
 
     Raises
     ------
@@ -410,18 +434,19 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
     ValueError
         If the field to be plotted has more dimensions than one.
         If one or both scaling factors are non-positive.
+        If xlim or ylim does not contain exactly two values.
 
     Returns
     -------
-    PatchCollection
+    PolyCollection
         The collection of polygons defining the cells.
 
     """
-    from vtkmodules.vtkFiltersCore import vtkClipPolyData
     from vtkmodules.vtkCommonDataModel import vtkBox
+    from vtkmodules.vtkFiltersCore import vtkClipPolyData
 
-    xlim = case.xlim if xlim is None else np.array(xlim)
-    ylim = case.ylim if ylim is None else np.array(ylim)
+    xlim = case.xlim if xlim is None else _axis_limits(xlim, "xlim")
+    ylim = case.ylim if ylim is None else _axis_limits(ylim, "ylim")
 
     if isinstance(field, str):
         fieldName = field
@@ -549,24 +574,6 @@ def plot_contour(case, field, value, scaleX=1, scaleY=1, **kwargs):
     contour.SetValue(0, value)
     contour.Update()
     contour = dsa.WrapDataObject(contour.GetOutput())
-    ax = plt.gca()
-    segments = []
-    for c in range(contour.GetNumberOfCells()):
-        if contour.GetCell(c).GetNumberOfPoints() != 2:
-            continue
-        point0 = contour.GetCell(c).GetPoints().GetPoint(0)[:2]
-        point1 = contour.GetCell(c).GetPoints().GetPoint(1)[:2]
 
-        point0 = np.array(point0)/[scaleX, scaleY]
-        point1 = np.array(point1)/[scaleX, scaleY]
-        segments.append((point0, point1))
-    collection = LineCollection(segments, **kwargs)
-    if not _colour_requested(kwargs):
-        collection.set_color("Black")
-
-    ax.add_collection(collection)
-    ax.set_xlim(case.xlim/scaleX)
-    ax.set_ylim(case.ylim/scaleY)
-    ax.set_aspect('equal')
-
-    return collection
+    segments = _line_segments(contour, scaleX, scaleY)
+    return _add_line_collection(segments, case, scaleX, scaleY, kwargs)

@@ -87,7 +87,9 @@ def _validate_contour_request(case, field, value, caller):
         raise TypeError("field must be a string.")
     if field not in case.fields:
         raise ValueError(f"Field {field} not present in the case.")
-    if case[field].ndim != 1:
+    components = case.vtkData.VTKObject.GetCellData().GetArray(
+        field).GetNumberOfComponents()
+    if components != 1:
         raise ValueError(f"{caller} requires a scalar field.")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise TypeError("value must be a real scalar.")
@@ -401,15 +403,14 @@ def edge_lengths(case, name):
         The lengths of each edge of the boundary.
 
     """
-    sizes = np.zeros(case.boundary_data(name)[0].shape[0])
-
     block = case.extract_block_by_name(name)
-    for c in range(block.GetNumberOfCells()):
-        point0 = block.GetCell(c).GetPoints().GetPoint(0)[:2]
-        point1 = block.GetCell(c).GetPoints().GetPoint(1)[:2]
+    sizes = np.zeros(block.GetNumberOfCells())
 
-        sizes[c] = np.sqrt((point1[0] - point0[0])**2 +
-                           (point1[1] - point0[1])**2)
+    for c in range(sizes.size):
+        points = block.GetCell(c).GetPoints()
+        point0 = np.array(points.GetPoint(0)[:2])
+        point1 = np.array(points.GetPoint(1)[:2])
+        sizes[c] = np.linalg.norm(point1 - point0)
 
     return sizes
 
@@ -465,7 +466,8 @@ def sample_by_plane(case, resolution):
         The first element of the tuple is an array of coordinates of
         the points on the plane. The second is a dictionary with the
         case's fields as keys and arrays of values of these fields as
-        values.
+        values. It also holds 'vtkValidPointMask', which is zero for the
+        sampling points that fall outside the geometry.
 
     Raises
     ------
@@ -475,8 +477,8 @@ def sample_by_plane(case, resolution):
         If resolution does not contain two values of at least two.
 
     """
-    from vtkmodules.vtkFiltersSources import vtkPlaneSource
     from vtkmodules.vtkFiltersCore import vtkProbeFilter
+    from vtkmodules.vtkFiltersSources import vtkPlaneSource
 
     resolution = _plane_resolution(resolution)
     plane = vtkPlaneSource()
@@ -499,18 +501,11 @@ def sample_by_plane(case, resolution):
     probeData = dsa.WrapDataObject(probeFilter.GetOutput())
     points = probeData.Points[:, [0, 1]]
 
-    # validPointsIdx = probeData.PointData['vtkValidPointMask']
-    # validPointsIdx = np.nonzero(validPointsIdx)
-    # points = points[validPointsIdx, :]
-
-    data = {}
-    for key in probeData.PointData.keys():
-        if probeData.PointData[key].ndim == 1:
-            # data[key] = np.array(probeData.PointData[key][validPointsIdx])
-            data[key] = np.array(probeData.PointData[key])
-        else:
-            # data[key] = np.array(probeData.PointData[key][validPointsIdx, :])
-            data[key] = np.array(probeData.PointData[key])
+    # Every sampling point is returned, including the ones that fall
+    # outside the geometry. The callers need the full rectangular grid,
+    # and use 'vtkValidPointMask' to mask out the points that missed.
+    pointData = probeData.PointData
+    data = {key: np.array(pointData[key]) for key in pointData.keys()}
 
     return points, data
 

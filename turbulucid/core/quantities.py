@@ -3,11 +3,14 @@
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
-from scipy.interpolate import interp1d
-from scipy.integrate import simpson as simps
 import numpy as np
+from scipy.integrate import simpson as simps
+from scipy.interpolate import interp1d
 
 __all__ = ["momentum_thickness", "delta_star", "delta_99"]
+
+#: Number of samples the profile is resampled to when interpolate is True.
+_INTERPOLATION_SAMPLES = 10000
 
 
 def _validate_profile(y, v, interpolate):
@@ -114,7 +117,7 @@ def momentum_thickness(y, v, u0="last", cutoff=None, interpolate=False):
 
     if interpolate:
         interp = interp1d(y, v, kind='linear')
-        y = np.linspace(y[0], y[-1], 10000)
+        y = np.linspace(y[0], y[-1], _INTERPOLATION_SAMPLES)
         v = interp(y)
 
     return simps(v/u0Val*(1 - v/u0Val), x=y)
@@ -155,7 +158,7 @@ def delta_star(y, v, u0="last", interpolate=False):
 
     if interpolate:
         interp = interp1d(y, v, kind='linear')
-        y = np.linspace(y[0], y[-1], 10000)
+        y = np.linspace(y[0], y[-1], _INTERPOLATION_SAMPLES)
         v = interp(y)
 
     return simps(1 - v/u0Val, x=y)
@@ -181,7 +184,11 @@ def delta_99(y, v, u0="last", interpolate=False):
     Returns
     -------
     float
-        The value of delta_99.
+        The value of delta_99. This is always one of the y values of the
+        profile, i.e. the first one at which the velocity reaches 99% of
+        the free stream value; no interpolation between samples is done.
+        The accuracy is therefore limited by the resolution of the
+        profile, which is what the interpolate option is for.
 
     Raises
     ------
@@ -196,7 +203,7 @@ def delta_99(y, v, u0="last", interpolate=False):
 
     if interpolate:
         interp = interp1d(y, v, kind='linear')
-        y = np.linspace(y[0], y[-1], 10000)
+        y = np.linspace(y[0], y[-1], _INTERPOLATION_SAMPLES)
         v = interp(y)
 
     candidates = np.flatnonzero(v/u0Val >= 0.99)

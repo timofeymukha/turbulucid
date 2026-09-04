@@ -89,8 +89,8 @@ def write_data(data, writerType, path):
     """Write data to a temporary directory and return the path to the file.
 
     """
-    from vtkmodules.vtkIOXML import vtkXMLPolyDataWriter
     from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
+    from vtkmodules.vtkIOXML import vtkXMLPolyDataWriter
 
     if writerType == "legacy":
         writer = vtkPolyDataWriter()
@@ -413,3 +413,73 @@ def test_clean_keeps_a_healthy_quad_mesh_intact(writer, tmpdir):
     readerType = LegacyReader if writer == "legacy" else XMLReader
 
     assert readerType(filename, clean=True).data.GetBlock(0).GetNumberOfCells() == 2
+
+
+@pytest.mark.parametrize("writer", ["legacy", "xml"])
+def test_point_data_is_interpolated_to_cells(writer, tmpdir):
+    """With pointData=True the cell arrays are built from the point arrays."""
+    data = create_polydata(
+        [(0, 0, 0), (1, 0, 0), (2, 0, 0), (0, 1, 0), (1, 1, 0), (2, 1, 0)],
+        [(0, 1, 4, 3), (1, 2, 5, 4)],
+    )
+    data.GetCellData().Initialize()
+
+    values = vtkDoubleArray()
+    values.SetName("Pressure")
+    for value in [0.0, 2.0, 4.0, 0.0, 2.0, 4.0]:
+        values.InsertNextValue(value)
+    data.GetPointData().SetScalars(values)
+
+    filename = write_data(data, writer, tmpdir)
+    readerType = LegacyReader if writer == "legacy" else XMLReader
+
+    internal = readerType(filename, pointData=True).data.GetBlock(0)
+    cellValues = dsa.WrapDataObject(internal).CellData["Pressure"]
+
+    # Each quad averages its four corners: (0+2+2+0)/4 and (2+4+4+2)/4.
+    assert_allclose(sorted(np.asarray(cellValues)), [1.0, 3.0])
+
+
+def test_structured_grid_reader(tmp_path):
+    """.vts is advertised as supported, so it needs to actually round-trip."""
+    from vtkmodules.vtkCommonCore import vtkPoints
+    from vtkmodules.vtkCommonDataModel import vtkStructuredGrid
+    from vtkmodules.vtkIOXML import vtkXMLStructuredGridWriter
+
+    grid = vtkStructuredGrid()
+    grid.SetDimensions(3, 2, 1)
+
+    points = vtkPoints()
+    for y in (0.0, 1.0):
+        for x in (0.0, 1.0, 2.0):
+            points.InsertNextPoint(x, y, 0.0)
+    grid.SetPoints(points)
+
+    values = vtkDoubleArray()
+    values.SetName("Pressure")
+    for index in range(2):
+        values.InsertNextValue(float(index))
+    grid.GetCellData().SetScalars(values)
+
+    filename = tmp_path / "grid.vts"
+    writer = vtkXMLStructuredGridWriter()
+    writer.SetFileName(str(filename))
+    writer.SetInputData(grid)
+    assert writer.Write() == 1
+
+    internal = XMLReader(str(filename)).data.GetBlock(0)
+    assert internal.GetNumberOfCells() == 2
+    assert_allclose(
+        sorted(np.asarray(dsa.WrapDataObject(internal).CellData["Pressure"])),
+        [0.0, 1.0],
+    )
+
+
+def test_missing_file_raises_file_not_found(tmp_path):
+    with pytest.raises(FileNotFoundError, match="No such file"):
+        LegacyReader(str(tmp_path / "absent.vtk"))
+
+
+def test_a_directory_is_not_a_readable_file(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        LegacyReader(str(tmp_path))

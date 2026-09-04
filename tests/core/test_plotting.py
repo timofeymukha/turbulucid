@@ -169,3 +169,52 @@ def test_streamline_colour_array_length_is_checked(block_case):
             planeResolution=(8, 9),
             plotBoundaries=False,
         )
+
+
+def test_plot_field_clips_to_the_requested_limits(block_case):
+    """Narrowing xlim must drop the cells that fall outside it."""
+    full = plot_field(block_case, "scalarField", colorbar=False)
+    fullCount = len(full.get_paths())
+    plt.close("all")
+
+    clipped = plot_field(
+        block_case, "scalarField", xlim=[0.0, 0.4], colorbar=False)
+
+    assert len(clipped.get_paths()) < fullCount
+    np.testing.assert_allclose(clipped.axes.get_xlim(), [0.0, 0.4])
+
+
+def test_plot_field_without_limits_covers_the_whole_case(block_case):
+    collection = plot_field(block_case, "scalarField", colorbar=False)
+
+    assert len(collection.get_paths()) == block_case.vtkData.GetNumberOfCells()
+    np.testing.assert_allclose(collection.axes.get_xlim(), block_case.xlim)
+    np.testing.assert_allclose(collection.axes.get_ylim(), block_case.ylim)
+
+
+@pytest.mark.parametrize("limits", [[0.0], [0.0, 1.0, 2.0], [1.0, 0.0],
+                                    [0.0, np.nan]])
+@pytest.mark.parametrize("axis", ["xlim", "ylim"])
+def test_plot_field_validates_limits(block_case, axis, limits):
+    with pytest.raises(ValueError, match=axis):
+        plot_field(block_case, "scalarField", colorbar=False, **{axis: limits})
+
+
+@pytest.mark.parametrize(
+    "function",
+    [plot_boundaries, plot_field, plot_vectors, plot_streamlines, plot_contour],
+)
+def test_scaling_factors_must_be_positive(block_case, function):
+    arguments = {"plot_field": ("scalarField",), "plot_vectors": ("vectorField",),
+                 "plot_streamlines": ("vectorField",),
+                 "plot_contour": ("scalarField", 2.5)}
+    positional = arguments.get(function.__name__, ())
+
+    with pytest.raises(ValueError, match="Scaling factors"):
+        function(block_case, *positional, scaleX=0)
+
+
+def test_plot_field_scales_the_geometry(block_case):
+    collection = plot_field(block_case, "scalarField", scaleX=2, colorbar=False)
+
+    np.testing.assert_allclose(collection.axes.get_xlim(), block_case.xlim/2)

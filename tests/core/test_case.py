@@ -149,3 +149,62 @@ def test_write_accepts_path_objects(block_case, tmp_path):
 
     assert output.exists()
     assert Case(str(output)).fields == block_case.fields
+
+
+def test_translate_moves_the_geometry(block_case):
+    centres = block_case.cellCentres
+    boundary = block_case.boundary_data("inlet")[0]
+
+    block_case.translate(2.0, -3.0)
+
+    assert_allclose(block_case.cellCentres, centres + [2.0, -3.0])
+    assert_allclose(block_case.boundary_data("inlet")[0], boundary + [2.0, -3.0])
+    assert block_case.bounds == pytest.approx((2.0, 3.0, -3.0, -2.0))
+
+
+def test_scale_divides_the_coordinates(block_case):
+    """The documented behaviour is division, not multiplication."""
+    centres = block_case.cellCentres
+
+    block_case.scale(2.0, 4.0)
+
+    assert_allclose(block_case.cellCentres, centres/[2.0, 4.0])
+    assert block_case.bounds == pytest.approx((0.0, 0.5, 0.0, 0.25))
+
+
+def test_rotate_turns_the_geometry_about_z(block_case):
+    centres = block_case.cellCentres
+
+    block_case.rotate(90.0)
+
+    expected = np.column_stack((-centres[:, 1], centres[:, 0]))
+    assert_allclose(block_case.cellCentres, expected, atol=1e-12)
+
+
+def test_transforms_move_boundaries_with_the_internal_field(block_case):
+    """Every block has to be transformed, not just the internal one."""
+    block_case.translate(1.0, 1.0)
+
+    for boundary in block_case.boundaries:
+        facePoints = block_case.boundary_data(boundary)[0]
+        cellPoints = block_case.boundary_cell_data(boundary)[0]
+        # Adjacent face centres and cell centres stay close together.
+        assert np.max(np.linalg.norm(cellPoints - facePoints, axis=1)) < 0.5
+
+
+def test_read_is_deprecated(block_case):
+    with pytest.warns(DeprecationWarning, match="reads its file"):
+        block_case.read()
+
+
+def test_unsupported_extension_lists_the_supported_ones(tmp_path):
+    bogus = tmp_path / "case.xyz"
+    bogus.touch()
+
+    with pytest.raises(ValueError, match=r"\.vtm"):
+        Case(str(bogus))
+
+
+def test_missing_file_raises_file_not_found(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        Case(str(tmp_path / "absent.vtm"))
