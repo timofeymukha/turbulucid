@@ -66,7 +66,7 @@ def write_data(data, writerType, path):
         format = "vtk"
     else:
         writer = vtkXMLPolyDataWriter()
-        format = "vtu"
+        format = "vtp"
 
     filename = path.join("test." + format).strpath
     writer.SetFileName(filename)
@@ -234,3 +234,23 @@ def test_xml_boundary_field_data(tmpdir):
 
     assert("boundaries" in w.FieldData.keys())
     assert(w.FieldData["boundaries"].GetNumberOfTuples() == 1)
+
+
+def test_xml_unstructured_grid_reader(tmp_path):
+    from vtkmodules.vtkFiltersCore import vtkAppendFilter
+    from vtkmodules.vtkIOXML import vtkXMLUnstructuredGridWriter
+
+    polydata = create_single_cell(0, [0, 1, 0], 0)
+    converter = vtkAppendFilter()
+    converter.AddInputData(polydata)
+    converter.Update()
+
+    filename = tmp_path / "test.vtu"
+    writer = vtkXMLUnstructuredGridWriter()
+    writer.SetFileName(str(filename))
+    writer.SetInputData(converter.GetOutput())
+    assert writer.Write() == 1
+
+    reader = XMLReader(str(filename))
+    assert reader.data.GetBlock(0).GetNumberOfCells() == 1
+    assert reader.data.GetBlock(0).GetNumberOfPoints() == 4

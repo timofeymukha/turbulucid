@@ -37,7 +37,11 @@ def test_get_block_names(read_test_case_1):
     names = get_block_names(blocks)
     patchNames = get_block_names(blocks.GetBlock(1))
 
-    assert names == ['internalMesh', 'Patches']
+    # VTK renamed this top-level block from "Patches" to "boundary".
+    # The structure and patch metadata are unchanged, so avoid coupling the
+    # helper test to a particular VTK release.
+    assert names[0] == 'internalMesh'
+    assert names[1] in {'Patches', 'boundary'}
     assert patchNames == ['left', 'right', 'top', 'inlet', 'botOrthoHex',
                           'botCurved', 'botPrism', 'outlet', 'botSkewedHex']
 
@@ -45,9 +49,10 @@ def test_get_block_names(read_test_case_1):
 def test_get_block_index(read_test_case_1):
     blocks = read_test_case_1.GetOutput()
     patchBlocks = blocks.GetBlock(1)
+    boundaryBlockName = get_block_names(blocks)[1]
 
     assert get_block_index(blocks, 'internalMesh') == 0
-    assert get_block_index(blocks, 'Patches') == 1
+    assert get_block_index(blocks, boundaryBlockName) == 1
     assert get_block_index(patchBlocks, 'left') == 0
     assert get_block_index(patchBlocks, 'outlet') == 7
 
