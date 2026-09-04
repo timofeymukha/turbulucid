@@ -40,17 +40,133 @@ def _axis_limits(limits, name):
     return limits
 
 
+def _update_datalim(ax, points):
+    """Grow the axes data limits to cover a set of xy points."""
+    if len(points) == 0:
+        return
+    ax.update_datalim([points.min(axis=0), points.max(axis=0)])
+
+
+def _as_polydata(data):
+    """Unwrap a dataset_adapter wrapper, if that is what we were given."""
+    return getattr(data, "VTKObject", data)
+
+
+def _scaled_points(polyData, scaleX, scaleY):
+    """The xy point coordinates of a polydata, scaled, as one array."""
+    vtkPoints = polyData.GetPoints()
+    if vtkPoints is None or vtkPoints.GetNumberOfPoints() == 0:
+        return np.empty((0, 2))
+    return vtk_to_numpy(vtkPoints.GetData())[:, :2]/[scaleX, scaleY]
+
+
+def _cell_array_topology(cellArray):
+    """Return (offsets, connectivity) of a vtkCellArray as NumPy arrays.
+
+    Returns None if this build of VTK predates the offset/connectivity
+    representation, so that callers can fall back to walking the cells.
+
+    """
+    try:
+        offsets = cellArray.GetOffsetsArray()
+        connectivity = cellArray.GetConnectivityArray()
+    except AttributeError:
+        return None
+    if offsets is None or connectivity is None:
+        return None
+    return vtk_to_numpy(offsets), vtk_to_numpy(connectivity)
+
+
+def _polygon_vertices(data, scaleX, scaleY):
+    """Return the polygons of a polydata as scaled vertex arrays.
+
+    When every polygon has the same number of vertices -- the usual
+    all-quad or all-triangle cut plane -- a single (nCells, nVertices, 2)
+    array is returned, because PolyCollection has a much faster path for
+    that than for a list of separate arrays. Otherwise a list of
+    (nVertices, 2) arrays is returned.
+
+    """
+    polyData = _as_polydata(data)
+    nCells = polyData.GetNumberOfCells()
+    if nCells == 0:
+        return []
+
+    topology = None
+    if polyData.GetNumberOfPolys() == nCells:
+        # Only take the vectorised route when the polys are the whole
+        # story: GetCell() walks verts, lines, polys and strips in turn,
+        # and the cell data is ordered to match.
+        topology = _cell_array_topology(polyData.GetPolys())
+
+    if topology is None:
+        return _polygon_vertices_by_cell(polyData, scaleX, scaleY)
+
+    offsets, connectivity = topology
+    points = _scaled_points(polyData, scaleX, scaleY)
+    vertices = points[connectivity]
+
+    sizes = np.diff(offsets)
+    if np.all(sizes == sizes[0]):
+        return vertices.reshape(nCells, int(sizes[0]), 2)
+    return np.split(vertices, offsets[1:-1])
+
+
+def _polygon_vertices_by_cell(polyData, scaleX, scaleY):
+    """Per-cell fallback for datasets of mixed cell types."""
+    polygons = []
+    for c in range(polyData.GetNumberOfCells()):
+        cellPoints = polyData.GetCell(c).GetPoints()
+        vertices = np.array(
+            [cellPoints.GetPoint(i)[:2]
+             for i in range(cellPoints.GetNumberOfPoints())])
+        polygons.append(vertices/[scaleX, scaleY])
+    return polygons
+
+
 def _line_segments(data, scaleX, scaleY):
-    """Collect the two-point cells of a polydata as scaled xy segments."""
+    """Collect the two-point cells of a polydata as scaled xy segments.
+
+    Returns an (nSegments, 2, 2) array.
+
+    """
+    polyData = _as_polydata(data)
+    nCells = polyData.GetNumberOfCells()
+    if nCells == 0:
+        return np.empty((0, 2, 2))
+
+    topology = None
+    if polyData.GetNumberOfLines() == nCells:
+        topology = _cell_array_topology(polyData.GetLines())
+
+    if topology is None:
+        return _line_segments_by_cell(polyData, scaleX, scaleY)
+
+    offsets, connectivity = topology
+    points = _scaled_points(polyData, scaleX, scaleY)
+
+    # Anything that is not a plain two-point segment is skipped.
+    starts = offsets[:-1][np.diff(offsets) == 2]
+    if starts.size == 0:
+        return np.empty((0, 2, 2))
+    return np.stack(
+        (points[connectivity[starts]], points[connectivity[starts + 1]]),
+        axis=1,
+    )
+
+
+def _line_segments_by_cell(polyData, scaleX, scaleY):
+    """Per-cell fallback for datasets of mixed cell types."""
     segments = []
-    for c in range(data.GetNumberOfCells()):
-        cell = data.GetCell(c)
+    for c in range(polyData.GetNumberOfCells()):
+        cell = polyData.GetCell(c)
         if cell.GetNumberOfPoints() != 2:
             continue
-        point0 = np.array(cell.GetPoints().GetPoint(0)[:2])/[scaleX, scaleY]
-        point1 = np.array(cell.GetPoints().GetPoint(1)[:2])/[scaleX, scaleY]
-        segments.append((point0, point1))
-    return segments
+        cellPoints = cell.GetPoints()
+        segments.append((cellPoints.GetPoint(0)[:2], cellPoints.GetPoint(1)[:2]))
+    if not segments:
+        return np.empty((0, 2, 2))
+    return np.array(segments)/[scaleX, scaleY]
 
 
 def _add_line_collection(segments, case, scaleX, scaleY, kwargs):
@@ -60,7 +176,11 @@ def _add_line_collection(segments, case, scaleX, scaleY, kwargs):
         collection.set_color("Black")
 
     ax = plt.gca()
-    ax.add_collection(collection)
+    # autolim would walk every path to find the extent, which we already
+    # know. The limits are set explicitly below, so feed the data limits
+    # in directly instead.
+    ax.add_collection(collection, autolim=False)
+    _update_datalim(ax, np.asarray(segments).reshape(-1, 2))
     ax.set_xlim(case.xlim/scaleX)
     ax.set_ylim(case.ylim/scaleY)
     ax.set_aspect('equal')
@@ -134,10 +254,11 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
     if (scaleX <= 0) or (scaleY <= 0):
         raise ValueError("Scaling factors must be positive.")
 
-    segments = []
-    for boundary in case.boundaries:
-        block = case.extract_block_by_name(boundary)
-        segments.extend(_line_segments(block, scaleX, scaleY))
+    segments = [_line_segments(case.extract_block_by_name(boundary),
+                               scaleX, scaleY)
+                for boundary in case.boundaries]
+    segments = (np.concatenate(segments) if segments
+                else np.empty((0, 2, 2)))
 
     return _add_line_collection(segments, case, scaleX, scaleY, kwargs)
 
@@ -485,16 +606,7 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
         clipper.Update()
         clippedData = dsa.WrapDataObject(clipper.GetOutput())
 
-    polys = []
-    for i in range(clippedData.GetNumberOfCells()):
-        cell = clippedData.GetCell(i)
-        nPoints = cell.GetNumberOfPoints()
-        points = np.zeros((nPoints, 2))
-        for pointI in range(nPoints):
-            points[pointI, :] = cell.GetPoints().GetPoint(pointI)[:2]
-            points[pointI, :] /= [scaleX, scaleY]
-
-        polys.append(points)
+    polys = _polygon_vertices(clippedData, scaleX, scaleY)
 
     polyCollection = PolyCollection(polys, **kwargs)
 
@@ -504,7 +616,12 @@ def plot_field(case, field, scaleX=1, scaleY=1, xlim=None, ylim=None, plotBounda
     polyCollection.set_array(data)
 
     ax = plt.gca()
-    ax.add_collection(polyCollection)
+    ax.add_collection(polyCollection, autolim=False)
+    dataBounds = _as_polydata(clippedData).GetBounds()
+    _update_datalim(ax, np.array([
+        [dataBounds[0]/scaleX, dataBounds[2]/scaleY],
+        [dataBounds[1]/scaleX, dataBounds[3]/scaleY],
+    ]))
 
     if colorbar:
         add_colorbar(polyCollection)

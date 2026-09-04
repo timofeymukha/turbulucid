@@ -4,6 +4,8 @@ import pytest
 
 from turbulucid.core.data_extraction import sample_by_plane
 from turbulucid.core.plotting import (
+    _line_segments,
+    _polygon_vertices,
     plot_boundaries,
     plot_contour,
     plot_field,
@@ -218,3 +220,130 @@ def test_plot_field_scales_the_geometry(block_case):
     collection = plot_field(block_case, "scalarField", scaleX=2, colorbar=False)
 
     np.testing.assert_allclose(collection.axes.get_xlim(), block_case.xlim/2)
+
+
+# ---------------------------------------------------------------------------
+# Geometry extraction. plot_field reads the cell array in one vectorised go
+# rather than walking cells; these pin it to the per-cell reference.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize(("scaleX", "scaleY"), [(1, 1), (2, 0.5)])
+def test_polygon_vertices_match_the_per_cell_walk(
+        block_case, polygon_reference, scaleX, scaleY):
+    expected = polygon_reference(block_case.vtkData, scaleX, scaleY)
+
+    vertices = _polygon_vertices(block_case.vtkData, scaleX, scaleY)
+
+    assert len(vertices) == len(expected)
+    for computed, reference in zip(vertices, expected, strict=True):
+        np.testing.assert_allclose(computed, reference)
+
+
+def test_uniform_meshes_use_the_array_fast_path(block_case):
+    """An all-quad mesh must come back as one (nCells, 4, 2) array.
+
+    PolyCollection is markedly faster for that than for a list, so this
+    is a performance contract, not just a detail.
+
+    """
+    vertices = _polygon_vertices(block_case.vtkData, 1, 1)
+
+    assert isinstance(vertices, np.ndarray)
+    assert vertices.shape == (block_case.vtkData.GetNumberOfCells(), 4, 2)
+
+
+def test_mixed_meshes_fall_back_to_a_list(mixed_cell_case, polygon_reference):
+    expected = polygon_reference(mixed_cell_case.vtkData)
+
+    vertices = _polygon_vertices(mixed_cell_case.vtkData, 1, 1)
+
+    assert not isinstance(vertices, np.ndarray)
+    assert [len(polygon) for polygon in vertices] == [4, 3, 5]
+    for computed, reference in zip(vertices, expected, strict=True):
+        np.testing.assert_allclose(computed, reference)
+
+
+def test_plot_field_handles_mixed_cell_sizes(mixed_cell_case):
+    collection = plot_field(mixed_cell_case, "p", colorbar=False,
+                            plotBoundaries=False)
+
+    # Matplotlib closes each polygon, so every path gains one vertex.
+    counts = sorted(len(path.vertices) for path in collection.get_paths())
+    assert counts == [4, 5, 6]
+    np.testing.assert_allclose(collection.get_array(), [0.0, 1.0, 2.0])
+
+
+def test_line_segments_match_the_per_cell_walk(block_case):
+    block = block_case.extract_block_by_name("bottomWall")
+
+    segments = _line_segments(block, 2, 0.5)
+
+    assert segments.shape == (block.GetNumberOfCells(), 2, 2)
+    for cellId in range(block.GetNumberOfCells()):
+        points = block_case.extract_block_by_name(
+            "bottomWall").GetCell(cellId).GetPoints()
+        expected = np.array([points.GetPoint(0)[:2],
+                             points.GetPoint(1)[:2]])/[2, 0.5]
+        np.testing.assert_allclose(segments[cellId], expected)
+
+
+# ---------------------------------------------------------------------------
+# The collections are added with autolim=False and the data limits supplied
+# directly, so the limits have to be checked explicitly.
+# ---------------------------------------------------------------------------
+
+def test_plot_field_sets_the_data_limits(block_case):
+    collection = plot_field(block_case, "scalarField", colorbar=False,
+                            plotBoundaries=False)
+
+    np.testing.assert_allclose(
+        collection.axes.dataLim.get_points(), [[0.0, 0.0], [1.0, 1.0]])
+
+
+def test_plot_field_data_limits_follow_clipping_and_scaling(block_case):
+    collection = plot_field(block_case, "scalarField", xlim=[0.2, 0.7],
+                            scaleX=2, colorbar=False, plotBoundaries=False)
+
+    limits = collection.axes.dataLim.get_points()
+    np.testing.assert_allclose(limits[:, 0], [0.1, 0.35])
+    np.testing.assert_allclose(limits[:, 1], [0.0, 1.0])
+
+
+def test_plot_boundaries_sets_the_data_limits(block_case):
+    collection = plot_boundaries(block_case)
+
+    np.testing.assert_allclose(
+        collection.axes.dataLim.get_points(), [[0.0, 0.0], [1.0, 1.0]])
+
+
+def test_plot_contour_sets_the_data_limits(block_case):
+    # scalarField is a uniform 2.5, which has no interior contour, so
+    # contour a field that actually varies across the geometry.
+    block_case["ramp"] = block_case.cellCentres[:, 0].copy()
+
+    collection = plot_contour(block_case, "ramp", 0.5)
+
+    limits = collection.axes.dataLim.get_points()
+    np.testing.assert_allclose(limits[:, 0], [0.5, 0.5])
+    np.testing.assert_allclose(limits[:, 1], [0.0, 1.0])
+
+
+def test_an_empty_contour_leaves_the_data_limits_alone(block_case):
+    """A contour that matches nothing must not poison the limits."""
+    collection = plot_contour(block_case, "scalarField", 1e30)
+
+    assert collection.get_segments() == []
+    # Matplotlib's "no data yet" bbox is [[inf, inf], [-inf, -inf]].
+    assert np.all(np.isinf(collection.axes.dataLim.get_points()))
+
+
+def test_autoscale_after_plotting_still_frames_the_geometry(block_case):
+    """A user re-enabling autoscale must not get an empty view."""
+    collection = plot_field(block_case, "scalarField", colorbar=False,
+                            plotBoundaries=False)
+    ax = collection.axes
+
+    ax.autoscale()
+
+    assert ax.get_xlim()[0] <= 0.0 and ax.get_xlim()[1] >= 1.0
+    assert ax.get_ylim()[0] <= 0.0 and ax.get_ylim()[1] >= 1.0
