@@ -457,7 +457,7 @@ class Case:
         """
         fileName = self.fileName
 
-        fileExt = os.path.splitext(fileName)[1]
+        fileExt = os.path.splitext(fileName)[1].lower()
 
         if fileExt == ".vtm":
             reader = NativeReader(fileName)

@@ -257,3 +257,16 @@ def test_xml_unstructured_grid_reader(tmp_path):
     reader = XMLReader(str(filename))
     assert reader.data.GetBlock(0).GetNumberOfCells() == 1
     assert reader.data.GetBlock(0).GetNumberOfPoints() == 4
+
+    with pytest.warns(DeprecationWarning, match="use XMLReader"):
+        compatibility_reader = VTUReader(str(filename))
+    assert compatibility_reader.data.GetBlock(0).GetNumberOfCells() == 1
+    assert compatibility_reader.data.GetBlock(0).GetNumberOfPoints() == 4
+
+
+def test_xml_reader_rejects_unsupported_extension(tmp_path):
+    filename = tmp_path / "test.xml"
+    filename.touch()
+
+    with pytest.raises(ValueError, match="Unsupported XML VTK file extension"):
+        XMLReader(str(filename))
