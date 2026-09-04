@@ -3,20 +3,53 @@
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
+from collections import OrderedDict
+from numbers import Integral, Real
+
 import numpy as np
 from vtkmodules.numpy_interface import dataset_adapter as dsa
-from vtkmodules.util.numpy_support import numpy_to_vtk
-from vtkmodules.util.numpy_support import vtk_to_numpy
 
 try:
     from vtkmodules.vtkFiltersGeneral import vtkCellCenters
 except ImportError:
     from vtkmodules.vtkFiltersCore import vtkCellCenters
-from collections import OrderedDict
 
 __all__ = ["profile_along_line", "tangents", "normals",
            "dist", "sort_indices", "sample_by_plane", "edge_lengths",
            "isoline"]
+
+
+def _point_2d(point, name):
+    try:
+        point = np.asarray(point, dtype=float)
+    except (TypeError, ValueError) as error:
+        raise TypeError(f"{name} must contain two real coordinates.") from error
+    if point.shape != (2,):
+        raise ValueError(f"{name} must contain exactly two coordinates.")
+    if not np.all(np.isfinite(point)):
+        raise ValueError(f"{name} coordinates must be finite.")
+    return point
+
+
+def _boolean(value, name):
+    if not isinstance(value, (bool, np.bool_)):
+        raise TypeError(f"{name} must be a boolean.")
+    return bool(value)
+
+
+def _plane_resolution(resolution):
+    try:
+        values = tuple(resolution)
+    except TypeError as error:
+        raise TypeError("resolution must contain two integer values.") from error
+    if len(values) != 2:
+        raise ValueError("resolution must contain exactly two values.")
+    if any(isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral)
+           for value in values):
+        raise TypeError("resolution values must be integers.")
+    if any(value < 2 for value in values):
+        raise ValueError("resolution values must be at least 2.")
+    return tuple(int(value) for value in values)
 
 
 def profile_along_line(case, p1, p2, correctDistance=False,
@@ -43,18 +76,35 @@ def profile_along_line(case, p1, p2, correctDistance=False,
         is False.
 
     Returns
+    -------
     (ndarray, dictionary)
         The first element of the tuple is an array of coordinates along
         the line where the data is located. The second element is a
         dictionary with the case's fields as keys and arrays of values
         of these fields as values.
 
+    Raises
+    ------
+    TypeError
+        If coordinates or boolean options have incompatible types.
+    ValueError
+        If either point is invalid or the line has zero length.
+
     """
     from vtkmodules.vtkCommonDataModel import vtkPlane
     from vtkmodules.vtkFiltersCore import vtkCutter
 
-    p1 = np.append(np.array(p1), case.vtkData.GetPoints()[0, 2])
-    p2 = np.append(np.array(p2), 0)
+    p1 = _point_2d(p1, "p1")
+    p2 = _point_2d(p2, "p2")
+    correctDistance = _boolean(correctDistance, "correctDistance")
+    excludeBoundaries = _boolean(excludeBoundaries, "excludeBoundaries")
+    if np.array_equal(p1, p2):
+        raise ValueError("p1 and p2 must define a nonzero-length line.")
+    if case.vtkData.GetNumberOfPoints() == 0:
+        raise ValueError("The case contains no geometry to sample.")
+
+    p1 = np.append(p1, case.vtkData.Points[0, 2])
+    p2 = np.append(p2, case.vtkData.Points[0, 2])
 
     # Compute the plane-normal as a cross-product
     unit = (p2 - p1)/np.linalg.norm(p2 - p1)
@@ -81,7 +131,11 @@ def profile_along_line(case, p1, p2, correctDistance=False,
     cCentersData = dsa.WrapDataObject(cCenters.GetOutput())
 
     # Grab the data and its coordinates
-    coords = np.copy(dsa.WrapDataObject(cCenters.GetOutput()).Points)
+    centrePoints = dsa.WrapDataObject(cCenters.GetOutput()).Points
+    if centrePoints is None:
+        coords = np.empty((0, 3))
+    else:
+        coords = np.array(centrePoints)
     data = OrderedDict()
 
     for field in cCentersData.PointData.keys():
@@ -108,12 +162,12 @@ def profile_along_line(case, p1, p2, correctDistance=False,
 
     validIds = []
 
-    l = np.linalg.norm(p2 - p1)
+    lineLength = np.linalg.norm(p2 - p1)
 
     for i in range(coords.shape[0]):
         distP1 = np.linalg.norm(coords[i, :] - p1)
         distP2 = np.linalg.norm(coords[i, :] - p2)
-        if (distP1 <= l) and (distP2 <= l):
+        if (distP1 <= lineLength) and (distP2 <= lineLength):
             validIds.append(i)
 
     coords = coords[validIds, :]
@@ -148,7 +202,11 @@ def profile_along_line(case, p1, p2, correctDistance=False,
         planeCut.SetInputData(case.vtkData.VTKObject)
         planeCut.Update()
 
+        if cutData.Points is None or cutData.GetNumberOfPoints() == 0:
+            raise ValueError("The line does not intersect the case geometry.")
         shiftPointId = cutData.VTKObject.FindPoint(p1)
+        if shiftPointId < 0:
+            raise ValueError("Could not locate the line intersection point.")
         shiftPoint = cutData.Points[shiftPointId, :]
         correction = np.linalg.norm(shiftPoint - p1)
         distance -= correction
@@ -171,6 +229,11 @@ def tangents(case, name):
     ndarray
         The tangent vectors
 
+    Raises
+    ------
+    ValueError
+        If the named boundary contains a zero-length edge.
+
     """
     block = case.extract_block_by_name(name)
     nCells = block.GetNumberOfCells()
@@ -181,7 +244,11 @@ def tangents(case, name):
         cell = block.GetCell(cellI)
         point0 = np.array(cell.GetPoints().GetPoint(0))[:2]
         point1 = np.array(cell.GetPoints().GetPoint(1))[:2]
-        tangents[cellI, :] = (point1 - point0)/np.linalg.norm(point1 - point0)
+        edge = point1 - point0
+        length = np.linalg.norm(edge)
+        if length == 0:
+            raise ValueError(f"Boundary {name} contains a zero-length edge.")
+        tangents[cellI, :] = edge/length
 
     return tangents
 
@@ -245,7 +312,13 @@ def dist(case, name, corrected=True, sort=None):
     ndarray
         The value of the distance for each adjacent cell.
 
+    Raises
+    ------
+    TypeError
+        If ``corrected`` is not a boolean.
+
     """
+    corrected = _boolean(corrected, "corrected")
     boundaryCoords = case.boundary_data(name)[0]
     cellCoords = case.boundary_cell_data(name)[0]
 
@@ -255,8 +328,6 @@ def dist(case, name, corrected=True, sort=None):
         idx = np.arange(0, boundaryCoords.shape[0], 1, dtype=np.int32)
 
     d = cellCoords - boundaryCoords
-    import matplotlib.pyplot as plt
-
     if not corrected:
         return np.linalg.norm(d, axis=1)[idx]
     else:
@@ -317,6 +388,9 @@ def sort_indices(case, name, axis):
 
     """
 
+    if axis not in {"x", "y"}:
+        raise ValueError("axis should be x or y.")
+
     blockData = case.extract_block_by_name(name)
 
     cCenters = vtkCellCenters()
@@ -327,10 +401,7 @@ def sort_indices(case, name, axis):
 
     if axis == "x":
         return np.argsort(points[:, 0])
-    elif axis == "y":
-        return np.argsort(points[:, 1])
-    else:
-        raise ValueError("axis should be x or y.")
+    return np.argsort(points[:, 1])
 
 
 def sample_by_plane(case, resolution):
@@ -351,10 +422,18 @@ def sample_by_plane(case, resolution):
         case's fields as keys and arrays of values of these fields as
         values.
 
+    Raises
+    ------
+    TypeError
+        If the resolution values are not integers.
+    ValueError
+        If resolution does not contain two values of at least two.
+
     """
     from vtkmodules.vtkFiltersSources import vtkPlaneSource
     from vtkmodules.vtkFiltersCore import vtkProbeFilter
 
+    resolution = _plane_resolution(resolution)
     plane = vtkPlaneSource()
     plane.SetResolution(resolution[0] - 1, resolution[1] - 1)
 
@@ -411,8 +490,27 @@ def isoline(case, field, value):
     ndarray
         Points defining the isoline.
 
+    Raises
+    ------
+    TypeError
+        If ``field`` is not a string or ``value`` is not a real scalar.
+    ValueError
+        If the field is missing or non-scalar, or the value is non-finite.
+
     """
     from vtkmodules.vtkFiltersCore import vtkCellDataToPointData, vtkContourFilter
+
+    if not isinstance(field, str):
+        raise TypeError("field must be a string.")
+    if field not in case.fields:
+        raise ValueError(f"Field {field} not present in the case.")
+    if case[field].ndim != 1:
+        raise ValueError("isoline requires a scalar field.")
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise TypeError("value must be a real scalar.")
+    value = float(value)
+    if not np.isfinite(value):
+        raise ValueError("value must be finite.")
 
     toPoint = vtkCellDataToPointData()
     toPoint.SetInputData(case.vtkData.VTKObject)
@@ -426,4 +524,6 @@ def isoline(case, field, value):
     contour.Update()
     contour = dsa.WrapDataObject(contour.GetOutput())
 
-    return np.array(contour.GetPoints()[:, :2])
+    if contour.Points is None:
+        return np.empty((0, 2))
+    return np.array(contour.Points[:, :2])
