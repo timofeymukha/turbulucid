@@ -10,6 +10,7 @@ from vtkmodules.numpy_interface import dataset_adapter as dsa
 from vtkmodules.vtkCommonDataModel import vtkDataObject
 from vtkmodules.vtkFiltersCore import vtkPointDataToCellData
 import abc
+import warnings
 from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.util.numpy_support import vtk_to_numpy
 
@@ -236,7 +237,7 @@ class LegacyReader(Reader):
 
 
 class XMLReader(Reader):
-    """Reader for data in XML polydata format, i.e. .vtp."""
+    """Reader for XML VTK polydata, unstructured, and structured grids."""
 
     def __init__(self, filename, clean=False, pointData=False):
         super().__init__(filename)
@@ -244,20 +245,24 @@ class XMLReader(Reader):
         from vtkmodules.vtkIOXML import vtkXMLPolyDataReader, vtkXMLUnstructuredGridReader, vtkXMLStructuredGridReader
         from vtkmodules.vtkFiltersGeometry import vtkDataSetSurfaceFilter
 
-        if ".vtu" in filename:
-            self._vtkReader = vtkXMLUnstructuredGridReader()
-        elif ".vtp" in filename:
-            self._vtkReader = vtkXMLPolyDataReader()
-        elif ".vts" in filename:
-            self._vtkReader = vtkXMLStructuredGridReader()
-        else:
-            raise NotImplementedError
+        extension = os.path.splitext(filename)[1].lower()
+        readerTypes = {
+            ".vtp": vtkXMLPolyDataReader,
+            ".vts": vtkXMLStructuredGridReader,
+            ".vtu": vtkXMLUnstructuredGridReader,
+        }
+        try:
+            self._vtkReader = readerTypes[extension]()
+        except KeyError as error:
+            raise ValueError(
+                f"Unsupported XML VTK file extension: {extension or '<none>'}"
+            ) from error
         self._fileName = filename
 
         self._vtkReader.SetFileName(self._fileName)
         self._vtkReader.Update()
 
-        if (".vtu" in filename) or (".vts" in filename):
+        if extension in {".vtu", ".vts"}:
             polydata = vtkDataSetSurfaceFilter()
             polydata.SetInputData(self._vtkReader.GetOutput())
             polydata.Update()
@@ -288,6 +293,7 @@ class XMLReader(Reader):
         bDict = {'boundary': boundaryData}
         mark_boundary_cells(internalData, bDict)
         self._data = self._assemble_multiblock_data(internalData, boundaryData)
+
     @property
     def vtkReader(self):
         """The VTK reader for the data."""
@@ -303,58 +309,16 @@ class XMLReader(Reader):
         """The read in data."""
         return self._data
 
-class VTUReader(Reader):
-    """Reader for data in XML unstructured grid format, i.e. .vtu."""
+class VTUReader(XMLReader):
+    """Deprecated compatibility wrapper for :class:`XMLReader`."""
 
     def __init__(self, filename, clean=False, pointData=False):
-        super().__init__(filename)
-
-        self._vtkReader = vtk.vtkXMLUnstructuredGridReader()
-        self._fileName = filename
-
-        self._vtkReader.SetFileName(self._fileName)
-        self._vtkReader.Update()
-
-        internalData = self._vtkReader.GetOutput()
-        self._data = self._vtkReader.GetOutput()
-
-    #        internalData = self._transform()
-#        if clean:
-#            internalData = self._clean(internalData)
-
-        if pointData:
-            interp = vtk.vtkPointDataToCellData()
-            interp.SetInputData(internalData)
-            interp.PassPointDataOff()
-            interp.Update()
-            internalData = interp.GetOutput()
-
-        internalData.BuildLinks()
-
-        n = internalData.GetNumberOfCells()
-        pids = np.arange(n)
-
-        internalData.GetAttributes(vtk.vtkDataObject.CELL).SetPedigreeIds(
-            numpy_to_vtk(pids))
-
-        boundaryData = self._extract_boundary_data(internalData)
-        bDict = {'boundary': boundaryData}
-        mark_boundary_cells(internalData, bDict)
-        self._data = self._assemble_multiblock_data(internalData, boundaryData)
-    @property
-    def vtkReader(self):
-        """The VTK reader for the data."""
-        return self._vtkReader
-
-    @property
-    def fileName(self):
-        """The path to the file with the data."""
-        return self._fileName
-
-    @property
-    def data(self):
-        """The read in data."""
-        return self._data
+        warnings.warn(
+            "VTUReader is deprecated; use XMLReader instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(filename, clean=clean, pointData=pointData)
 
 
 
