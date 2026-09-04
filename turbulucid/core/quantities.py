@@ -10,6 +10,56 @@ import numpy as np
 __all__ = ["momentum_thickness", "delta_star", "delta_99"]
 
 
+def _validate_profile(y, v, interpolate):
+    """Validate and normalize a one-dimensional velocity profile."""
+    try:
+        y = np.asarray(y, dtype=float)
+        v = np.asarray(v, dtype=float)
+    except (TypeError, ValueError) as error:
+        raise TypeError("y and v must contain real numbers.") from error
+
+    if y.ndim != 1 or v.ndim != 1:
+        raise ValueError("y and v must be one-dimensional arrays.")
+    if y.size != v.size:
+        raise ValueError("y and v must contain the same number of samples.")
+    if y.size < 2:
+        raise ValueError("A profile must contain at least two samples.")
+    if not np.all(np.isfinite(y)) or not np.all(np.isfinite(v)):
+        raise ValueError("Profile coordinates and values must be finite.")
+    if np.any(np.diff(y) <= 0):
+        raise ValueError("Profile coordinates must be strictly increasing.")
+    if not isinstance(interpolate, (bool, np.bool_)):
+        raise TypeError("interpolate must be a boolean.")
+
+    return y, v
+
+
+def _free_stream_velocity(v, u0):
+    """Resolve and validate the requested free-stream velocity."""
+    if isinstance(u0, str):
+        if u0 == "last":
+            value = v[-1]
+        elif u0 == "max":
+            value = np.max(v)
+        else:
+            raise ValueError("u0 must be 'last', 'max', or a numeric scalar.")
+    else:
+        if not np.isscalar(u0) or isinstance(u0, (complex, np.complexfloating)):
+            raise TypeError("u0 must be 'last', 'max', or a numeric scalar.")
+        try:
+            value = float(u0)
+        except (TypeError, ValueError) as error:
+            raise TypeError(
+                "u0 must be 'last', 'max', or a numeric scalar."
+            ) from error
+
+    if not np.isfinite(value):
+        raise ValueError("The free-stream velocity must be finite.")
+    if value == 0:
+        raise ValueError("The free-stream velocity must be nonzero.")
+    return value
+
+
 def momentum_thickness(y, v, u0="last", cutoff=None, interpolate=False):
     """Compute the momentum thickness.
 
@@ -23,6 +73,8 @@ def momentum_thickness(y, v, u0="last", cutoff=None, interpolate=False):
         How to compute the free stream velocity. Last will lead to
         using the last value in the v array, max will lead to using
         the maximum value.
+    cutoff : int, optional
+        Index of the final profile sample included in the integral.
     interpolate : bool
         Whether to add new points to the profile using linear
         interpolation. Useful for coarse profiles.
@@ -32,33 +84,38 @@ def momentum_thickness(y, v, u0="last", cutoff=None, interpolate=False):
     float
         The value of the momentum thickness.
 
+    Raises
+    ------
+    TypeError
+        If an option or profile value has an incompatible type.
+    ValueError
+        If the profile is invalid, unsorted, non-finite, or too short.
+
     """
-    if u0 == "last":
-        u0Val = v[-1]
-        cutOff = v.size - 1
-    elif u0 == "max":
-        u0Val = np.max(v)
+    y, v = _validate_profile(y, v, interpolate)
+    u0Val = _free_stream_velocity(v, u0)
+
+    if isinstance(u0, str) and u0 == "max":
         cutOff = np.argmax(v)
     else:
-        u0Val = u0
         cutOff = v.size - 1
 
     if cutoff is not None:
+        if isinstance(cutoff, (bool, np.bool_)) or not isinstance(
+                cutoff, (int, np.integer)):
+            raise TypeError("cutoff must be an integer index.")
         cutOff = int(cutoff)
 
-    if cutOff < 0 or cutOff >= v.size:
-        raise ValueError("cutoff must index an element of the profile.")
+    if cutOff < 1 or cutOff >= v.size:
+        raise ValueError("cutoff must include at least two profile samples.")
+
+    y = y[:cutOff + 1]
+    v = v[:cutOff + 1]
 
     if interpolate:
         interp = interp1d(y, v, kind='linear')
-        y = np.linspace(y[0], y[cutOff], 10000)
+        y = np.linspace(y[0], y[-1], 10000)
         v = interp(y)
-    else:
-        # ``cutOff`` identifies the final sample included in the integral.
-        # The old slice omitted that endpoint, including the free-stream value
-        # in the default mode.
-        y = y[:cutOff + 1]
-        v = v[:cutOff + 1]
 
     return simps(v/u0Val*(1 - v/u0Val), x=y)
 
@@ -85,13 +142,16 @@ def delta_star(y, v, u0="last", interpolate=False):
     float
         The value of the displacement thickness.
 
+    Raises
+    ------
+    TypeError
+        If an option or profile value has an incompatible type.
+    ValueError
+        If the profile is invalid, unsorted, non-finite, or too short.
+
     """
-    if u0 == "last":
-        u0Val = v[-1]
-    elif u0 == "max":
-        u0Val = np.max(v)
-    else:
-        u0Val = u0
+    y, v = _validate_profile(y, v, interpolate)
+    u0Val = _free_stream_velocity(v, u0)
 
     if interpolate:
         interp = interp1d(y, v, kind='linear')
@@ -125,29 +185,26 @@ def delta_99(y, v, u0="last", interpolate=False):
 
     Raises
     ------
+    TypeError
+        If an option or profile value has an incompatible type.
     ValueError
-        If the computed value is not positive.
+        If the profile is invalid or the computed value is not positive.
 
     """
-    if u0 == "last":
-        u0Val = v[-1]
-    elif u0 == "max":
-        u0Val = np.max(v)
-    else:
-        u0Val = u0
+    y, v = _validate_profile(y, v, interpolate)
+    u0Val = _free_stream_velocity(v, u0)
 
     if interpolate:
         interp = interp1d(y, v, kind='linear')
         y = np.linspace(y[0], y[-1], 10000)
         v = interp(y)
 
-    delta99 = 0
-    for i in range(v.size):
-        if v[i] >= 0.99*u0Val:
-            delta99 = y[i]
-            break
+    candidates = np.flatnonzero(v/u0Val >= 0.99)
+    if candidates.size == 0:
+        raise ValueError("The profile does not reach 99% of u0.")
 
+    delta99 = y[candidates[0]]
     if delta99 <= 0:
-        raise ValueError("delta_99 is not positive!")
+        raise ValueError("delta_99 is not positive.")
 
     return delta99
