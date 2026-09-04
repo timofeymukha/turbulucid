@@ -3,9 +3,6 @@
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 import numpy as np
 from vtkmodules.numpy_interface import dataset_adapter as dsa
 from vtkmodules.util.numpy_support import numpy_to_vtk

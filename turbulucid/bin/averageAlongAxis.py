@@ -9,8 +9,6 @@ ASSMPTIONS
     * The geometry is "fit in" between to x-y planes.
 """
 
-from __future__ import print_function
-from __future__ import division
 import os
 import argparse
 import numpy as np

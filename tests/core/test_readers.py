@@ -3,8 +3,6 @@
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
-from __future__ import print_function
-from __future__ import division
 from vtkmodules.numpy_interface import dataset_adapter as dsa
 from turbulucid.core.readers import *
 import numpy as np
@@ -13,6 +11,11 @@ import pytest
 from vtkmodules.vtkCommonCore import vtkPoints, vtkDoubleArray
 from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray, vtkCompositeDataSet
 from vtkmodules.vtkCommonTransforms import vtkTransform
+
+
+def test_reader_base_class_is_abstract():
+    with pytest.raises(TypeError, match="abstract"):
+        Reader("unused")
 
 
 def create_single_cell(z, axis, angle):

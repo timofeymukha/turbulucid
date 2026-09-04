@@ -42,23 +42,25 @@ def mark_boundary_cells(internalData, boundaryDataDict):
         wrappedData.FieldData.append(boundaryCellsConn[key], key)
 
 
-class Reader():
+class Reader(abc.ABC):
     """Abstract base class for file readers."""
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, fileName):
         if not os.path.exists(fileName):
             raise ValueError("ERROR: The file " + fileName + " does not exist")
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def vtkReader(self):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def fileName(self):
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def data(self):
         pass
 
@@ -185,7 +187,7 @@ class LegacyReader(Reader):
     def __init__(self, filename, clean=False, pointData=False):
         from vtkmodules.vtkIOLegacy import vtkPolyDataReader
 
-        Reader.__init__(self, filename)
+        super().__init__(filename)
 
         self._vtkReader = vtkPolyDataReader()
         self._fileName = filename
@@ -237,7 +239,7 @@ class XMLReader(Reader):
     """Reader for data in XML polydata format, i.e. .vtp."""
 
     def __init__(self, filename, clean=False, pointData=False):
-        Reader.__init__(self, filename)
+        super().__init__(filename)
 
         from vtkmodules.vtkIOXML import vtkXMLPolyDataReader, vtkXMLUnstructuredGridReader, vtkXMLStructuredGridReader
         from vtkmodules.vtkFiltersGeometry import vtkDataSetSurfaceFilter
@@ -305,7 +307,7 @@ class VTUReader(Reader):
     """Reader for data in XML unstructured grid format, i.e. .vtu."""
 
     def __init__(self, filename, clean=False, pointData=False):
-        Reader.__init__(self, filename)
+        super().__init__(filename)
 
         self._vtkReader = vtk.vtkXMLUnstructuredGridReader()
         self._fileName = filename
@@ -362,7 +364,7 @@ class NativeReader(Reader):
     def __init__(self, fileName):
         from vtkmodules.vtkIOXML import vtkXMLMultiBlockDataReader
 
-        Reader.__init__(self, fileName)
+        super().__init__(fileName)
 
         self._vtkReader = vtkXMLMultiBlockDataReader()
         self._fileName = fileName
