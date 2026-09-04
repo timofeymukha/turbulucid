@@ -102,7 +102,7 @@ class Reader(abc.ABC):
 
     def _transform(self, inputData):
         from vtkmodules.vtkCommonTransforms import vtkTransform
-        from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
+        from vtkmodules.vtkFiltersGeneral import vtkTransformFilter
 
         transform = vtkTransform()
         meanNormal = self._compute_normal(inputData)
@@ -118,7 +118,7 @@ class Reader(abc.ABC):
             transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
         transform.Update()
 
-        transformFilter = vtkTransformPolyDataFilter()
+        transformFilter = vtkTransformFilter()
         transformFilter.SetInputData(inputData)
         transformFilter.SetTransform(transform)
         transformFilter.Update()

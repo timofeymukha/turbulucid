@@ -11,7 +11,7 @@ from vtkmodules.numpy_interface import dataset_adapter as dsa
 from vtkmodules.util.numpy_support import numpy_to_vtk
 from vtkmodules.vtkCommonTransforms import vtkTransform
 from vtkmodules.vtkFiltersCore import vtkCellCenters
-from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
+from vtkmodules.vtkFiltersGeneral import vtkTransformFilter
 
 from .readers import LegacyReader, NativeReader, XMLReader
 
@@ -263,7 +263,7 @@ class Case:
 
         # Block 0 is the internal field, the rest are the boundaries.
         for i in range(self._blockData.GetNumberOfBlocks()):
-            transformFilter = vtkTransformPolyDataFilter()
+            transformFilter = vtkTransformFilter()
             transformFilter.SetTransform(transform)
             transformFilter.SetInputData(self._blockData.GetBlock(i))
             transformFilter.Update()

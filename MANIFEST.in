@@ -5,3 +5,12 @@ include README.rst
 # Include the data files
 recursive-include docs *
 recursive-include turbulucid/datasets *
+
+# Include the test suite so that it can be run from an unpacked sdist.
+# These directories are deliberately not installable packages, so nothing
+# pulls them in automatically.
+recursive-include tests *.py
+
+# Nothing below is useful to someone building from the sdist.
+prune build
+global-exclude *.py[cod] __pycache__

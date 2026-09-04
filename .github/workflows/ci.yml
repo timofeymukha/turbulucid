@@ -87,7 +87,7 @@ jobs:
           python -m build
 
       - name: Check the metadata
-        run: python -m twine check dist/*
+        run: python -m twine check --strict dist/*
 
       - name: Only turbulucid may be installed top level
         run: |
@@ -101,3 +101,33 @@ jobs:
               sys.exit(f"unexpected top-level entries in the wheel: {sorted(unexpected)}")
           print("wheel contains:", sorted(roots))
           PY
+
+      - name: The sdist must carry the whole test suite
+        run: |
+          python - <<'PY'
+          import pathlib, sys, tarfile
+
+          sdist = next(pathlib.Path("dist").glob("*.tar.gz"))
+          shipped = {
+              "/".join(name.split("/")[1:])
+              for name in tarfile.open(sdist).getnames()
+          }
+          expected = {
+              str(path) for path in pathlib.Path("tests").rglob("*.py")
+          }
+          missing = sorted(expected - shipped)
+          if missing:
+              sys.exit(f"sdist is missing test files: {missing}")
+          print(f"sdist ships all {len(expected)} test modules")
+          PY
+
+      - name: Install the wheel and run the suite from the unpacked sdist
+        env:
+          MPLBACKEND: Agg
+        run: |
+          tar xzf dist/*.tar.gz -C /tmp
+          python -m venv /tmp/check
+          /tmp/check/bin/python -m pip install --quiet dist/*.whl pytest
+          /tmp/check/bin/python -c "import turbulucid; print(turbulucid.Case)"
+          /tmp/check/bin/averageAlongAxis --help > /dev/null
+          cd /tmp/turbulucid-*/ && /tmp/check/bin/python -m pytest -q

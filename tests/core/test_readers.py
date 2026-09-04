@@ -24,7 +24,7 @@ def test_reader_base_class_is_abstract():
 
 
 def create_single_cell(z, axis, angle):
-    from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
+    from vtkmodules.vtkFiltersGeneral import vtkTransformFilter
 
     points = vtkPoints()
     points.InsertPoint(0, 0.0, 0.0, z)
@@ -54,7 +54,7 @@ def create_single_cell(z, axis, angle):
     transform.RotateWXYZ(angle, axis[0], axis[1], axis[2])
     transform.Update()
 
-    filter = vtkTransformPolyDataFilter()
+    filter = vtkTransformFilter()
     filter.SetInputData(data)
     filter.SetTransform(transform)
     filter.Update()
@@ -301,7 +301,7 @@ def test_xml_reader_rejects_unsupported_extension(tmp_path):
 
 
 def test_plane_fit_is_independent_of_cell_winding(tmpdir):
-    from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
+    from vtkmodules.vtkFiltersGeneral import vtkTransformFilter
 
     data = create_polydata(
         [
@@ -319,7 +319,7 @@ def test_plane_fit_is_independent_of_cell_winding(tmpdir):
     )
     transform = vtkTransform()
     transform.RotateWXYZ(57, 1, 0.3, 0.2)
-    transformed = vtkTransformPolyDataFilter()
+    transformed = vtkTransformFilter()
     transformed.SetInputData(data)
     transformed.SetTransform(transform)
     transformed.Update()

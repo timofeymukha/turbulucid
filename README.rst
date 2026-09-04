@@ -29,8 +29,9 @@ An example of such a plot, produced with turbulucid, is shown below.
 
 .. _fig-cover:
 
-.. figure:: docs/figures/cover.png
+.. figure:: https://raw.githubusercontent.com/timofeymukha/turbulucid/master/docs/figures/cover.png
    :align: center
+   :alt: A publication-quality plot produced with turbulucid
 
 Also, while VTK provides an abundance of filters for extracting specific
 parts of a dataset, the object-oriented API is hard to learn and quite verbose.
@@ -49,33 +50,37 @@ to make the plots look exactly as desired.
 
 Installing
 ----------
-Turbulucid requires Python 3.
+Turbulucid requires Python 3.10 or newer.
 It should work on any platform, where the packages described below also work.
 It has been used extensively on both Windows and Linux.
 
-For turbulucid to work, several other packages have to be installed.
-Three packages are :code:`numpy`, :code:`scipy`, and :code:`matplotlib`.
-These are easy to obtain and are part of many python package managers, e.g. conda, mamba, or pip.
+The easiest way to install turbulucid is from PyPI::
 
-Turbulucid also depends on python bindings for VTK, i.e the :code:`vtk` package.
-The version of VTK should be at least 7.0.0.
-With conda, VTK can be obtained by running
-:code:`conda install vtk` in the terminal.
-We generally recommend using the conda-forge package channel: :code:`conda install vtk -c conda-forge`.
-The best practice is to then use a separate conda environment and install all the necessary pacakges from conda-forge there.
+   python -m pip install turbulucid
 
-Installing the package is easy.
-Simply clone the git repository or download it as an archive and then unpack.
+This pulls in the dependencies as well: :code:`numpy`, :code:`scipy`,
+:code:`matplotlib`, and the Python bindings for VTK, i.e. the :code:`vtk`
+package.
+VTK 9.0 or newer is required.
+
+To install the latest development version instead, clone the git repository
+or download it as an archive and unpack it.
 Then navigate to the root directory of the code in a terminal and execute
 :code:`python -m pip install .`.
 
-Using :code:`conda`, it is possible to test the package in a separate environment::
+Users who prefer :code:`conda` can obtain the dependencies from the
+conda-forge channel and install turbulucid itself with pip.
+The best practice is to use a separate environment::
 
-   conda create -n tbl python=3.10
-   source activate tbl
+   conda create -n tbl python=3.12
+   conda activate tbl
    conda install -c conda-forge vtk numpy scipy matplotlib
+   python -m pip install turbulucid
+
+To run the test suite from a checkout, install the test extra instead::
+
    python -m pip install ".[test]"
-   
+
 For more info regarding conda environments refer to `<https://conda.io/docs/user-guide/tasks/manage-environments.html>`_
 
 Validation

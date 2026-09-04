@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,17 +9,38 @@ description = "A package for post-processing of 2D flow fields."
 authors = [
     { name = "Timofey Mukha", email = "timofey.mukha@protonmail.com" }
 ]
-license = { text = "GNU GPL 3" }
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE.txt"]
 readme = "README.rst"
 requires-python = ">=3.10"
-classifiers = [
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
+keywords = [
+    "CFD",
+    "VTK",
+    "flow visualization",
+    "post-processing",
+    "turbulence",
 ]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+# Lower bounds reflect the APIs the code actually uses: the vtkmodules
+# layout and vtkCellArray.GetOffsetsArray() need VTK 9, and
+# scipy.integrate.simpson was introduced in SciPy 1.6.
 dependencies = [
-    "numpy",
-    "scipy",
-    "matplotlib",
-    "vtk"
+    "numpy>=1.22",
+    "scipy>=1.6",
+    "matplotlib>=3.5",
+    "vtk>=9.0",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +48,9 @@ test = ["pytest>=8"]
 
 [project.urls]
 Homepage = "https://github.com/timofeymukha/turbulucid"
+Documentation = "https://timofeymukha.github.io/turbulucid/"
+Source = "https://github.com/timofeymukha/turbulucid"
+Issues = "https://github.com/timofeymukha/turbulucid/issues"
 
 [project.scripts]
 averageAlongAxis = "turbulucid.bin.averageAlongAxis:main"
