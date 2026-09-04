@@ -52,6 +52,51 @@ def _plane_resolution(resolution):
     return tuple(int(value) for value in values)
 
 
+def _validate_contour_request(case, field, value, caller):
+    """Validate a request for a contour of a scalar field.
+
+    Shared by :func:`isoline` and :func:`turbulucid.plot_contour` so that
+    both reject a missing or non-scalar field instead of quietly producing
+    an empty contour.
+
+    Parameters
+    ----------
+    case : Case
+        The case the field belongs to.
+    field : str
+        The name of the field to contour.
+    value : float
+        The value associated with the contour.
+    caller : str
+        The name of the calling function, used in the error message.
+
+    Returns
+    -------
+    float
+        The validated contour value.
+
+    Raises
+    ------
+    TypeError
+        If ``field`` is not a string or ``value`` is not a real scalar.
+    ValueError
+        If the field is missing or non-scalar, or the value is non-finite.
+
+    """
+    if not isinstance(field, str):
+        raise TypeError("field must be a string.")
+    if field not in case.fields:
+        raise ValueError(f"Field {field} not present in the case.")
+    if case[field].ndim != 1:
+        raise ValueError(f"{caller} requires a scalar field.")
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise TypeError("value must be a real scalar.")
+    value = float(value)
+    if not np.isfinite(value):
+        raise ValueError("value must be finite.")
+    return value
+
+
 def profile_along_line(case, p1, p2, correctDistance=False,
                        excludeBoundaries=False):
     """Extract a linear profile from the data.
@@ -500,17 +545,7 @@ def isoline(case, field, value):
     """
     from vtkmodules.vtkFiltersCore import vtkCellDataToPointData, vtkContourFilter
 
-    if not isinstance(field, str):
-        raise TypeError("field must be a string.")
-    if field not in case.fields:
-        raise ValueError(f"Field {field} not present in the case.")
-    if case[field].ndim != 1:
-        raise ValueError("isoline requires a scalar field.")
-    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
-        raise TypeError("value must be a real scalar.")
-    value = float(value)
-    if not np.isfinite(value):
-        raise ValueError("value must be finite.")
+    value = _validate_contour_request(case, field, value, "isoline")
 
     toPoint = vtkCellDataToPointData()
     toPoint.SetInputData(case.vtkData.VTKObject)

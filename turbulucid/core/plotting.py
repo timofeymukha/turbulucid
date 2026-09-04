@@ -13,10 +13,20 @@ from mpl_toolkits import axes_grid1
 from matplotlib.collections import PatchCollection
 from matplotlib.collections import PolyCollection
 from matplotlib.collections import LineCollection
-from .data_extraction import sample_by_plane
+from .data_extraction import sample_by_plane, _validate_contour_request
 
 __all__ = ["plot_boundaries", "plot_vectors", "plot_streamlines", "plot_field",
            "add_colorbar", "plot_contour"]
+
+
+def _colour_requested(kwargs):
+    """Whether the user already asked for a specific line colour.
+
+    LineCollection accepts both spellings, so checking only one of them
+    silently overrides the other.
+
+    """
+    return any(key in kwargs for key in ("color", "colors"))
 
 
 def _temporary_field_name(case):
@@ -97,7 +107,7 @@ def plot_boundaries(case, scaleX=1, scaleY=1, **kwargs):
             point1 = np.array(point1)/[scaleX, scaleY]
             segments.append((point0, point1))
     collection = LineCollection(segments, **kwargs)
-    if "color" not in kwargs:
+    if not _colour_requested(kwargs):
         collection.set_color("Black")
 
     ax.add_collection(collection)
@@ -213,9 +223,8 @@ def plot_vectors(case, field, colorField=None,
 
     if normalize:
         norms = np.linalg.norm(data[:, [0, 1]], axis=1)
-        for i in range(data.shape[0]):
-            if norms[i] != 0:
-                data[i, :] /= norms[i]
+        # Out of place: data may alias an array owned by the caller.
+        data = data/np.where(norms == 0, 1, norms)[:, np.newaxis]
 
     if colorField is None:
         return plt.quiver(pointsX/scaleX, pointsY/scaleY, data[:, 0],
@@ -259,11 +268,10 @@ def plot_streamlines(case, field, colorField=None,
         string with the name of the field as found in the case or an
         ndarray with the data.
     colorField : string or ndarray
-        Data used to colour the vectors, either name of the field or
-        an array.
-    normalize : bool, optional
-        Whether to normalize the the length of the vectors.
-        Default is False.
+        Data used to colour the streamlines, either the name of a field
+        in the case or an array. An array must hold one value per
+        sampling point, i.e. planeResolution[0]*planeResolution[1]
+        values, ordered as returned by sample_by_plane.
     scaleX : float, optional
         A scaling factor for the abscissa.
     scaleY : float, optional
@@ -274,7 +282,7 @@ def plot_streamlines(case, field, colorField=None,
     plotBoundaries : bool, optional
         Whether to plot the boundary of the geometry as a black line.
     **kwargs
-        Additional arguments to be passed to pyplot.quiver.
+        Additional arguments to be passed to pyplot.streamplot.
 
     Raises
     ------
@@ -283,6 +291,7 @@ def plot_streamlines(case, field, colorField=None,
     ValueError
         If the data to be plotted has less dimensions than two.
         If one or both scaling factors are non-positive.
+        If colorField is an array of the wrong length.
 
     Returns
     -------
@@ -346,10 +355,15 @@ def plot_streamlines(case, field, colorField=None,
                               **kwargs)
     else:
         if isinstance(colorField, str):
-            colorData = sampledData[colorField].reshape(
-                (nRows, nCols), order='F')
+            colorData = sampledData[colorField]
         else:
-            colorData = np.asarray(colorField).reshape((nRows, nCols))
+            colorData = np.asarray(colorField)
+            if colorData.shape != (nRows*nCols,):
+                raise ValueError(
+                    "colorField must contain one value per sampling point, "
+                    f"i.e. {nRows*nCols} values, got {colorData.size}.")
+        # Same ordering as the sampled vector components above.
+        colorData = colorData.reshape((nRows, nCols), order='F')
         colorData = np.ma.masked_where(~validPoints, colorData)
         return plt.streamplot(pointsX/scaleX, pointsY/scaleY, dataX, dataY,
                               color=colorData, **kwargs)
@@ -505,8 +519,11 @@ def plot_contour(case, field, value, scaleX=1, scaleY=1, **kwargs):
 
     Raises
     ------
+    TypeError
+        If ``field`` is not a string or ``value`` is not a real scalar.
     ValueError
         If one or both scaling factors are non-positive.
+        If the field is missing or non-scalar, or the value is non-finite.
 
     Returns
     -------
@@ -518,6 +535,8 @@ def plot_contour(case, field, value, scaleX=1, scaleY=1, **kwargs):
 
     if (scaleX <= 0) or (scaleY <= 0):
         raise ValueError("Scaling factors must be positive.")
+
+    value = _validate_contour_request(case, field, value, "plot_contour")
 
     toPoint = vtkCellDataToPointData()
     toPoint.SetInputData(case.vtkData.VTKObject)
@@ -542,7 +561,7 @@ def plot_contour(case, field, value, scaleX=1, scaleY=1, **kwargs):
         point1 = np.array(point1)/[scaleX, scaleY]
         segments.append((point0, point1))
     collection = LineCollection(segments, **kwargs)
-    if "color" not in kwargs:
+    if not _colour_requested(kwargs):
         collection.set_color("Black")
 
     ax.add_collection(collection)

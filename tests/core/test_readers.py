@@ -351,3 +351,65 @@ def test_plane_fit_rejects_collinear_geometry(tmpdir):
 
     with pytest.raises(ValueError, match="degenerate or collinear"):
         XMLReader(filename)
+
+
+def cell_areas(data):
+    """Return the area of every cell in a polydata."""
+    from vtkmodules.vtkFiltersVerdict import vtkMeshQuality
+
+    quality = vtkMeshQuality()
+    quality.SetTriangleQualityMeasureToArea()
+    quality.SetQuadQualityMeasureToArea()
+    quality.SetInputData(data)
+    quality.Update()
+    return np.asarray(dsa.WrapDataObject(quality.GetOutput()).CellData["Quality"])
+
+
+def degenerate_quad_mesh():
+    """Two unit quads with a zero-area quad wedged between them."""
+    return create_polydata(
+        [
+            (0, 0, 0), (1, 0, 0), (1, 1, 0), (0, 1, 0),
+            # Two coincident pairs, so this quad encloses no area at all.
+            (2, 0, 0), (2, 0, 0), (2, 1, 0), (2, 1, 0),
+            (3, 0, 0), (4, 0, 0), (4, 1, 0), (3, 1, 0),
+        ],
+        [
+            (0, 1, 2, 3),
+            (4, 5, 6, 7),
+            (8, 9, 10, 11),
+        ],
+    )
+
+
+@pytest.mark.parametrize("writer", ["legacy", "xml"])
+def test_clean_removes_degenerate_quads(writer, tmpdir):
+    """vtkMeshQuality scores quads with its own measure, which must be area.
+
+    With the default quad measure a degenerate cell scores 1e30 rather than
+    0, so it never falls below the threshold and clean silently does
+    nothing on the quad meshes that make up most cut planes.
+
+    """
+    filename = write_data(degenerate_quad_mesh(), writer, tmpdir)
+    readerType = LegacyReader if writer == "legacy" else XMLReader
+
+    uncleaned = readerType(filename, clean=False)
+    assert uncleaned.data.GetBlock(0).GetNumberOfCells() == 3
+
+    cleaned = readerType(filename, clean=True).data.GetBlock(0)
+    assert cleaned.GetNumberOfCells() == 2
+
+    assert_allclose(sorted(cell_areas(cleaned)), [1.0, 1.0])
+
+
+@pytest.mark.parametrize("writer", ["legacy", "xml"])
+def test_clean_keeps_a_healthy_quad_mesh_intact(writer, tmpdir):
+    data = create_polydata(
+        [(0, 0, 0), (1, 0, 0), (2, 0, 0), (0, 1, 0), (1, 1, 0), (2, 1, 0)],
+        [(0, 1, 4, 3), (1, 2, 5, 4)],
+    )
+    filename = write_data(data, writer, tmpdir)
+    readerType = LegacyReader if writer == "legacy" else XMLReader
+
+    assert readerType(filename, clean=True).data.GetBlock(0).GetNumberOfCells() == 2

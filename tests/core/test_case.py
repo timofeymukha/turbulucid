@@ -130,3 +130,22 @@ def test_native_round_trip(block_case, tmp_path):
     assert_allclose(restored.cellCentres, block_case.cellCentres)
     for field in block_case.fields:
         assert_allclose(restored[field], block_case[field])
+
+
+def test_write_reports_failure(block_case, tmp_path):
+    """The VTK writer returns 1 even on failure, so the error code decides."""
+    blocker = tmp_path / "blocker"
+    blocker.write_text("not a directory")
+    unwritable = blocker / "out.vtm"
+
+    with pytest.raises(OSError, match="Could not write the case"):
+        block_case.write(str(unwritable))
+
+
+def test_write_accepts_path_objects(block_case, tmp_path):
+    output = tmp_path / "from_path_object.vtm"
+
+    block_case.write(output)
+
+    assert output.exists()
+    assert Case(str(output)).fields == block_case.fields

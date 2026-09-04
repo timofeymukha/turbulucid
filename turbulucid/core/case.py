@@ -472,10 +472,27 @@ class Case:
         writePath : str
             The name of the file.
 
+        Raises
+        ------
+        OSError
+            If the data could not be written to the given path.
+
         """
         from vtkmodules.vtkIOXML import vtkXMLMultiBlockDataWriter
+        from vtkmodules.vtkCommonMisc import vtkErrorCode
+
+        writePath = os.fspath(writePath)
 
         writer = vtkXMLMultiBlockDataWriter()
         writer.SetFileName(writePath)
         writer.SetInputData(self._blockData)
         writer.Write()
+
+        # The writer does not raise, and its return value stays 1 even on
+        # failure, so the error code is the only reliable status.
+        errorCode = writer.GetErrorCode()
+        if errorCode != vtkErrorCode.NoError:
+            raise OSError(
+                f"Could not write the case to {writePath}: "
+                + vtkErrorCode.GetStringFromErrorCode(errorCode)
+            )

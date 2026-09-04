@@ -1,7 +1,11 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
+from turbulucid.core.data_extraction import sample_by_plane
 from turbulucid.core.plotting import (
+    plot_boundaries,
+    plot_contour,
     plot_field,
     plot_streamlines,
     plot_vectors,
@@ -69,3 +73,99 @@ def test_colored_streamlines_return_plot_object(block_case):
     )
 
     assert result is not None
+
+
+def test_boundaries_default_to_black(block_case):
+    collection = plot_boundaries(block_case)
+
+    np.testing.assert_array_equal(collection.get_color(), [[0.0, 0.0, 0.0, 1.0]])
+
+
+@pytest.mark.parametrize("keyword", ["color", "colors"])
+@pytest.mark.parametrize("function", [plot_boundaries, plot_contour])
+def test_line_plots_honour_either_colour_keyword(block_case, function, keyword):
+    """LineCollection accepts both spellings; neither may be overridden."""
+    arguments = {keyword: "red"}
+    if function is plot_contour:
+        collection = function(block_case, "scalarField", 2.5, **arguments)
+    else:
+        collection = function(block_case, **arguments)
+
+    np.testing.assert_array_equal(collection.get_color(), [[1.0, 0.0, 0.0, 1.0]])
+
+
+def test_plot_vectors_normalizes_without_mutating_the_input(block_case):
+    field = block_case["vectorField"].astype(float)
+    original = field.copy()
+
+    result = plot_vectors(block_case, field, normalize=True, plotBoundaries=False)
+
+    np.testing.assert_array_equal(field, original)
+    lengths = np.hypot(result.U, result.V)
+    np.testing.assert_allclose(lengths, 1.0)
+
+
+def test_plot_vectors_normalize_leaves_zero_vectors_alone(block_case):
+    field = np.zeros((block_case.vtkData.GetNumberOfCells(), 3))
+    field[0] = [3.0, 4.0, 0.0]
+
+    result = plot_vectors(block_case, field, normalize=True, plotBoundaries=False)
+
+    lengths = np.hypot(result.U, result.V)
+    assert lengths[0] == pytest.approx(1.0)
+    np.testing.assert_allclose(lengths[1:], 0.0)
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "error", "message"),
+    [
+        ("missing", 1.0, ValueError, "not present"),
+        ("vectorField", 1.0, ValueError, "scalar"),
+        ("scalarField", np.inf, ValueError, "finite"),
+        (1, 1.0, TypeError, "string"),
+        ("scalarField", "high", TypeError, "real scalar"),
+    ],
+)
+def test_plot_contour_validates_its_request(block_case, field, value, error, message):
+    with pytest.raises(error, match=message):
+        plot_contour(block_case, field, value)
+
+
+def test_streamline_colour_array_matches_the_named_field(block_case):
+    """An array colorField must be interpreted in sample_by_plane's order."""
+    block_case["ramp"] = block_case.cellCentres[:, 0].copy()
+    resolution = (8, 9)
+    _, sampled = sample_by_plane(block_case, resolution)
+
+    from_name = plot_streamlines(
+        block_case,
+        "vectorField",
+        colorField="ramp",
+        planeResolution=resolution,
+        plotBoundaries=False,
+    )
+    expected = np.asarray(from_name.lines.get_array())
+    plt.close("all")
+
+    from_array = plot_streamlines(
+        block_case,
+        "vectorField",
+        colorField=sampled["ramp"],
+        planeResolution=resolution,
+        plotBoundaries=False,
+    )
+
+    np.testing.assert_allclose(np.asarray(from_array.lines.get_array()), expected)
+    # A ramp across a non-square grid: the two reshape orders really differ.
+    assert np.nanmin(expected) < np.nanmax(expected)
+
+
+def test_streamline_colour_array_length_is_checked(block_case):
+    with pytest.raises(ValueError, match="one value per sampling point"):
+        plot_streamlines(
+            block_case,
+            "vectorField",
+            colorField=np.ones(5),
+            planeResolution=(8, 9),
+            plotBoundaries=False,
+        )

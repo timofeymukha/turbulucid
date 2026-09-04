@@ -33,6 +33,10 @@ averageAlongAxis = "turbulucid.bin.averageAlongAxis:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
+# Without these, namespace discovery also installs "docs" and "tests" as
+# top-level packages, and every dataset subdirectory as a package of its own.
+include = ["turbulucid*"]
+namespaces = false
 
 [tool.pytest.ini_options]
 minversion = "8.0"

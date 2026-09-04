@@ -69,6 +69,10 @@ class Reader(abc.ABC):
         """Removes cells that have area less than 1e-10. Also runs the
         data through vtkCleanPolyData().
 
+        Only triangles and quadrilaterals are considered.  vtkMeshQuality
+        reports NaN for general polygons, which never compares less than the
+        threshold, so such cells are always kept.
+
         """
         from vtkmodules.vtkFiltersVerdict import vtkMeshQuality
         from vtkmodules.vtkFiltersCore import vtkCleanPolyData
@@ -77,6 +81,9 @@ class Reader(abc.ABC):
 
         area = vtkMeshQuality()
         area.SetTriangleQualityMeasureToArea()
+        # Without this the quads are scored with the default measure, which
+        # reports 1e30 for degenerate cells and so never triggers the check.
+        area.SetQuadQualityMeasureToArea()
         area.SetInputData(data)
         area.Update()
         area = dsa.WrapDataObject(area.GetOutput()).CellData["Quality"]
