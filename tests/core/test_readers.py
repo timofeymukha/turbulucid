@@ -3,14 +3,19 @@
 # The code is released under the GNU GPL Version 3 licence.
 # See LICENCE.txt and the Legal section in the README for more information
 
-from vtkmodules.numpy_interface import dataset_adapter as dsa
-from turbulucid.core.readers import *
 import numpy as np
-from numpy.testing import assert_allclose
 import pytest
-from vtkmodules.vtkCommonCore import vtkPoints, vtkDoubleArray
-from vtkmodules.vtkCommonDataModel import vtkPolyData, vtkCellArray, vtkCompositeDataSet
+from numpy.testing import assert_allclose
+from vtkmodules.numpy_interface import dataset_adapter as dsa
+from vtkmodules.vtkCommonCore import vtkDoubleArray, vtkPoints
+from vtkmodules.vtkCommonDataModel import (
+    vtkCellArray,
+    vtkCompositeDataSet,
+    vtkPolyData,
+)
 from vtkmodules.vtkCommonTransforms import vtkTransform
+
+from turbulucid.core.readers import LegacyReader, Reader, VTUReader, XMLReader
 
 
 def test_reader_base_class_is_abstract():
@@ -55,6 +60,29 @@ def create_single_cell(z, axis, angle):
     filter.Update()
 
     return filter.GetOutput()
+
+
+def create_polydata(point_values, cells):
+    points = vtkPoints()
+    for index, point in enumerate(point_values):
+        points.InsertPoint(index, *point)
+
+    polygons = vtkCellArray()
+    for cell in cells:
+        polygons.InsertNextCell(len(cell))
+        for point_id in cell:
+            polygons.InsertCellPoint(point_id)
+
+    data = vtkPolyData()
+    data.SetPoints(points)
+    data.SetPolys(polygons)
+
+    values = vtkDoubleArray()
+    values.SetName("Pressure")
+    for index in range(len(cells)):
+        values.InsertNextValue(float(index))
+    data.GetCellData().SetScalars(values)
+    return data
 
 
 def write_data(data, writerType, path):
@@ -270,3 +298,56 @@ def test_xml_reader_rejects_unsupported_extension(tmp_path):
 
     with pytest.raises(ValueError, match="Unsupported XML VTK file extension"):
         XMLReader(str(filename))
+
+
+def test_plane_fit_is_independent_of_cell_winding(tmpdir):
+    from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
+
+    data = create_polydata(
+        [
+            (0, 0, 0),
+            (1, 0, 0),
+            (2, 0, 0),
+            (0, 1, 0),
+            (1, 1, 0),
+            (2, 1, 0),
+        ],
+        [
+            (0, 1, 4, 3),
+            (1, 4, 5, 2),  # Deliberately opposite winding.
+        ],
+    )
+    transform = vtkTransform()
+    transform.RotateWXYZ(57, 1, 0.3, 0.2)
+    transformed = vtkTransformPolyDataFilter()
+    transformed.SetInputData(data)
+    transformed.SetTransform(transform)
+    transformed.Update()
+
+    filename = write_data(transformed.GetOutput(), "xml", tmpdir)
+    reader = XMLReader(filename)
+    points = dsa.WrapDataObject(reader.data.GetBlock(0)).Points
+
+    assert_allclose(points[:, 2], 0, atol=1e-7)
+
+
+def test_plane_fit_rejects_nonplanar_geometry(tmpdir):
+    data = create_polydata(
+        [(0, 0, 0), (1, 0, 0), (1, 1, 0.1), (0, 1, 0)],
+        [(0, 1, 2, 3)],
+    )
+    filename = write_data(data, "xml", tmpdir)
+
+    with pytest.raises(ValueError, match="not planar"):
+        XMLReader(filename)
+
+
+def test_plane_fit_rejects_collinear_geometry(tmpdir):
+    data = create_polydata(
+        [(0, 0, 0), (1, 0, 0), (2, 0, 0), (3, 0, 0)],
+        [(0, 1, 2, 3)],
+    )
+    filename = write_data(data, "xml", tmpdir)
+
+    with pytest.raises(ValueError, match="degenerate or collinear"):
+        XMLReader(filename)

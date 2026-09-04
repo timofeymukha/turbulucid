@@ -51,6 +51,69 @@ def test_boundary_cell_data_returns_independent_arrays(block_case):
     assert_array_equal(second["scalarField"], expected)
 
 
+def test_case_properties_follow_direct_vtk_changes(block_case):
+    values = np.arange(block_case.vtkData.GetNumberOfCells(), dtype=float)
+    block_case.vtkData.CellData.append(values, "directField")
+
+    assert "directField" in block_case.fields
+    assert_array_equal(block_case["directField"], values)
+
+    block_case.vtkData.CellData["scalarField"][:] = 42
+    for boundary in block_case.boundaries:
+        boundary_values = block_case.boundary_cell_data(boundary)[1]
+        assert_array_equal(
+            boundary_values["scalarField"],
+            np.full(boundary_values["scalarField"].shape, 42),
+        )
+
+    original_centres = block_case.cellCentres
+    block_case.vtkData.Points[:, 0] += 2
+    assert_allclose(block_case.cellCentres[:, 0], original_centres[:, 0] + 2)
+    assert block_case.bounds[:2] == pytest.approx((2.0, 3.0))
+
+
+def test_case_round_trips_tensor_fields(block_case):
+    n_cells = block_case.vtkData.GetNumberOfCells()
+    values = np.arange(n_cells * 9, dtype=float).reshape(n_cells, 3, 3)
+
+    block_case["derivedTensor"] = values
+
+    assert_array_equal(block_case["derivedTensor"], values)
+
+
+@pytest.mark.parametrize(
+    ("name", "values", "error"),
+    [
+        (1, np.ones(6), TypeError),
+        ("", np.ones(6), ValueError),
+        ("badLength", np.ones(2), ValueError),
+        ("notNumeric", np.array(["x"] * 6), TypeError),
+        ("complex", np.full(6, 1 + 2j), TypeError),
+        ("notFinite", np.full(6, np.nan), ValueError),
+        ("badTensor", np.ones((6, 2, 2)), ValueError),
+    ],
+)
+def test_field_assignment_validation(block_case, name, values, error):
+    with pytest.raises(error):
+        block_case[name] = values
+
+
+def test_transform_validation(block_case):
+    with pytest.raises(ValueError, match="nonzero"):
+        block_case.scale(0, 1)
+    with pytest.raises(ValueError, match="finite"):
+        block_case.translate(np.inf, 0)
+    with pytest.raises(TypeError, match="scalar"):
+        block_case.rotate([90])
+
+
+def test_boundary_name_validation(block_case):
+    with pytest.raises(ValueError, match="not present"):
+        block_case.boundary_data("missing")
+    with pytest.raises(TypeError, match="string"):
+        block_case.boundary_cell_data(1)
+
+
 @pytest.mark.parametrize("method", ["boundary_data", "boundary_cell_data"])
 def test_boundary_sort_validation(block_case, method):
     with pytest.raises(ValueError, match="sort should"):
